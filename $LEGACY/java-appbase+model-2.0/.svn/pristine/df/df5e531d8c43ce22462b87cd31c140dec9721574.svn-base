@@ -1,0 +1,44 @@
+<#--  -->
+<#function get_table_type obj>
+  <#if obj.isLabelled('entity')>
+    <#return "'N'">
+  <#elseif obj.isLabelled('value')>
+    <#return "'V'">
+  <#elseif obj.isLabelled('conj')>
+    <#return "'C'">
+  <#elseif obj.isLabelled('enum')>
+    <#return "'E'">
+  <#elseif obj.isLabelled('data')>
+    <#return "'L'">
+  </#if>
+  <#return 'NULL'>
+</#function>
+<#--  -->
+<#function get_bool flag>
+  <#if flag?? && flag>
+    <#return 'T'>
+  </#if>
+  <#return 'F'>
+</#function>
+<#function get_ref attr>
+  <#if attr.constraint.domainType.toString()?index_of('&') == 0>
+    <#return "'" + attr.constraint.domainType.toString() + "'">
+  </#if>
+  <#return 'NULL'>
+</#function>
+<#list model.objects as obj>
+  <#if !obj.persistenceName??><#continue></#if>
+  <#assign tabId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+insert into tn_mtm_tab (tabid, schmnm, modnm, modtxt, tabnm, tabtxt, typ, nt)
+values ('${tabId}', null, '${obj.getLabelledOptions('module')['name']!''}', '${obj.getLabelledOptions('module')['text']!''}', null, '${obj.persistenceName?trim}', '${obj.text!''?trim}', ${get_table_type(obj)}, null);
+
+  <#assign col_index = 1>
+  <#list obj.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
+    <#assign colId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+insert into tn_mtm_col (colid, tabid, colnm, coltxt, dtatyp, dmntyp, identif, nul, uniq, ordpos, fmt, rng, regexpr, valexpr, qryexpr, cmdexpr, refexpr, unisql, refsql, opt, nt)
+values ('${colId}', '${tabId}', '${attr.persistenceName?trim}', '${attr.text!''?trim}', '${(typebase.typename(attr.constraint.domainType, "sql")!'varchar(64)')}', '${attr.constraint.domainType.toString()}', '${get_bool(attr.constraint.identifiable)}', '${get_bool(!attr.constraint.identifiable && attr.constraint.nullable)}', '${get_bool(attr.constraint.unique)}', '${col_index}', null, null, null, null, null, null, null, null, null, null, null);
+    <#assign col_index = col_index + 1>
+  </#list>
+
+</#list>

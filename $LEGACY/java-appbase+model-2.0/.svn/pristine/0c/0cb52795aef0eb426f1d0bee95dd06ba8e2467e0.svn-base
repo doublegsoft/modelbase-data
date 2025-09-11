@@ -1,0 +1,93 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.entity;
+
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.io.InputStream;
+
+import net.doublegsoft.appbase.ddd.Entity;
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.value.*;
+</#if>
+
+<#assign idAttrs = modelbase.get_id_attributes(entity)>
+<#assign label = modelbase.get_object_label(entity)>
+/**
+ * ${label}实体对象封装。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since 1.0.0
+ */
+public class ${java.nameType(entity.name)} implements Entity, Serializable {
+
+  private static final long serialVersionUID = -1L;
+
+<#list entity.attributes as attr>
+  /**
+   * ${modelbase.get_attribute_label(attr)}<#if !attr.type.collection>——${attr.persistenceName!'TODO'}</#if>.
+   */
+  <#assign defaultValue = modelbase.get_attribute_default_value(attr)>
+  private <#if attr.type.collection>final </#if>${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}<#if defaultValue != ''> = ${defaultValue}</#if>;
+
+</#list>
+<#list entity.attributes as attr>
+  public ${modelbase.type_attribute(attr)} get${java.nameType(attr.name)}() {
+    return ${java.nameVariable(attr.name)};
+  }
+
+  <#if !attr.type.collection>
+  public void set${java.nameType(attr.name)}(${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
+  }
+
+  </#if>
+</#list>
+
+  /**
+   * Checks whether anyone of id attributes is null.
+   *
+   * @return if there is anyone of id attributes is null return {@code true}, otherwise return {@code false}
+   */
+  public boolean hasNullId() {
+<#list idAttrs as idAttr>
+    if (${java.nameVariable(idAttr.name)} == null) {
+      return false;
+    }
+</#list>
+    return true;    
+  }
+
+  /**
+   * Uses entity id attributes to check {@code this} instance equals to 
+   * another {@link ${java.nameType(entity.name)}} object.
+   *
+   * @return {@code true} if equals or {@code false}
+   */
+  public boolean equals(${java.nameType(entity.name)} another) {
+<#list idAttrs as idAttr>
+    if (${java.nameVariable(idAttr.name)} == null) {
+      return false;
+    }
+    if (another.${java.nameVariable(idAttr.name)} == null) {
+      return false;
+    }
+</#list>
+<#list idAttrs as idAttr>
+    if (!${java.nameVariable(idAttr.name)}.equals(another.${java.nameVariable(idAttr.name)})) {
+      return false;
+    }
+</#list>  
+    return true;  
+  }
+}

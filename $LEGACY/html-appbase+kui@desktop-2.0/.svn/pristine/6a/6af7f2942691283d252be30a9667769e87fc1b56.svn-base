@@ -1,0 +1,6 @@
+<#if role??>
+  <#attempt>
+<#include role + '.init.js.ftl'>
+  <#recover>
+  </#attempt>
+</#if>

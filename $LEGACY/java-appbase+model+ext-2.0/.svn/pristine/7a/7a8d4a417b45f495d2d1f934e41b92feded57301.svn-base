@@ -1,0 +1,156 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign WidgetModelExpressionParser = statics['com.doublegsoft.jcommons.metaui.WidgetModelExpressionParser']>
+<#list model.objects as obj>
+  <#if obj.isLabelled('conjunction') || obj.isLabelled('generated')><#continue></#if>
+  <#-- 在表单中的显示属性集合 -->
+  <#assign formHiddenAttrs = []>
+  <#assign formShownAttrs = []>
+  <#-- 在查询中的显示属性集合 -->
+  <#assign queryAttrs = []>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable>
+      <#assign formHiddenAttrs = formHiddenAttrs + [attr]>
+    <#else>
+      <#assign formShownAttrs = formShownAttrs + [attr]>
+    </#if>
+    <#if attr.getLabelledOptions('persistence')['query']?? && !attr.constraint.identifiable>
+      <#assign queryAttrs = queryAttrs + [attr]>
+    </#if>
+  </#list>
+  <#if obj.getLabelledOptions('widgets')['table']??>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['table']>
+    <#assign tableWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['query']!>
+    <#if modelExpr != ''>
+      <#assign queryWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+      <#assign queryAttrs = []>
+      <#list queryWidgetModel.widgetModels as elementModel>
+        <#assign queryAttr = model.findAttributeByNames(obj.name, elementModel.source)>
+        <#assign queryAttrs = queryAttrs + [queryAttr]>
+      </#list>
+    </#if>
+
+/*
+ * 【${modelbase.get_object_label(obj)}】容器页面。
+ */ 
+main:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "main")<
+  widget_list_${obj.name}:panel(title: "${modelbase.get_object_label(obj)}列表", role: "list", style: "show"),
+  widget_edit_${obj.name}:panel(title: "${modelbase.get_object_label(obj)}编辑", role: "edit", style: "hide"),
+  widget_view_${obj.name}:panel(title: "${modelbase.get_object_label(obj)}查看", role: "view", style: "hide")
+>
+
+/*
+ * 【${modelbase.get_object_label(obj)}】列表页面。
+ */ 
+list:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "list")<
+  query_${obj.name}:query(position: "(1,1,100,0)")<
+  <#list queryAttrs as queryAttr>
+    <#assign index = queryAttr?index>
+    <#assign size = queryAttrs?size>
+    <#assign title = modelbase.get_attribute_label(queryAttr)>
+    <#assign role = modelbase.get_query_widget(queryAttr)!'text'>
+    <#assign options = ''>
+    <#if queryAttr.constraint.domainType.name?index_of('enum') == 0>
+      <#assign options = queryAttr.constraint.domainType.name>
+    </#if>
+    ${queryAttr.name}:input(title: "${title}", role: "${role}", <#if options != ''>options: "${options}", </#if>position: "(${(index / 2)?floor + 1},${index % 2 + 1},50,0)")<#if index != size - 1>,</#if>
+  </#list>      
+  >,
+  buttons(position: "2,1,100,0")<
+    button(role: "query", title: "查询", containerId: "widget_list_${obj.name}", @action: ""),
+    button(role: "new", title: "新建", containerId: "widget_list_${obj.name}", @action: "")
+  >,
+  table_${obj.name}:table(position: "(3,1,100,0)",
+      @load: "/api/v1/${js.nameVariable(obj.name)}/find")<
+  <#list tableWidgetModel.widgetModels as elementModel>
+    <#assign index = elementModel?index>
+    <#assign size = tableWidgetModel.widgetModels?size>
+    <#assign elements = ''>
+    <#assign attr = ''>
+    <#if elementModel.class.simpleName == 'GroupingWidgetModel'>
+      <#assign title = elementModel.text>
+      <#list elementModel.primitiveWidgetModels as primitiveModel>
+        <#if elements != ''><#assign elements = elements + '+'></#if>
+        <#if primitiveModel.action??>
+          <#assign elements = elements + '@' + primitiveModel.action>
+        <#else>
+          <#assign elements = elements + primitiveModel.source>
+        </#if>
+      </#list>
+    <#else>
+      <#assign attr = model.findAttributeByNames(obj.name, elementModel.source)>
+      <#assign title = modelbase.get_attribute_label(attr)>
+    </#if>
+    <#if attr != ''>${attr.name}:</#if>text(title: "${title}" <#if elements != ''>, elements: "${elements}"</#if>)<#if index != size - 1>,</#if>
+  </#list>
+  > 
+>
+  </#if>
+  <#if obj.getLabelledOptions('widgets')['form']??>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['form']>
+    <#assign formWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+    <#assign elementModels = formWidgetModel.widgetModels>
+    <#assign elementCount = modelbase.get_form_widget_count(formWidgetModel)>
+/*
+ * 【${modelbase.get_object_label(obj)}】编辑页面。
+ */ 
+edit:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "edit")<
+  form_${obj.name}:form(position: "(1,1,100,0)", title: "${modelbase.get_object_label(obj)}",
+      @load: "@/api/v1/${js.nameVariable(obj.name)}/find",
+      @save: "@/api/v1/${js.nameVariable(obj.name)}/save",
+      @delete: "@/api/v1/${js.nameVariable(obj.name)}/delete",
+      @close: "")<
+  <#list formHiddenAttrs as formHiddenAttr>
+    ${modelbase.get_attribute_sql_name(formHiddenAttr)}:input(title: "${modelbase.get_attribute_label(formHiddenAttr)}", role: "hidden"),
+  </#list>
+  <#assign rowCount = elementModels?size>
+  <#list elementModels as elementModel>
+    <#assign rowIndex = elementModel?index + 1>
+    <#assign cellIndex = 1>
+    <#assign elementWidth = 50>
+    <#if elementModel.class.simpleName == 'GroupingWidgetModel'>
+      <#assign elementSize = elementModel.primitiveWidgetModels?size>
+      <#assign elementWidth = (100 / elementSize)?floor>
+      <#list elementModel.primitiveWidgetModels as primitiveWidgetModel>
+        <#assign cellIndex = primitiveWidgetModel?index + 1>
+        <#assign formShownAttr = model.findAttributeByNames(obj.name, primitiveWidgetModel.source)>
+        <#assign title = modelbase.get_attribute_label(formShownAttr)>
+        <#assign role = modelbase.get_form_widget(formShownAttr)!'text'>
+        <#assign unit = formShownAttr.getLabelledOptions('name')['unit']!>
+        <#assign domain = ''>
+        <#assign range = formShownAttr.getLabelledOptions('persistence')['range']!>
+        <#if range != ''>
+          <#assign domain = 'range' + range>
+        <#elseif formShownAttr.type.name == 'number'>
+          <#assign domain = 'number'>
+        </#if>
+        <#if formShownAttr.type.collection && formShownAttr.type.componentType.custom>
+          <#assign refObj = model.findObjectByName(formShownAttr.type.componentType.name)>
+          <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+        </#if>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}"<#if refObj??>, bound: "${refObj.name}", fieldText: "name", fieldValue: "${java.nameVariable(refObj.name)}${java.nameType(refObjAttrId.name)}"</#if><#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+      </#list>
+    <#else>
+      <#assign formShownAttr = model.findAttributeByNames(obj.name, elementModel.source)>
+      <#assign title = modelbase.get_attribute_label(formShownAttr)>
+      <#assign role = modelbase.get_form_widget(formShownAttr)!'text'>
+      <#assign unit = formShownAttr.getLabelledOptions('name')['unit']!>
+      <#assign domain = ''>
+      <#assign range = formShownAttr.getLabelledOptions('persistence')['range']!>
+      <#if range != ''>
+        <#assign domain = 'range' + range>
+      <#elseif formShownAttr.type.name == 'number'>
+        <#assign domain = 'number'>
+      </#if>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}"<#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount>,</#if>
+    </#if>
+  </#list>
+  >,
+  buttons(position: "(2,1,100,0)")<
+    button(role: "save", title: "保存", containerId: "widget_edit_${obj.name}", @action: ""),
+    button(role: "reset", title: "重置", containerId: "widget_edit_${obj.name}", @action: ""),
+    button(role: "back", title: "返回", containerId: "widget_edit_${obj.name}", @action: "")
+  >
+>
+  </#if>
+</#list>

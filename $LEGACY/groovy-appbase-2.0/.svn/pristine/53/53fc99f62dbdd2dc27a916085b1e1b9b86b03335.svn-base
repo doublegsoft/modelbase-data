@@ -1,0 +1,107 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign attrId = modelbase.get_id_attributes(entity)[0]>
+import java.util.List
+import java.util.ArrayList
+import java.util.Map
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+
+import org.springframework.context.ApplicationContext
+
+import ${namespace}.${java.nameNamespace(app.name)}.model.repository.${java.nameType(entity.name)}Repository
+import net.doublegsoft.appbase.JsonData
+import net.doublegsoft.appbase.SqlParams
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.Pagination
+import net.doublegsoft.appbase.service.CommonService
+import net.doublegsoft.appbase.service.RepositoryService
+import net.doublegsoft.appbase.service.GroovyService
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.util.Datasets
+
+List<ObjectMap> find(ApplicationContext spring, ObjectMap params) {
+  def ${java.nameVariable(entity.name)}Repository = spring.getBean(${java.nameType(entity.name)}Repository.class)
+  def commonService = spring.getBean(CommonService.class)
+  def repositoryService = spring.getBean(RepositoryService.class)
+  def groovyService = spring.getBean(GroovyService.class)
+
+  def ${java.nameVariable(modelbase.get_object_plural(entity))} = ${java.nameVariable(entity.name)}Repository.findObjectMapsBy(params);
+
+  // 拼音转换
+  if (params.containsKey("fieldPinyin")) {
+    List<String> fields = params.get("fieldPinyin");
+    for (ObjectMap item : ${java.nameVariable(modelbase.get_object_plural(entity))}) {
+      for (String field : fields) {
+        if (!Strings.isBlank(item.get(field))) {
+          item.set(field + "Pinyin", Strings.pinyin(item.get(field)));
+        }
+      }
+    }
+  }
+  ObjectMap groupingIds = null
+  <#assign implicitReferences = modelbase.get_object_implicit_references(entity)>
+  <#if implicitReferences?size != 0>
+    <#list implicitReferences as implicitReferenceName, implicitReference>
+      <#assign attrRefId = ''>
+      <#assign attrRefType = ''>
+      <#list implicitReference as value, attr>
+        <#if value == 'type'>
+          <#assign attrRefType = attr>
+        <#elseif value == 'id'>
+          <#assign attrRefId = attr>
+        </#if>
+      </#list>
+  if (params.get("get${java.nameType(implicitReferenceName)}") == "true") {
+    groupingIds = new ObjectMap()
+    for (ObjectMap item : ${java.nameVariable(modelbase.get_object_plural(entity))}) {
+      if (item.get("${modelbase.get_attribute_sql_name(attrRefId)}") != null) {
+        groupingIds.add(item.get("${modelbase.get_attribute_sql_name(attrRefType)}"), item.get("${modelbase.get_attribute_sql_name(attrRefId)}"))
+      }
+    }
+    for (Map.Entry<String, Object> entry : groupingIds.entrySet()) {
+      String group = entry.getKey();
+      List<ObjectMap> rows = repositoryService.findObjectsByIds(entry.getValue(), group);
+      ${java.nameVariable(modelbase.get_object_plural(entity))} = Datasets.conjunct(${java.nameVariable(modelbase.get_object_plural(entity))}, "${modelbase.get_attribute_sql_name(attrRefId)}", rows, Strings.nameVariable(group.substring(group.lastIndexOf(".") + 1)) + "Id", "${java.nameVariable(implicitReferenceName)}");
+    }
+  }
+    </#list>
+  </#if>
+  <#-- 多对多聚合查询函数 -->
+  <#list entity.attributes as attr>
+    <#assign conjObjName = attr.getLabelledOptions('persistence')['conjunction']!>
+    <#if conjObjName == ''><#continue></#if>
+    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions('persistence')['conjunction'])>
+    <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+  if (params.get("count${java.nameType(refObj.name)}") == 'true') {
+    List<ObjectMap> rows = ${java.nameVariable(entity.name)}Repository.count${java.nameType(refObj.name)}(params)
+    ${java.nameVariable(modelbase.get_object_plural(entity))} = Datasets.conjunct(${java.nameVariable(modelbase.get_object_plural(entity))}, "${modelbase.get_attribute_sql_name(attrId)}", rows, "${modelbase.get_attribute_sql_name(attrId)}");
+  }  
+  if (params.get("sum${java.nameType(refObj.name)}") == 'true') {
+    List<ObjectMap> rows = ${java.nameVariable(entity.name)}Repository.sum${java.nameType(refObj.name)}(params)
+    ${java.nameVariable(modelbase.get_object_plural(entity))} = Datasets.conjunct(${java.nameVariable(modelbase.get_object_plural(entity))}, "${modelbase.get_attribute_sql_name(attrId)}", rows, "${modelbase.get_attribute_sql_name(attrId)}");
+  }  
+  </#list>
+  return ${java.nameVariable(modelbase.get_object_plural(entity))}
+}
+
+List<ObjectMap> handle(ApplicationContext spring, ObjectMap params) {
+  return find(spring, params);
+}
+
+def spring = binding.getVariable("spring")
+def params = binding.getVariable("params")
+GroovyService groovyService = spring.getBean(GroovyService.class)
+GroovyShell shell = new GroovyShell()
+
+String scriptRoot = groovyService.getRoot()
+Script common = shell.parse(new File(scriptRoot + "/common.groovy"))
+
+List<ObjectMap> data = find(spring, params)
+
+data = common.conjunct(spring, shell, scriptRoot, params, data)
+
+def retVal = new JsonData()
+retVal.set("data", data)
+return retVal

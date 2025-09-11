@@ -1,0 +1,1029 @@
+<#--
+ ### Gets type name for the attribute. And supports both collection and
+ ### non-collection types.
+ ### <p>
+ ### And attribute type could be primitive, custom and collection.
+ ###
+ ### @param attr
+ ###        the attribute definition
+ ###
+ ### @return
+ ###        the programming language type name
+ #-->
+<#function type_attribute attr>
+  <#if attr.type.custom>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
+    <#return java.nameType(refObj.name)>
+  <#elseif attr.constraint.domainType.name == "id">
+    <#return "Long">    
+  <#elseif attr.type.name == "int" || attr.type.name == "integer">
+    <#return "Integer">  
+  <#elseif attr.type.name == "number">
+    <#return "BigDecimal">      
+  <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
+    <#return "Date">  
+  <#elseif attr.type.name == "json">
+    <#return "String">
+  <#elseif attr.type.primitive>
+    <#return typebase.typename(attr.type.name, "java", "String")>
+  <#elseif attr.type.collection>
+    <#assign fakeAttr = {"type": attr.type.componentType}>
+    <#return "List<" + type_attribute(fakeAttr) + ">">
+  <#elseif attr.type.domain>
+    <#assign exprDomain = attr.type.toString()>
+    <#if exprDomain?index_of("&") == 0>
+      <#assign refObj = model.findObjectByName(attr.type.name)>
+      <#return java.nameType(refObj.name)>
+    <#else>
+      <#return typebase.typename(attr.type.name, "java", "String")>
+    </#if>
+  </#if>
+  <#return typebase.typename(attr.type.name, "java", "String")>
+</#function>
+
+<#function type_attribute_primitive attr>
+  <#if attr.type.custom>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#local refObjIdAttrs = modelbase.get_id_attributes(refObj)>
+    <#return type_attribute_primitive(refObjIdAttrs[0])>
+  <#elseif attr.constraint.domainType.name == "id">
+    <#return "Long">  
+  <#elseif attr.constraint.domainType.name == "uuid">
+    <#return "String">    
+  <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
+    <#return "Date">  
+  <#elseif attr.type.name == "long">
+    <#return "Long">    
+  <#elseif attr.type.name == "int" || attr.type.name == "integer">
+    <#return "Integer">  
+  <#elseif attr.type.name == "number">
+    <#return "BigDecimal">    
+  <#elseif attr.type.name == "json">
+    <#return "String">
+  <#elseif attr.type.primitive>
+    <#return typebase.typename(attr.type.name, "java", "String")>
+  <#elseif attr.type.collection>
+    <#return "List<String>">
+  <#elseif attr.type.domain>
+    <#assign exprDomain = attr.type.toString()>
+    <#if exprDomain?index_of("&") == 0>
+      <#assign refObj = model.findObjectByName(attr.type.name)>
+      <#return java.nameType(refObj.name)>
+    <#else>
+      <#return typebase.typename(attr.type.name, "java", "String")>
+    </#if>
+  </#if>
+  <#return typebase.typename(attr.type.name, "java", "String")>
+</#function>
+
+<#function value_attribute_null attr>
+  <#local typename = type_attribute_primitive(attr)>
+  <#if typename == "String">
+    <#return "\"0\"">
+  <#elseif typename == "int" || typename == "integer">
+    <#return "0">  
+  <#elseif typename == "number">
+    <#return "0.0">
+  <#elseif typename == "long" || typename == "Long">
+    <#return "0L">  
+  <#else>
+    <#return "null">  
+  </#if>
+</#function>
+
+<#function singularize_coll_attr attr>
+  <#if attr.getLabelledOptions("name")?? && attr.getLabelledOptions("name")["singular"]??>
+    <#return java.nameVariable(attr.getLabelledOptions("name")["singular"])>
+  </#if>
+  <#return java.nameVariable(attr.type.componentType.name)>
+</#function>
+
+<#function get_imports obj>
+  <#local ret = []>
+  <#local existings = {"":""}>
+  <#list obj.attributes as attr>
+    <#local fullname = "">
+    <#if attr.type.custom>
+    <#elseif attr.type.collection>
+      <#local fullname = 'java.util.List'>
+      <#if !existings[fullname]??>
+        <#local existings += {fullname:fullname}>
+        <#local ret += [fullname]>
+      </#if>
+    <#elseif attr.type.name == "number">
+      <#local fullname = "java.math.BigDecimal">
+    <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
+      <#local fullname = "java.util.Date">      
+    </#if>
+    <#if !existings[fullname]??>
+      <#local existings += {fullname:fullname}>
+      <#local ret += [fullname]>
+    </#if>
+  </#list>
+  <#return ret>
+</#function>
+
+<#--
+ ### Gets the test value from tatabase framework for the given attribute.
+ ###
+ ### @param attr
+ ###        the attribute of an object
+ ###
+ ### @return
+ ###        the test value for java language
+ #-->
+<#function test_unit_value attr>
+  <#assign val = tatabase.value(attr.constraint.domainType?string, '', language)>
+  <#assign typestr = attr.constraint.domainType?string>
+  <#if attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] = "id">
+    <#return '"123456"'>
+  <#elseif typestr == 'lmt'>
+    <#return 'Timestamp.valueOf("' + val + '")'>
+  <#elseif attr.name == 'state'>
+    <#return '"E"'>  
+  <#elseif typestr == 'id'>
+    <#return 'IdGenerator.id()'>
+  <#elseif typestr == 'code'>
+    <#return '"000"'>
+  <#elseif typestr?contains('enum')>
+    <#return '"0"'>
+  <#elseif typestr?contains('name')>
+    <#return '"测试名称"'>
+  <#elseif typestr?contains('string')>
+    <#assign length = 64>
+    <#if typestr?contains('(')>
+      <#assign length = typestr?replace('string(', '')?replace(')', '')?number>
+    </#if>
+    <#if (length > modelbase.get_attribute_label(attr)?length * 2 + 6)>
+      <#return '"' + tatabase.string(length / 6) + '"'>
+    <#else>
+      <#assign ret = ''>
+      <#list 1..length as idx>
+        <#assign ret = ret + '0'>
+      </#list>
+      <#return '"' + ret + '"'>
+    </#if>
+  <#elseif typestr?contains('number')>
+    <#return 'new BigDecimal("5.67")'>
+  <#elseif typestr?contains('integer') || typestr?contains('int')>
+    <#return '5'>
+  <#elseif typestr?contains('long')>
+    <#return '5L'>
+  <#elseif typestr?contains('bool')>
+    <#return 'true'>
+  <#elseif typestr == "datetime">
+    <#return 'Timestamp.valueOf("' + tatabase.datetime() + '")'> 
+  </#if>
+  <#return 'null'>
+</#function>
+
+<#function test_sql_value attr ttbctx>d
+  <#assign UUID = statics['naming.util.UUID']>
+  <#assign typestr = attr.constraint.domainType?string>
+  <#if typestr == 'lmt' || typestr == 'now'>
+    <#return 'current_timestamp'>
+  <#elseif typestr == 'id'>
+    <#assign id = UUID.randomUUID()?string?upper_case>
+    <#assign ttbctx = ttbctx.addObjectId(attr.parent, id)>
+    <#return "'" + id + "'">
+  <#elseif typestr == 'code'>
+    <#return "'000'">
+  <#elseif typestr?contains('enum')>
+    <#return "'" + ttbctx.getValue(attr, ttbctx) + "'">
+  <#elseif typestr?contains('name')>
+    <#return "'测试名称'">
+  <#elseif typestr?contains('string')>
+    <#return "'" +  attr.text + '测试值' + "'">
+  <#elseif typestr?contains('number')>
+    <#return '100.55'>
+  <#elseif typestr?contains('integer') || typestr?contains('int')>
+    <#return ttbctx.getValue(attr, ttbctx)>
+  <#elseif typestr?contains('long')>
+    <#return ttbctx.getValue(attr, ttbctx)>
+  <#elseif typestr?contains('&')>
+    <#assign id = ttbctx.getValue(attr, ttbctx)!>
+    <#if id == ''>
+      <#return 'null'>
+    <#else>
+      <#return "'" + id + "'">
+    </#if>
+  <#elseif typestr?contains('bool')>
+    <#return "'T'">
+  </#if>
+  <#return 'null'>
+</#function>
+
+<#function test_json_value attr>
+  <#assign Timestamp = statics['java.sql.Timestamp']>
+  <#assign Date = statics['java.sql.Date']>
+  <#if attr.constraint.domainType.name?contains('enum')>
+    <#return '"' + tatabase.enumcode(attr.constraint.domainType.name) + '"'>
+  <#elseif attr.constraint.domainType.name == 'id' || attr.name == 'id' || attr.type.custom || attr.identifiable>
+    <#local val = tatabase.number(0,100)>
+    <#local val = val?substring(0, val?index_of("."))>
+    <#return "\"" + val + "\"">
+  <#elseif attr.constraint.domainType.name == 'json'>
+    <#return '{}'>
+  <#elseif attr.constraint.domainType.name == 'state'>
+    <#return '"E"'>
+  <#elseif attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] == "id">
+    <#return '"123456"'>  
+  <#elseif attr.type.name == 'bool'>
+    <#return '"true"'>
+  <#elseif attr.type.name == 'number'>
+    <#return '"' + tatabase.number(0,100) + '"'>
+  <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
+    <#return '36'>
+  <#elseif attr.type.name == 'long'>
+    <#return '36'>
+  <#elseif attr.type.name == 'date'>
+    <#return '"' + tatabase.datetime() + '"'>
+  <#elseif attr.type.name == 'datetime'>
+    <#return '"' + tatabase.datetime() + '"'>
+  <#elseif attr.type.custom>
+    <#return '"654321"'>
+  <#elseif attr.type.collection>
+    <#return '[]'>
+  <#elseif attr.type.name == 'string'>
+    <#return '"' + tatabase.string((attr.type.length!12)/4) + '"'>  
+  <#else>
+    <#return '"666666"'>
+  </#if>
+</#function>
+
+<#function name_getter attr>
+  <#return "get" + java.nameType(modelbase.get_attribute_sql_name(attr))>
+</#function>
+
+<#function name_setter attr>
+  <#return "set" + java.nameType(modelbase.get_attribute_sql_name(attr))>
+</#function>
+
+<#macro print_reference_assemble attr objname attrname indent>
+  <#if attr.type.custom>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#local idAttrs = modelbase.get_id_attributes(refObj)>
+${""?left_pad(indent)}${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${java.nameVariable(refObj.name)});  
+    <#if idAttrs[0].type.custom>
+<@print_reference_assemble attr=idAttrs[0] objname=java.nameVariable(refObj.name) attrname=attrname indent=indent />  
+    <#else>
+      <#assign refObjIdAttrs = modelbase.get_id_attributes(refObj)>
+      <#list refObjIdAttrs as refObjIdAttr>
+        <#if refObjIdAttr.type.name == objname>
+          <#assign foundRefObjIdAttr = refObjIdAttr>
+          <#break>
+        </#if>
+      </#list>
+      <#if foundRefObjIdAttr??>
+${""?left_pad(indent)}${java.nameVariable(refObj.name)}.set${java.nameType(foundRefObjIdAttr.name)}(${attrname});
+      <#else>
+${""?left_pad(indent)}${java.nameVariable(refObj.name)}.set${java.nameType(idAttrs[0].name)}(${attrname});      
+      </#if>
+    </#if>
+  <#else>
+${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});   
+  </#if> 
+</#macro>
+
+<#macro print_hierarchy_set attr objname attrname indent>
+  <#if attr.type.custom>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#local idAttrs = modelbase.get_id_attributes(refObj)>
+${""?left_pad(indent)}${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${java.nameVariable(refObj.name)});  
+    <#if idAttrs[0].type.custom>
+<@print_reference_assemble attr=idAttrs[0] objname=java.nameVariable(refObj.name) attrname=attrname indent=indent />  
+    <#else>
+${""?left_pad(indent)}${java.nameVariable(refObj.name)}.set${java.nameType(idAttrs[0].name)}(${attrname});  
+    </#if>
+  <#else>
+${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});    
+  </#if> 
+</#macro>
+
+<#function get_attribute_default_value attr>
+  <#if attr.constraint.defaultValue == "now">
+    <#return "new java.sql.Timestamp(System.currentTimeMillis())">
+  <#elseif attr.type.name == "int" || attr.type.name == "integer">
+    <#return attr.constraint.defaultValue> 
+  <#elseif attr.type.name == "long">
+    <#return (attr.constraint.defaultValue!0)?string + "L">   
+  <#elseif attr.type.name == "string">  
+    <#if attr.constraint.defaultValue?starts_with("'") && attr.constraint.defaultValue?ends_with("'")>
+      <#return "\"" + attr.constraint.defaultValue?substring(1,attr.constraint.defaultValue?length - 1)  + "\"">  
+    </#if>
+    <#return "\"" + attr.constraint.defaultValue + "\"">  
+  </#if>
+  <#return "null">
+</#function>
+
+<#macro print_object_default_setters obj varname indent>
+  <#list obj.attributes as attr>
+    <#if attr.name == "state">
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}("E");
+${""?left_pad(indent)}}
+    <#elseif attr.constraint.domainType.name == "now" || (attr.constraint.defaultValue!"") == "now">
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));
+${""?left_pad(indent)}}    
+    <#elseif attr.constraint.defaultValue??>
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(${get_attribute_default_value(attr)});
+${""?left_pad(indent)}}    
+    <#elseif attr.name == "last_modified_time">
+${""?left_pad(indent)}${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));
+    </#if>
+  </#list>
+</#macro>
+
+<#macro print_query_default_setters obj varname indent>
+  <#list obj.attributes as attr>
+    <#if attr.name == "state">
+${""?left_pad(indent)}if (${varname}.get${java.nameType(modelbase.get_attribute_sql_name(attr))}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}("E");
+${""?left_pad(indent)}}
+    <#elseif attr.constraint.domainType.name == "now" || (attr.constraint.defaultValue!"") == "now">
+${""?left_pad(indent)}if (${varname}.get${java.nameType(modelbase.get_attribute_sql_name(attr))}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(new java.sql.Timestamp(System.currentTimeMillis()));
+${""?left_pad(indent)}}    
+    <#elseif attr.constraint.defaultValue??>
+${""?left_pad(indent)}if (${varname}.get${java.nameType(modelbase.get_attribute_sql_name(attr))}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${get_attribute_default_value(attr)});
+${""?left_pad(indent)}}    
+    <#elseif attr.name == "last_modified_time">
+${""?left_pad(indent)}${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(new java.sql.Timestamp(System.currentTimeMillis()));
+    </#if>
+  </#list>
+</#macro>
+
+<#-- Query对象类成员 -->
+<#macro print_object_query_members obj processedAttrs>
+  <#list obj.attributes as attr>
+    <#if processedAttrs[modelbase.get_attribute_sql_name(attr)]??><#continue></#if>
+    <#if attr.type.collection>
+    
+  /*!
+  ** 【${modelbase.get_attribute_label(attr)}】
+  */
+  protected final List<${java.nameType(attr.type.componentType.name)}Query> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} = new ArrayList<>();
+  
+  protected final Map<String,Object> in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))} = new HashMap<>();
+    <#else>
+  
+  /*!
+  ** 【${modelbase.get_attribute_label(attr)}】
+  */
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)};
+  
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}0;
+  
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}1;
+    </#if>
+    <#-- 需要集合属性作为查询条件的 -->
+    <#if attr.constraint.identifiable ||
+         attr.type.custom ||
+         attr.constraint.domainType.name?starts_with("enum")> 
+       
+  protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} = new ArrayList<>();
+    </#if>
+    <#-- 引用对象需要作为结果的 -->
+    <#if attr.type.custom>
+      <#if processedAttrs[attr.name]??><#continue></#if>
+    
+  protected ${java.nameType(attr.type.name)}Query ${java.nameVariable(attr.name)};       
+    </#if>
+    <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>
+  
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}2;
+    </#if>
+    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr):attr}>
+    <#local processedAttrs += {attr.name:attr}>
+  </#list>
+  <#-- REFERENCE -->
+  <#list obj.attributes as attr>
+    <#if attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] == "id">
+      <#assign referenceName = attr.getLabelledOptions("reference")["name"]>
+      <#if processedAttrs[java.nameVariable(referenceName)]??><#continue></#if>
+      <#local processedAttrs += {referenceName:attr}>
+      
+  protected AbstractQuery ${java.nameVariable(referenceName)};
+    </#if>
+  </#list>
+  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
+  <#list obj.attributes as attr>
+    <#if attr.type.custom && attr.constraint.identifiable>
+      <#local refObj = model.findObjectByName(attr.type.name)>
+<@print_object_query_members obj=refObj processedAttrs=processedAttrs />    
+    </#if>
+  </#list>  
+</#macro>
+
+<#-- Query Setters and Getters -->
+<#macro print_object_query_xetters obj processedAttrs>
+  <#list obj.attributes as attr>
+    <#if processedAttrs[modelbase.get_attribute_sql_name(attr)]??><#continue></#if>
+    <#if attr.type.collection>
+    
+  public List<${java.nameType(attr.type.componentType.name)}Query> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))};
+  }
+  
+  public Map<String,Object> getIn${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
+    return in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))};
+  }
+    <#else>
+    
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}() {
+    return ${modelbase.get_attribute_sql_name(attr)};
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}) {
+    this.${modelbase.get_attribute_sql_name(attr)} = ${modelbase.get_attribute_sql_name(attr)};
+  }
+  
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}0() {
+    return ${modelbase.get_attribute_sql_name(attr)}0;
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}0(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}0) {
+    this.${modelbase.get_attribute_sql_name(attr)}0 = ${modelbase.get_attribute_sql_name(attr)}0;
+  }
+  
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}1() {
+    return ${modelbase.get_attribute_sql_name(attr)}1;
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}1(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}1) {
+    this.${modelbase.get_attribute_sql_name(attr)}1 = ${modelbase.get_attribute_sql_name(attr)}1;
+  }
+    </#if>
+    <#if attr.constraint.identifiable ||
+         attr.type.custom ||
+         attr.constraint.domainType.name?starts_with("enum")>
+       
+  public List<${modelbase4java.type_attribute_primitive(attr)}> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))};
+  }
+  
+  public void add${java.nameType(modelbase.get_attribute_sql_name(attr))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}) {
+    ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.add(${modelbase.get_attribute_sql_name(attr)});
+  }
+    </#if>
+    <#-- 引用对象需要作为结果的 -->
+    <#if attr.type.custom>
+      <#if processedAttrs[attr.name]??><#continue></#if>
+      
+  public ${java.nameType(attr.type.name)}Query get${java.nameType(attr.name)}() {
+    return this.${java.nameVariable(attr.name)};
+  };       
+  
+  public void set${java.nameType(attr.name)}(${java.nameType(attr.type.name)}Query ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
+  }
+    </#if>
+    <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>  
+  
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}2() {
+    return ${modelbase.get_attribute_sql_name(attr)}2;
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}2(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}2) {
+    this.${modelbase.get_attribute_sql_name(attr)}2 = ${modelbase.get_attribute_sql_name(attr)}2;
+  }
+    </#if>    
+    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr):attr}>
+    <#local processedAttrs += {attr.name:attr}>
+  </#list>
+  <#-- REFERENCE -->
+  <#list obj.attributes as attr>
+    <#if attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] == "id">
+      <#assign referenceName = attr.getLabelledOptions("reference")["name"]>
+      <#if processedAttrs[java.nameVariable(referenceName)]??><#continue></#if>
+      <#local processedAttrs += {referenceName:attr}>
+      
+  public AbstractQuery get${java.nameType(referenceName)}() {
+    return ${java.nameVariable(referenceName)};
+  }
+  
+  public void set${java.nameType(referenceName)}(AbstractQuery ${java.nameVariable(referenceName)}) {
+    this.${java.nameVariable(referenceName)} = ${java.nameVariable(referenceName)};
+  }
+    </#if>
+  </#list>
+  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable && attr.type.custom>
+      <#local refObj = model.findObjectByName(attr.type.name)> 
+<@print_object_query_xetters obj=refObj processedAttrs=processedAttrs /> 
+    </#if>
+  </#list>
+</#macro>
+
+<#--  -->
+<#macro print_object_query_to_query obj root>
+  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
+  <#list obj.attributes as attr>
+    <#if !(attr.type.custom && attr.constraint.identifiable)><#continue></#if>
+    <#local refObj = model.findObjectByName(attr.type.name)>   
+      
+  public ${java.nameType(refObj.name)}Query to${java.nameType(refObj.name)}Query() {
+    ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();
+    <#list refObj.attributes as refObjAttr>
+      <#local found = false>
+      <#list root.attributes as innerAttr>
+        <#if refObjAttr.name == innerAttr.name>
+    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr)}());  
+          <#local found = true>  
+          <#break>    
+        </#if>
+      </#list>
+      <#if !found>
+        <#if refObjAttr.type.collection>
+    retVal.${name_getter(refObjAttr)}().addAll(${name_getter(refObjAttr)}());        
+        <#else>  
+    retVal.${name_setter(refObjAttr)}(${name_getter(refObjAttr)}());    
+        </#if>
+      </#if>
+    </#list>  
+    return retVal;
+  }
+<@print_object_query_to_query obj=refObj root=root />    
+  </#list>  
+</#macro>
+
+<#macro print_object_query_to_map obj processedAttrs>
+  <#list obj.attributes as attr>
+    <#if processedAttrs[attr.name]??><#continue></#if>
+    <#if attr.type.collection>
+    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.isEmpty()) {
+      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))});
+    }
+    <#else>
+      <#local attrtype = modelbase4java.type_attribute_primitive(attr)>
+      <#if attrtype == "Long">
+    if (${modelbase.get_attribute_sql_name(attr)} != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
+    }
+    if (${modelbase.get_attribute_sql_name(attr)}0 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}0));
+    }
+    if (${modelbase.get_attribute_sql_name(attr)}1 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}1));
+    }  
+      <#else>
+    if (${modelbase.get_attribute_sql_name(attr)} != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}", ${modelbase.get_attribute_sql_name(attr)});
+    }
+    if (${modelbase.get_attribute_sql_name(attr)}0 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", ${modelbase.get_attribute_sql_name(attr)}0);
+    }
+    if (${modelbase.get_attribute_sql_name(attr)}1 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", ${modelbase.get_attribute_sql_name(attr)}1);
+    }
+      </#if>
+    </#if>
+    <#if attr.constraint.identifiable ||
+         attr.type.custom ||
+         attr.constraint.domainType.name?starts_with("enum")>
+    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.isEmpty()) {
+      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))});
+    }
+    </#if>
+    <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>  
+    if (${modelbase.get_attribute_sql_name(attr)}2 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}2", ${modelbase.get_attribute_sql_name(attr)}2);
+    }
+    </#if>    
+    <#local processedAttrs += {attr.name:attr}>
+  </#list>  
+  <#-- 值体对象 -->
+  <#if modelbase.get_id_attributes(obj)?size != 1>
+    <#list obj.attributes as attr>
+      <#if attr.type.custom>
+    if (${java.nameVariable(attr.name)} != null) {
+      retVal.put("${java.nameVariable(attr.name)}", ${java.nameVariable(attr.name)}.toMap());
+    }
+      </#if>
+    </#list>
+    <#-- 注意此处的返回 -->
+    <#return>
+  </#if>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable && attr.type.custom>
+      <#local refObj = model.findObjectByName(attr.type.name)> 
+<@print_object_query_to_map obj=refObj processedAttrs=processedAttrs /> 
+    if (${java.nameVariable(attr.name)} != null) {
+      retVal.put("${java.nameVariable(attr.name)}", ${java.nameVariable(attr.name)}.toMap());
+    }
+    <#elseif attr.type.custom>
+    if (${java.nameVariable(attr.name)} != null) {
+      retVal.put("${java.nameVariable(attr.name)}", ${java.nameVariable(attr.name)}.toMap());
+    }
+    </#if>
+  </#list>
+</#macro>
+
+<#macro print_object_query_save obj>
+  <#list obj.attributes as attr>
+    <#if !attr.type.custom || !attr.constraint.identifiable><#continue></#if>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
+      /*!
+      ** 保存主键引用的【${modelbase.get_object_label(refObj)}】对象
+      */
+      ${java.nameType(refObj.name)}Query ${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query = query.to${java.nameType(refObj.name)}Query();
+      ${java.nameVariable(refObj.name)}Service.save${java.nameType(refObj.name)}(${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query);   
+<@print_object_query_save obj=refObj />         
+  </#list>
+</#macro>
+
+<#macro print_object_o2o_members obj existings>
+  <#local existingDaos = {}>
+  <#local existingServices = {}>
+  <#list obj.attributes as attr>
+    <#if !attr.type.custom || !attr.constraint.identifiable><#continue></#if>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
+    <#if !existings[refObj.name]??>
+      <#local existings += {refObj.name: refObj}>
+  @Autowired  
+  ${java.nameType(refObj.name)}DataAccess ${java.nameVariable(refObj.name)}DataAccess;
+      
+  @Autowired  
+  ${java.nameType(refObj.name)}Service ${java.nameVariable(refObj.name)}Service;
+    </#if>
+<@print_object_o2o_members obj=refObj existings=existings/>         
+  </#list>
+</#macro>
+
+<#macro print_object_o2m_members obj existings>
+  <#list obj.attributes as attr>
+    <#if !attr.type.collection><#continue></#if>
+    <#if !existings[attr.type.componentType.name]??>
+      <#assign existings += {attr.type.componentType.name:""}>
+      
+  @Autowired
+  ${java.nameType(attr.type.componentType.name)}DataAccess ${java.nameVariable(attr.type.componentType.name)}DataAccess;
+
+  @Autowired
+  ${java.nameType(attr.type.componentType.name)}Service ${java.nameVariable(attr.type.componentType.name)}Service;
+    </#if>
+    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#if collObj.isLabelled("value")>
+      <#list collObj.attributes as collObjAttr>
+        <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
+        <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
+        <#if !existings[collObjAttrRefObj.name]??>
+      
+  @Autowired
+  ${java.nameType(collObjAttrRefObj.name)}Service ${java.nameVariable(collObjAttrRefObj.name)}Service;
+        </#if>
+      </#list>
+    </#if>
+    <#if attr.isLabelled("conjunction") && !existings[attr.getLabelledOptions("conjunction")["name"]]??>
+      <#assign conjname = attr.getLabelledOptions("conjunction")["name"]>
+      <#assign existings += {conjname:""}>
+    
+  @Autowired
+  ${java.nameType(conjname)}DataAccess ${java.nameVariable(conjname)}DataAccess;
+  
+  @Autowired
+  ${java.nameType(conjname)}Service ${java.nameVariable(conjname)}Service;
+    </#if>
+  </#list> 
+</#macro>
+
+<#macro print_find_by_unique_name attrs>
+<#list attrs as attr><#if attr?index != 0>And</#if>${java.nameType(attr.name)}</#list></#macro>
+
+<#macro print_find_by_unique_parameters attrs>
+<#list attrs as attr><#if attr?index != 0>,</#if>${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}</#list></#macro>
+
+<#macro print_pom_dependencies deps indent>
+  <#list deps as dep>
+    <#if dep == "cachec@redis">
+${""?left_pad(indent)}<dependency>
+${""?left_pad(indent)}  <groupId>redis.clients</groupId>
+${""?left_pad(indent)}  <artifactId>jedis</artifactId>
+${""?left_pad(indent)}  <version>4.3.1</version>
+${""?left_pad(indent)}</dependency>  
+    <#elseif dep == "httpc@okhttp">
+${""?left_pad(indent)}<dependency>
+${""?left_pad(indent)}  <groupId>com.squareup.okhttp3</groupId>
+${""?left_pad(indent)}  <artifactId>okhttp</artifactId>
+${""?left_pad(indent)}  <version>3.14.2</version>
+${""?left_pad(indent)}</dependency>      
+    </#if>
+  </#list>
+</#macro>
+
+<#--------------------->
+<#-- 实体对象的保存操作 -->
+<#--------------------->
+<#macro print_object_entity_save obj indent>
+  <#if obj.isLabelled("pivot") && obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#local obj = masterObj>
+  </#if>
+${""?left_pad(indent)}boolean existing = true;
+  <#if obj.isLabelled("pivot") && !masterObj??>
+    <#return>
+  </#if>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+${""?left_pad(indent)}${modelbase4java.type_attribute_primitive(idAttrs[0])} ${modelbase.get_attribute_sql_name(idAttrs[0])} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}();
+${""?left_pad(indent)}if (Strings.isBlank(${modelbase.get_attribute_sql_name(idAttrs[0])})) {
+${""?left_pad(indent)}  ${modelbase.get_attribute_sql_name(idAttrs[0])} = IdGenerator.id();
+${""?left_pad(indent)}  query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}  existing = false;
+${""?left_pad(indent)}}         
+${""?left_pad(indent)}if (existing) {
+${""?left_pad(indent)}  // 在传入了主键的情况下，也需要检查传入主键的有效性
+${""?left_pad(indent)}  existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}}
+  <#if masterObj??>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query.to${java.nameType(obj.name)}Query());  
+  <#else>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+  </#if>
+${""?left_pad(indent)}if (!existing) {
+<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=8 /> 
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+${""?left_pad(indent)}} else {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});      
+${""?left_pad(indent)}}
+</#macro>
+
+<#macro print_object_entity_create obj indent>
+  <#if obj.isLabelled("pivot") && obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#local obj = masterObj>
+  </#if>
+  <#if !masterObj??><#return></#if>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+${""?left_pad(indent)}${modelbase4java.type_attribute_primitive(idAttrs[0])} ${modelbase.get_attribute_sql_name(idAttrs[0])} = IdGenerator.id();
+  <#if masterObj??>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query.to${java.nameType(obj.name)}Query());  
+  <#else>
+${""?left_pad(indent)}query.${name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+  </#if>
+<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=indent /> 
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+</#macro>
+
+<#macro print_object_entity_update obj indent>
+  <#if obj.isLabelled("pivot") && obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#local obj = masterObj>
+  </#if>
+  <#if !masterObj??><#return></#if>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#if masterObj??>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query.to${java.nameType(obj.name)}Query());  
+  <#else>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+  </#if>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name == 'now'>
+${""?left_pad(indent)}${java.nameVariable(obj.name)}.${name_setter(attr)}(new Timestamp(System.currentTimeMillis()));
+    </#if>
+  </#list>
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+</#macro>
+
+<#--------------------->
+<#-- 值体对象的保存操作 -->
+<#--------------------->
+<#macro print_object_value_save obj indent>       
+${""?left_pad(indent)}boolean existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(query);
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+${""?left_pad(indent)}if (!existing) {
+<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=8 /> 
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+${""?left_pad(indent)}} else {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.update${java.nameType(obj.name)}(${java.nameVariable(obj.name)});      
+${""?left_pad(indent)}}
+</#macro>
+
+<#macro print_object_value_create obj indent>       
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=indent /> 
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+</#macro>
+
+<#macro print_object_value_update obj indent>       
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name == 'now'>
+${""?left_pad(indent)}${java.nameVariable(obj.name)}.${name_setter(attr)}(new Timestamp(System.currentTimeMillis()));
+    </#if>
+  </#list>
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+</#macro>
+
+<#--------------------->
+<#-- 实体对象的读取操作 -->
+<#--------------------->
+<#macro print_object_entity_read obj indent>
+  <#if obj.isLabelled("pivot") && obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>  
+    <#local origObj = obj>
+    <#local obj = masterObj>
+  </#if>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#if (idAttrs?size > 0)>
+    <#local idAttr = idAttrs[0]>
+${""?left_pad(indent)}List<Map<String,Object>> results = null;
+${""?left_pad(indent)}try {
+    <#if masterObj??>
+${""?left_pad(indent)}  ${java.nameType(masterObj.name)}Query ${java.nameVariable(masterObj.name)}Query = new ${java.nameType(masterObj.name)}Query();
+${""?left_pad(indent)}  ${java.nameVariable(masterObj.name)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
+${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(${java.nameVariable(masterObj.name)}Query);
+    <#else>
+${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);
+    </#if>
+${""?left_pad(indent)}} catch (Throwable cause) {
+${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}}
+${""?left_pad(indent)}if (results == null || results.size() == 0) {
+${""?left_pad(indent)}  throw new ServiceException(404, "没有找到【${modelbase.get_object_label(obj)}】对象实例。");
+${""?left_pad(indent)}}
+${""?left_pad(indent)}if (results.size() > 1) {
+${""?left_pad(indent)}  throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
+${""?left_pad(indent)}}
+${""?left_pad(indent)}Map<String,Object> result = results.get(0);
+    <#if masterObj??>
+${""?left_pad(indent)}${java.nameType(origObj.name)}Query retVal = ${java.nameType(origObj.name)}QueryAssembler.assemble${java.nameType(origObj.name)}Query(result);  
+    <#else>
+${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);
+    </#if>
+  <#else>
+${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = new ${java.nameType(obj.name)}Query();  
+  </#if>  
+</#macro>
+
+<#--------------------->
+<#-- 主键引用的读取操作 -->
+<#--------------------->
+<#macro print_object_o2o_read obj root indent>
+  <#local rootObjIdAttr = modelbase.get_id_attributes(root)[0]>
+  <#local idAttr = modelbase.get_id_attributes(obj)[0]>
+  <#local refObj = model.findObjectByName(idAttr.type.name)>
+  <#local refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+${""?left_pad(indent)}${java.nameType(refObj.name)}Query ${java.nameVariable(refObj.name)}Query = new ${java.nameType(refObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(refObj.name)}Query.${modelbase4java.name_setter(refObjIdAttr)}(query.${modelbase4java.name_getter(rootObjIdAttr)}());
+${""?left_pad(indent)}try {
+${""?left_pad(indent)}  results = ${java.nameVariable(refObj.name)}DataAccess.select${java.nameType(refObj.name)}(${java.nameVariable(refObj.name)}Query);
+${""?left_pad(indent)}  if (results.size() == 1) {
+${""?left_pad(indent)}    result = results.get(0);
+${""?left_pad(indent)}    ${java.nameVariable(refObj.name)}Query = ${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(result);
+  <#list refObj.attributes as refObjAttr>
+    <#if refObjAttr.identifiable><#continue></#if>
+    <#local found = false>
+    <#list root.attributes as attr>
+      <#if attr.name == refObjAttr.name>
+        <#local found = true>
+        <#break>
+      </#if>
+    </#list>
+    <#if !found>
+      <#if refObjAttr.type.collection>
+${""?left_pad(indent)}    retVal.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}().addAll(${java.nameVariable(refObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}());       
+      <#else>
+${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}(${java.nameVariable(refObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}());     
+      </#if>
+    </#if>
+  </#list>    
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}} catch (Throwable cause) {
+${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}}
+  <#if refObjIdAttr.type.custom>
+<@print_object_o2o_read obj=refObj root=root indent=indent />  
+  </#if>
+</#macro>
+
+<#--------------------->
+<#-- 元型扩展的读取操作 -->
+<#--------------------->
+<#macro print_object_meta_read obj indent>
+  <#local idAttr = modelbase.get_id_attributes(obj)[0]>
+${""?left_pad(indent)}${java.nameType(obj.name)}MetaQuery metaQuery = new ${java.nameType(obj.name)}MetaQuery();
+${""?left_pad(indent)}metaQuery.${name_setter(idAttr)}(query.${name_getter(idAttr)}());
+${""?left_pad(indent)}List<Map<String,Object>> metas = ${java.nameVariable(obj.name)}MetaDataAccess.select${java.nameType(obj.name)}Meta(metaQuery);
+${""?left_pad(indent)}for (Map<String,Object> meta : metas) {
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(meta.get("propertyName"))) {
+${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(meta.get("propertyValue"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+${""?left_pad(indent)}  }
+  </#list>
+${""?left_pad(indent)}}
+</#macro>
+
+<#--------------------->
+<#-- 行列扩展的读取操作 -->
+<#--------------------->
+<#macro print_object_pivot_read obj indent>
+  <#local detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#local keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+  <#local valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+  <#if obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+  </#if>
+  <#if !masterObj??><#return></#if>  
+  <#local idAttr = modelbase.get_id_attributes(masterObj)[0]>
+${""?left_pad(indent)}${java.nameType(detailObj.name)}Query ${java.nameVariable(detailObj.name)}Query = new ${java.nameType(detailObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${name_setter(idAttr)}(query.${name_getter(idAttr)}());
+${""?left_pad(indent)}List<Map<String,Object>> items = ${java.nameVariable(detailObj.name)}DataAccess.select${java.nameType(detailObj.name)}(${java.nameVariable(detailObj.name)}Query);
+${""?left_pad(indent)}for (Map<String,Object> item : items) {
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(item.get("${modelbase.get_attribute_sql_name(keyAttr)}"))) {
+${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(valueAttr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+${""?left_pad(indent)}  }
+  </#list>
+${""?left_pad(indent)}}
+</#macro>
+
+<#--------------------->
+<#-- 灵活扩展的读取操作 -->
+<#--------------------->
+<#macro print_object_extension_read obj indent>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#local extObjs = modelbase.get_extension_objects(obj)>
+  <#list extObjs as extObjName, extRefAttr>
+    <#assign extObj = extRefAttr.parent>
+${""?left_pad(indent)}${java.nameType(extObjName)}Query ${java.nameVariable(extObjName)}Query = new ${java.nameType(extObjName)}Query();
+${""?left_pad(indent)}${java.nameVariable(extObjName)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extRefAttr))}(Safe.safe(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(), ${modelbase4java.type_attribute_primitive(extRefAttr)}.class));
+${""?left_pad(indent)}try {
+${""?left_pad(indent)}  results = ${java.nameVariable(extObjName)}DataAccess.select${java.nameType(extObjName)}(${java.nameVariable(extObjName)}Query);
+${""?left_pad(indent)}  if (results.size() == 1) {
+${""?left_pad(indent)}    result = results.get(0);
+${""?left_pad(indent)}    ${java.nameVariable(extObjName)}Query = ${java.nameType(extObjName)}QueryAssembler.assemble${java.nameType(extObjName)}Query(result);
+    <#list obj.attributes as attr>
+      <#list extObj.attributes as extObjAttr>
+        <#if modelbase.get_attribute_sql_name(attr) == modelbase.get_attribute_sql_name(extObjAttr) && !attr.identifiable>
+${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${java.nameVariable(extObjName)}Query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());   
+        <#break>
+      </#if>
+    </#list>
+  </#list>    
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}} catch (Throwable cause) {
+${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}}
+  </#list> 
+</#macro>
+
+<#--------------------------------------->
+<#-- 通用：集合属性的添加操作，触发观察者改变 -->
+<#--------------------------------------->
+<#macro print_attribute_observer_update obj attr indent>
+  <#assign obAttr = modelbase.get_observer_for_attribute(obj, attr)>
+  <#assign operator = obAttr.getLabelledOptions("observer")["operator"]>
+  <#assign attrexpr = obAttr.getLabelledOptions("observer")["attribute"]>
+  <#assign idAttrs = modelbase.get_id_attributes(obj)>
+  <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+  <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+  <#assign collTargetAttr = attr.directRelationship.targetAttribute>
+  <#if operator != "count">
+    <#assign observableAttr = modelbase.get_observable_attribute(obj, attrexpr)>
+  </#if>  
+  <#if obAttr.type.custom>
+    <#assign obAttrTypeObj = model.findObjectByName(obAttr.type.name)>
+    <#assign objAttrTypeObjIdAttrs = modelbase.get_id_attributes(obAttrTypeObj)>
+  </#if>
+  <#if operator == "count">
+${""?left_pad(indent)}if (query.${modelbase4java.name_getter(collObjIdAttrs[0])}() == null) {
+${""?left_pad(indent)}  ${java.nameType(collObj.name)}Query ${java.nameVariable(collObj.name)}Query = new ${java.nameType(collObj.name)}Query();
+${""?left_pad(indent)}  ${java.nameVariable(collObj.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(query.${modelbase4java.name_getter(idAttrs[0])}());
+${""?left_pad(indent)}  long total = ${java.nameVariable(collObj.name)}DataAccess.selectCountOf${java.nameType(collObj.name)}(${java.nameVariable(collObj.name)}Query);
+${""?left_pad(indent)}  ${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = new ${java.nameType(obj.name)}();
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(idAttrs[0].name)}(query.${modelbase4java.name_getter(idAttrs[0])}());
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(obAttr.name)}(total);
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+${""?left_pad(indent)}}
+  <#elseif operator == "max">
+${""?left_pad(indent)}${java.nameType(obAttrTypeObj.name)}Query max${java.nameType(obAttr.name)} =  ${java.nameVariable(collObj.name)}DataAccess.selectMax${java.nameType(observableAttr.name)}(query);
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = new ${java.nameType(obj.name)}();
+${""?left_pad(indent)}${java.nameVariable(obj.name)}.set${java.nameType(idAttrs[0].name)}(query.${modelbase4java.name_getter(idAttrs[0])}());
+${""?left_pad(indent)}if (max${java.nameType(obAttr.name)} != null) {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(obAttr.name)}(${java.nameType(obAttrTypeObj.name)}Assembler.assemble${java.nameType(obAttrTypeObj.name)}FromQuery(max${java.nameType(obAttr.name)}));
+${""?left_pad(indent)}} else {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(obAttr.name)}(${java.nameType(obAttrTypeObj.name)}.NULL);
+${""?left_pad(indent)}}
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+  <#elseif operator == "min">
+${""?left_pad(indent)}Map<String,Object> min${java.nameType(obAttr.name)} =  ${java.nameVariable(collObj.name)}DataAccess.selectMin${java.nameType(observableAttr.name)}(query);
+${""?left_pad(indent)}${java.nameType(obAttrTypeObj.name)}Query min${java.nameType(obAttr.name)} =  ${java.nameVariable(collObj.name)}DataAccess.selectMin${java.nameType(observableAttr.name)}(query);
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = new ${java.nameType(obj.name)}();
+${""?left_pad(indent)}${java.nameVariable(obj.name)}.set${java.nameType(idAttrs[0].name)}(query.${modelbase4java.name_getter(idAttrs[0])}());
+${""?left_pad(indent)}if (min${java.nameType(obAttr.name)} != null) {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(obAttr.name)}(${java.nameType(obAttrTypeObj.name)}Assembler.assemble${java.nameType(obAttrTypeObj.name)}FromQuery(min${java.nameType(obAttr.name)}));
+${""?left_pad(indent)}} else {
+${""?left_pad(indent)}  ${java.nameVariable(obj.name)}.set${java.nameType(obAttr.name)}(${java.nameType(obAttrTypeObj.name)}.NULL);
+${""?left_pad(indent)}}
+${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
+  </#if>  
+</#macro>

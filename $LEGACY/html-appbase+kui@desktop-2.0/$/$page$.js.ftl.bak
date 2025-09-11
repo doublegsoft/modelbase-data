@@ -1,0 +1,111 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign objname = module?substring(module?index_of('/') + 1)>
+
+<#if role?? && role != 'main'>
+function renderPageEditWithData(data) {
+  <#list pageOwner.pageWidgets as widget>
+${plugin.render(widget, 2, 'decl.js')}  
+${plugin.render(widget, 2, 'init.js')} 
+  </#list> 
+}
+  <#list pageOwner.pageWidgets as widget>
+${plugin.render(widget, 0, 'decl.js')}  
+${plugin.render(widget, 0, 'init.js')} 
+  </#list> 
+<#else>
+function Page${js.nameType(bound)}() {
+  let self = this;
+<#list children as child>
+${plugin.render(child, 2, 'decl.js')}  
+</#list> 
+};
+
+Page${js.nameType(bound)}.prototype.render = function () {
+  let self = this;
+  if (globals.parameters.${js.nameVariable(objname)}Id) {
+    xhr.post({
+      url: '/api/v1/common/script',
+      data: {
+        usecase: '${pageOwner.module}/read',
+        ${js.nameVariable(objname)}Id: globals.parameters.${js.nameVariable(objname)}Id
+      },
+      success: function(resp) {
+        self.initialize(resp.data);
+      }
+    });
+  } else {
+    this.initialize();
+  }
+};
+
+Page${js.nameType(bound)}.prototype.initialize = function (persistent) {
+<#list pageOwner.pageWidgets as widget>
+${plugin.render(widget, 2, 'init.js')}
+</#list>
+<#if role?? && role == 'main'>
+  this.loadPageList();
+</#if>
+};
+<#list children as child>
+  <#if child.role?? && child.role == 'edit'>
+
+Page${js.nameType(bound)}.prototype.loadPageEdit = function (${js.nameVariable(objname)}Id) {
+  let self = this;
+  ajax.view({
+    url: '/html/${pageOwner.module}/edit.html',
+    containerId: 'widgetEdit${js.nameType(objname)} div.card-body',
+    success: function() {
+      displayWidget('widgetEdit${js.nameType(objname)}');
+      if (${js.nameVariable(objname)}Id) {
+        self.loadDataEdit(${js.nameVariable(objname)}Id, function(data) {
+          renderPageEditWithData(data);
+        });
+      } else {
+        self.setDataEdit({});
+      }
+    }
+  });
+};
+
+Page${js.nameType(bound)}.prototype.loadDataEdit = function (${js.nameVariable(objname)}Id) {
+  let self = this;
+  if (${js.nameVariable(objname)}Id) {
+    xhr.post({
+      url: '/api/v1/common/script',
+      data: {
+        usecase: '${pageOwner.module}/read',
+        ${js.nameVariable(objname)}Id: ${js.nameVariable(objname)}Id
+      },
+      success: function (resp) {
+        
+      }
+    });
+  }
+}
+
+Page${js.nameType(bound)}.prototype.setDataEdit = function (${js.nameVariable(objname)}Data) {
+  utils.assemble(${js.nameVariable(objname)}Data, '${js.nameVariable(objname)}');
+  $('#form${js.nameType(objname)}').formdata(${js.nameVariable(objname)}Data);
+};
+  <#elseif child.role?? && child.role == 'list'>
+
+Page${js.nameType(bound)}.prototype.loadPageList = function (event) {
+  globals.parameters.${js.nameVariable(objname)}Id = null;
+  if ($('#widgetList${js.nameType(objname)} div.card-body').html().trim() == '') {
+    ajax.view({
+      url: '/html/${pageOwner.module}/list.html',
+      containerId: 'widgetList${js.nameType(objname)} div.card-body',
+      success: function() {
+        displayWidget('widgetList${js.nameType(objname)}');
+      }
+    });
+  } else {
+    displayWidget('widgetList${js.nameType(objname)}');
+  }
+};  
+  </#if>
+</#list>
+
+var page${js.nameType(bound)} = new Page${js.nameType(bound)}();
+page${js.nameType(bound)}.render();
+</#if>

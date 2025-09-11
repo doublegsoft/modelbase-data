@@ -1,0 +1,19 @@
+var ${js.nameVariable(id)} = new PaginationTable({
+  url: '',
+  columns: [{
+<#list children as child>
+  <#if child?index != 0>
+  },{
+  </#if>
+    title: '${child.title}',
+    style: 'text-align: center',
+    display: function (row, td) {
+
+    }
+</#list>    
+  }]
+});
+
+${js.nameVariable(id)}.render('${js.nameVariable(id)}', {
+  usecase: ''
+});

@@ -1,0 +1,69 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#list model.objects as obj>
+  <#if !obj.isLabelled('persistence')><#continue></#if>
+  <#if obj.persistenceName??>
+    <#assign idAttrs = []>
+    <#assign nonIdAttrs = []>
+    <#list obj.attributes as attr>
+      <#if attr.persistenceName??>
+        <#if attr.identifiable>
+          <#assign idAttrs = idAttrs + [attr]>
+        <#else>
+          <#assign nonIdAttrs = nonIdAttrs + [attr]>
+        </#if>
+      </#if>
+    </#list>
+-- ${modelbase.get_object_persistence_text(obj)}
+
+drop table ${obj.persistenceName} if exists;
+
+create table ${obj.persistenceName} (
+    <#list idAttrs as idAttr>
+      <#assign domaintype = idAttr.constraint.domainType.name>
+      <#if domaintype?index_of('&') == 0>
+  ${idAttr.persistenceName?right_pad(24)} ${r"varchar(64)"?right_pad(24)} not null<#if nonIdAttrs?size != 0 || idAttr?index != idAttrs?size - 1>,</#if>
+      <#else>
+  ${idAttr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!'varchar(64)')?right_pad(24)} not null<#if nonIdAttrs?size != 0 || idAttr?index != idAttrs?size - 1>,</#if>
+      </#if>
+    </#list>
+    <#list nonIdAttrs as nonIdAttr>
+      <#assign domaintype = nonIdAttr.constraint.domainType.toString()>
+      <#if domaintype?index_of('&') == 0>
+  ${nonIdAttr.persistenceName?right_pad(24)} varchar(64)<#if nonIdAttr?index != nonIdAttrs?size - 1>,</#if>
+      <#else>
+  ${nonIdAttr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!domaintype)}<#if nonIdAttr?index != nonIdAttrs?size - 1>,</#if>
+      </#if>
+    </#list>
+);
+
+alter table ${obj.persistenceName} add constraint pk_${obj.persistenceName} primary key (<#list idAttrs as attrId>${attrId.persistenceName}<#if attrId?index != idAttrs?size - 1>,</#if></#list>);
+
+    <#if obj.getLabelledOptions('persistence')['revision']??>
+drop table ${obj.getLabelledOptions('persistence')['revision']} if exists;
+
+create table ${obj.getLabelledOptions('persistence')['revision']} (
+    <#list idAttrs as idAttr>
+      <#assign domaintype = idAttr.constraint.domainType.name>
+      <#if domaintype?index_of('&') == 0>
+  ${idAttr.persistenceName?right_pad(24)} ${r"varchar(64)"?right_pad(24)} not null<#if nonIdAttrs?size != 0 || idAttr?index != idAttrs?size - 1>,</#if>
+      <#else>
+  ${idAttr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!'varchar(64)')?right_pad(24)} not null<#if nonIdAttrs?size != 0 || idAttr?index != idAttrs?size - 1>,</#if>
+      </#if>
+    </#list>
+    <#list nonIdAttrs as nonIdAttr>
+      <#assign domaintype = nonIdAttr.constraint.domainType.toString()>
+      <#if domaintype?index_of('&') == 0>
+  ${nonIdAttr.persistenceName?right_pad(24)} varchar(64)<#if nonIdAttr?index != nonIdAttrs?size - 1>,</#if>
+      <#elseif  nonIdAttr.name == 'last_modified_time'>
+  ${nonIdAttr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!domaintype)} not null<#if nonIdAttr?index != nonIdAttrs?size - 1>,</#if>
+      <#else>
+  ${nonIdAttr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!domaintype)}<#if nonIdAttr?index != nonIdAttrs?size - 1>,</#if>
+      </#if>
+    </#list>
+);
+
+alter table ${obj.getLabelledOptions('persistence')['revision']} add constraint pk_${obj.getLabelledOptions('persistence')['revision']} primary key (<#list idAttrs as attrId>${attrId.persistenceName},</#list>lmt);
+
+    </#if>
+  </#if>
+</#list>

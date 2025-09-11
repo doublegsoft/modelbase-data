@@ -1,0 +1,118 @@
+<#import "/$/modelbase.ftl" as modelbase>
+<#assign attrId = modelbase.get_id_attributes(entity)[0]>
+import java.util.List
+import java.util.ArrayList
+import java.util.Map
+import java.util.Set
+import java.util.HashSet
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+import org.slf4j.Logger
+
+import org.springframework.context.ApplicationContext
+
+import ${namespace}.${java.nameNamespace(app.name)}.model.event.*
+import ${namespace}.${java.nameNamespace(app.name)}.model.entity.${java.nameType(entity.name)}
+import ${namespace}.${java.nameNamespace(app.name)}.model.assembler.${java.nameType(entity.name)}Assembler
+import ${namespace}.${java.nameNamespace(app.name)}.model.repository.${java.nameType(entity.name)}Repository
+import net.doublegsoft.appbase.dao.CommonDataAccess
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.JsonData
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.service.GroovyService
+import net.doublegsoft.appbase.ddd.EventDispatcher
+
+ObjectMap save(ApplicationContext spring, ObjectMap params) {
+	EventDispatcher eventDispatcher = spring.getBean(EventDispatcher.class)
+  ${java.nameType(entity.name)} ${java.nameVariable(entity.name)} = ${java.nameType(entity.name)}Assembler.assemble${java.nameType(entity.name)}FromFrontend(params)
+  ${java.nameType(entity.name)}Repository ${java.nameVariable(entity.name)}Repository = spring.getBean(${java.nameType(entity.name)}Repository.class)
+
+  if (${java.nameVariable(entity.name)}.hasNullId()) {
+    ${java.nameVariable(entity.name)}Repository.create${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    ${java.nameType(entity.name)}CreatedEvent createdEvent = new ${java.nameType(entity.name)}CreatedEvent()
+    createdEvent.set${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    eventDispatcher.dispatch(createdEvent)
+  } else {
+    ${java.nameVariable(entity.name)}Repository.update${java.nameType(entity.name)}(${java.nameVariable(entity.name)}, params.keySet())
+    ${java.nameType(entity.name)}UpdatedEvent updatedEvent = new ${java.nameType(entity.name)}UpdatedEvent()
+    updatedEvent.set${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    eventDispatcher.dispatch(updatedEvent)
+  }
+
+<#-- 隐式引用实际上是间接引用，通过标识和类型两个字段对同一个实体的引用 -->
+  GroovyShell shell = new GroovyShell()
+<#assign implicitReferences = modelbase.get_object_implicit_references(entity)>
+<#if implicitReferences?size != 0>
+  <#---->
+</#if>
+<#list implicitReferences as implicitReferenceName, implicitReference>
+  <#assign attrRefId = ''>
+  <#assign attrRefType = ''>
+  <#list implicitReference as value, attr>
+    <#if value == 'type'>
+      <#assign attrRefType = attr>
+    <#elseif value == 'id'>
+      <#assign attrRefId = attr>
+    </#if>
+  </#list>
+  if (params.containsKey("_save_${implicitReferenceName}")) {
+    String usecase = params.get("_save_${implicitReferenceName}")
+    def another = shell.parse(new File('./script/' + usecase + '.groovy'))
+    another.save(spring, params.get("${java.nameVariable(implicitReferenceName)}"))
+  }
+  if (params.containsKey("_merge_${implicitReferenceName}")) {
+    String usecase = params.get("_merge_${implicitReferenceName}")
+    def another = shell.parse(new File('./script/' + usecase + '.groovy'))
+    another.merge(spring, params.get("${java.nameVariable(implicitReferenceName)}"))
+  }
+  if (params.containsKey("_delete_${implicitReferenceName}")) {
+    String usecase = params.get("_delete_${implicitReferenceName}")
+    def another = shell.parse(new File('./script/' + usecase + '.groovy'))
+    another.delete(spring, params.get("${java.nameVariable(implicitReferenceName)}"))
+  }
+</#list>
+  ObjectMap ret = new ObjectMap()
+  ret.putAll(params)
+  <#-- FIXME -->
+  <#if attrId.type.custom>
+    ret.set('${modelbase.get_attribute_sql_name(attrId)}', ${java.nameVariable(entity.name)}.get${java.nameType(attrId.name)}().getId())
+  <#else>
+    ret.set('${modelbase.get_attribute_sql_name(attrId)}', ${java.nameVariable(entity.name)}.get${java.nameType(attrId.name)}())
+  </#if>
+  return ret
+}
+
+ObjectMap handle(ApplicationContext spring, ObjectMap params) {
+  return save(spring, params);
+}
+
+ApplicationContext spring = binding.getVariable("spring")
+ObjectMap params = binding.getVariable("params")
+Logger logger = binding.getVariable("logger")
+GroovyService groovyService = spring.getBean(GroovyService.class)
+
+String _data_source = params.get("_data_source") == null ? "" : params.get("_data_source")
+CommonDataAccess commonDataAccess = spring.getBean("commonDataAccess" + _data_source)
+GroovyShell shell = new GroovyShell()
+
+String scriptRoot = groovyService.getRoot()
+Script common = shell.parse(new File(scriptRoot + "/common.groovy"))
+
+ObjectMap data = null
+try {
+  commonDataAccess.beginTransaction()
+  data = save(spring, params)
+  data = common.transact(spring, shell, scriptRoot, params, data)
+  commonDataAccess.commit()
+} catch (Throwable ex) {
+  logger.error(ex.getMessage(), ex)
+  commonDataAccess.rollback()
+  return new JsonData().error(ex.getMessage())
+}
+
+// 返回对象
+JsonData retVal = new JsonData()
+retVal.set("data", data)
+return retVal

@@ -1,0 +1,9 @@
+<#assign opts = typebase.enumtype(options)>
+<div class="col-form-label">
+<#list opts as opt>
+  <div class="form-check form-check-inline">
+    <input id="${js.nameVariable(id)}_${opt.key}" name="${js.nameVariable(id)}" value="${opt.key}" type="checkbox" class="form-check-input" checked  label="${title}" <#if required??>required</#if>>
+    <label class="form-check-label" for="${js.nameVariable(id)}_${opt.key}">${opt.value}</label>
+  </div>
+</#list>
+</div>

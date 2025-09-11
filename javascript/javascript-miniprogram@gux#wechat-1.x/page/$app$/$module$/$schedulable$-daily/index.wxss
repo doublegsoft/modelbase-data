@@ -1,0 +1,75 @@
+@import '/app.wxss';
+
+.meeting-card {
+  margin: 30rpx;
+  padding: 40rpx;
+  background: #E8F5E9;
+  border-radius: 24rpx;
+}
+
+.platform {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.platform text {
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.avatars {
+  display: flex;
+}
+
+.avatars image {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 30rpx;
+  border: 4rpx solid #fff;
+  margin-left: -15rpx;
+}
+
+.title {
+  font-size: 44rpx;
+  font-weight: bold;
+  margin-bottom: 40rpx;
+}
+
+.duration {
+  
+}
+
+.duration .number {
+  font-size: 72rpx;
+  font-weight: bold;
+}
+
+.duration .unit {
+  font-size: 32rpx;
+  color: #666;
+  margin-left: 10rpx;
+}
+
+.time-info {
+  display: flex;
+  justify-content: flex-start;
+  gap: 80rpx;
+}
+
+.time-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-item .label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+
+.time-item .value {
+  font-size: 32rpx;
+  font-weight: 500;
+}

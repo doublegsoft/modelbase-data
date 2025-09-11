@@ -1,0 +1,27 @@
+
+@import "/vendor/gux/gux.wxss";
+
+.page {
+  padding: 16rpx 16rpx;
+}
+
+.head-search {
+  display: flex;
+  padding: 14rpx 20rpx;
+  width: calc(100%-64rpx);
+  height: 48rpx;
+  background: var(--color-surface-inverse);
+  border-radius: 16rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.05);
+}
+
+.search {
+  margin-right: 24rpx;
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.placeholder-style {
+  color: #999999;
+  font-size: 24rpx;
+}

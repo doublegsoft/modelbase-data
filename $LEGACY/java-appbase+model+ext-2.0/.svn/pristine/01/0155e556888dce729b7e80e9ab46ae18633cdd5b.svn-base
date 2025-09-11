@@ -1,0 +1,170 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign whos = {}>
+<#assign whoms = {}>
+<#assign whats = {}>
+<#assign labels = {}>
+<#--
+ ### Finds all attributes which are labelled as who, what, whom.
+ -->
+<#list model.objects as obj>
+  <#list obj.attributes as attr>
+    <#if attr.isLabelled('whom')>
+      <#if attr.type.custom>
+        <#assign whoms = whoms + {attr.type.name: []}>
+      <#else>
+        <#if attr.isLabelled('reference')>
+          <#--  <#assign whoms = whoms + {attr.getLabelledOptions('reference')['name']: []}>  -->
+          <#assign whoms = whoms + {attr.name: []}>
+        <#else>
+          <#assign whoms = whoms + {attr.name: []}>
+        </#if>
+        <#assign labels = labels + {attr.name: modelbase.get_attribute_label(attr)}>
+      </#if>
+    <#elseif attr.isLabelled('who')>
+      <#if attr.type.custom>
+        <#assign whos = whos + {attr.type.name: []}>
+      <#else>
+        <#if attr.isLabelled('reference')>
+          <#--  <#assign whos = whos + {attr.getLabelledOptions('reference')['name']: []}>  -->
+          <#assign whos = whos + {attr.name: []}>
+        <#else>
+          <#assign whos = whos + {attr.name: []}>
+        </#if>
+        <#assign labels = labels + {attr.name: modelbase.get_attribute_label(attr)}>
+      </#if>
+    <#elseif attr.isLabelled('what')>
+      <#if attr.type.custom>
+        <#assign whats = whats + {attr.type.name: []}>
+      <#else>
+        <#assign whats = whats + {attr.name: []}>
+      </#if>
+      <#assign labels = labels + {attr.name: modelbase.get_attribute_label(attr)}>
+    </#if>
+  </#list>
+</#list>
+<#list whos?keys as name>
+  <#assign val = whos[name]>
+  <#list model.objects as obj>
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled('who') && !attr.isLabelled('what') && !attr.isLabelled('whom') && !attr.isLabelled('which') && !attr.isLabelled('where')>
+        <#continue>
+      </#if>
+      <#if attr.type.name == name || attr.name == name>
+        <#assign val = val + [obj]>
+      </#if>
+    </#list>
+  </#list>
+  <#assign whos = whos + {name: val}>
+</#list>
+<#list whats?keys as name>
+  <#assign val = whats[name]>
+  <#list model.objects as obj>
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled('who') && !attr.isLabelled('what') && !attr.isLabelled('whom') && !attr.isLabelled('which') && !attr.isLabelled('where')>
+        <#continue>
+      </#if>
+      <#if attr.type.name == name || attr.name == name>
+        <#assign val = val + [obj]>
+      </#if>
+    </#list>
+  </#list>
+  <#assign whats = whats + {name: val}>
+</#list>
+<#list whoms?keys as name>
+  <#assign val = whoms[name]>
+  <#list model.objects as obj>
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled('who') && !attr.isLabelled('what') && !attr.isLabelled('whom') && !attr.isLabelled('which') && !attr.isLabelled('where')>
+        <#continue>
+      </#if>
+      <#if attr.type.name == name || attr.name == name>
+        <#assign val = val + [obj]>
+      </#if>
+    </#list>
+  </#list>
+  <#assign whoms = whoms + {name: val}>
+</#list>
+<#list whos?keys as name>
+  <#assign objtype = model.findObjectByName(name)!''>
+  <#assign refObjs = whos[name]>
+@name(label='${labels[name]!'TODO'}')
+@aggregate
+@who
+${name}_aggregate<
+
+  <#if objtype == ''>
+  @root
+  ${name}: string(64)<#if (refObjs?size > 0)>,</#if>
+  <#else>
+  @root
+  ${name}: &${name}(id)<#if (refObjs?size > 0)>,</#if>
+  </#if>
+  <#list refObjs as refObj> 
+
+    <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+    <#if refObjAttrId.type.name == name && refObj.isLabelled('entity')>
+  ${refObj.name}: &${refObj.name}(id)<#if refObj?index != refObjs?size - 1>,</#if>
+    <#else>
+  ${modelbase.get_object_plural(refObj)}: &${refObj.name}(id)[]<#if refObj?index != refObjs?size - 1>,</#if>
+    </#if>
+  </#list>
+
+>
+
+</#list>
+<#list whoms?keys as name>
+  <#assign objtype = model.findObjectByName(name)!''>
+  <#assign refObjs = whoms[name]>
+@name(label='${labels[name]!'TODO'}')
+@aggregate
+@whom
+${name}_as_whom_aggregate<
+
+  <#if objtype == ''>
+  @root
+  ${name}: string(64)<#if (refObjs?size > 0)>,</#if>
+  <#else>
+  @root
+  ${name}: &${name}(id)<#if (refObjs?size > 0)>,</#if>
+  </#if>
+  <#list refObjs as refObj> 
+
+    <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+    <#if refObjAttrId.type.name == name>
+  ${refObj.name}: &${refObj.name}(id)<#if refObj?index != refObjs?size - 1>,</#if>
+    <#else>
+  ${modelbase.get_object_plural(refObj)}: &${refObj.name}(id)[]<#if refObj?index != refObjs?size - 1>,</#if>
+    </#if>
+  </#list>
+
+>
+
+</#list>
+<#list whats?keys as name>
+  <#assign objtype = model.findObjectByName(name)!''>
+  <#assign refObjs = whats[name]>
+@name(label='${labels[name]!'TODO'}')
+@aggregate
+@what
+${name}_aggregate<
+
+  <#if objtype == ''>
+  @root
+  ${name}: string(64)<#if (refObjs?size > 0)>,</#if>
+  <#else>
+  @root
+  ${name}: &${name}(id)<#if (refObjs?size > 0)>,</#if>
+  </#if>
+  <#list refObjs as refObj> 
+
+    <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+    <#if refObjAttrId.type.name == name>
+  ${refObj.name}: &${refObj.name}(id)<#if refObj?index != refObjs?size - 1>,</#if>
+    <#else>
+  ${modelbase.get_object_plural(refObj)}: &${refObj.name}(id)[]<#if refObj?index != refObjs?size - 1>,</#if>
+    </#if>
+  </#list>
+  
+>
+
+</#list>

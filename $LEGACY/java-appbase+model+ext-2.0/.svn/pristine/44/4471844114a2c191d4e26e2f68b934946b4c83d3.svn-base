@@ -1,0 +1,198 @@
+<#import '/$/modelbase.ftl' as modelbase>
+if (typeof stdbiz === 'undefined') stdbiz = {};
+
+<#list model.objects as obj>
+  <#if obj.isLabelled('generated')><#continue></#if>
+  <#if obj.isLabelled('generated')><#continue></#if>
+  <#assign attrIds = modelbase.get_id_attributes(obj)>
+  <#if attrIds?size == 0><#continue></#if>
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ${obj.name?upper_case} RENDERER
+//
+////////////////////////////////////////////////////////////////////////////////
+
+stdbiz.${app.name}.createLinkDisable = function (opt) {
+  var link = dom.create('a', 'btn', 'text-danger');
+  var icon = dom.create('i', 'fas', 'fa-trash-alt');
+  if (opt)
+    stdbiz.${app.name}.bindElementEnable(link, opt.message, opt.model, opt.success);
+  return link;
+};
+
+stdbiz.${app.name}.createLinkEnable = function (opt) {
+  var link = dom.create('a', 'btn', 'text-primary');
+  var icon = dom.create('i', 'fas', 'fa-recycle');
+  if (opt)
+    stdbiz.${app.name}.bindElementDisable(link, opt.message, opt.model, opt.success);
+  return link;
+};
+
+stdbiz.${app.name}.createLinkEdit = function (opt) {
+  var link = dom.create('a', 'btn', 'text-primary');
+  var icon = dom.create('i', 'fas', 'fa-edit');
+  if (opt)
+    stdbiz.${app.name}.bindElementEdit(link, opt.message, opt.model, opt.success);
+  return link;
+};
+
+stdbiz.${app.name}.createLinkDelete = function (opt) {
+  var link = dom.create('a', 'btn', 'text-primary');
+  var icon = dom.create('i', 'fas', 'fa-times-circle');
+  if (opt)
+    stdbiz.${app.name}.bindElementEdit(link, opt.message, opt.model, opt.success);
+  return link;
+};
+
+stdbiz.${app.name}.createLinkActions = function(opt) {
+  var link = dom.create('a', 'btn', 'text-primary');
+  var icon = dom.create('i', 'fas', 'fa-ellipse-v');
+  return link;
+};
+
+// // 绑定元素触发【禁用】操作
+stdbiz.${app.name}.bindElementDisable = function (selector, message, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+  dom.bind(trigger, 'click', function() {
+    var model = dom.model(this);
+    dialog.confirm(message, function() {
+      stdbiz.${app.name}.disableStateOf${js.nameType(obj.name)}(model, function() {
+        if (resolve) resolve(model);
+      });
+    });
+  });
+};
+
+// 绑定元素触发【激活】操作
+stdbiz.${app.name}.bindElementEnable = function (selector, message, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+  dom.bind(link, 'click', function() {
+    var model = dom.model(this);
+    dialog.confirm(message, function() {
+      stdbiz.${app.name}.enableStateOf${js.nameType(obj.name)}(model, function() {
+        if (resolve) resolve(model);
+      });
+    });
+  });
+};
+
+// 绑定元素触发【保存】操作
+stdbiz.${app.name}.bindElementSave = function (selector, message, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+  dom.bind(link, 'click', function() {
+    var model = dom.model(this);
+    stdbiz.${app.name}.save${js.nameType(obj.name)}(model, function() {
+      if (resolve) resolve(model);
+    });
+  });
+};
+
+// 绑定元素触发【删除】操作
+stdbiz.${app.name}.bindElementDelete = function (selector, message, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+  dom.bind(link, 'click', function() {
+    var model = dom.model(this);
+    dialog.confirm(message, function() {
+      stdbiz.${app.name}.delete${js.nameType(obj.name)}(model, function() {
+        if (resolve) resolve(model);
+      });
+    });
+  });
+};
+
+// 绑定元素触发【编辑】操作
+stdbiz.${app.name}.bindElementEdit = function (selector, message, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+  dom.bind(trigger, 'click', function() {
+    var model = dom.model(this);
+    ajax.sidebar({
+      containerId: '#page${js.nameType(obj.name)}List',
+      title: title,
+      url: 'html/stdbiz/${app.name}/${obj.name}/edit.html',
+      success: function() {
+        page${js.nameType(obj.name)}Edit.show(model);
+      }
+    });
+  });
+};
+
+stdbiz.${app.name}.decorateReadonlyProgress = function (selector, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+};
+
+stdbiz.${app.name}.decorateReadonlyTags = function (selector, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+};
+
+stdbiz.${app.name}.decorateEditableTags = function (selector, model, resolve) {
+  var trigger;
+  if (typeof selector === 'string') 
+    trigger = dom.find(selector);
+  else
+    trigger = selector;
+  
+  dom.model(trigger, model);
+};
+
+// 渲染【可删除】列表
+stdbiz.${app.name}.render${js.nameType(obj.name)}List = function (selector, params, resolve) {
+  var container;
+  if (typeof selector === 'string') 
+    container = dom.find(selector);
+  else
+    container = selector;
+  
+  stdbiz.${app.name}.find${js.nameType(obj.name)}(model, function(data) {
+    if (!data) return;
+    for (var i = 0; i < data.length; i++) {
+      var li = dom.create('li', 'list-group-item');
+      // 名称，还有什么
+      container.appendChild(li);
+    }
+  });
+};
+
+</#list>

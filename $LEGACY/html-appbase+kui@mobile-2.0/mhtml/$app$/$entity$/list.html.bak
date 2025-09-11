@@ -1,0 +1,116 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#import '/$/appbase.ftl' as appbase>
+<#assign querybase = statics['io.doublegsoft.querybase.Querybase']>
+<#assign action = entity.getLabelledOptions('mobile')['action']!'home'>
+<div id="page${js.nameType(mobile.name)}${js.nameType(action)}" class="page">
+<#list action.attributes as attr>
+  <#if !attr.isLabelled('mobile')><#continue></#if>
+  <#assign widgetType = attr.getLabelledOptions('mobile')['widget']>
+  <#if widgetType?index_of('hscroll') == 0>
+  <div widget-id="hscroll${js.nameType(attr.name)}" class="ui seven item menu scrollable"></div>
+  <#elseif widgetType?index_of('tabs') == 0>
+  <div widget-id="tabs${js.nameType(attr.name)}" class="gmd-tabs">
+    <a class="gmd-tab active">全部</a>
+    <a class="gmd-tab">综合医院</a>
+    <a class="gmd-tab">社区医院</a>
+    <span class="gmd-tab-bottom" style="width: 33.3%"></span>
+  </div>
+  <#elseif widgetType?index_of('listview') == 0>
+  <div widget-id="list${js.nameType(attr.name)}" class="ui items"></div>
+  </#if>
+</#list>
+<script>
+
+function Page${js.nameType(mobile.name)}${js.nameType(action)}() {
+  this.page = dom.find('#page${js.nameType(mobile.name)}${js.nameType(action)}');
+<#list mobile.attributes as attr>
+  <#if !attr.isLabelled('mobile')><#continue></#if>
+  <#assign widgetType = attr.getLabelledOptions('mobile')['widget']>
+  <#if widgetType?index_of('hscroll') == 0>
+  this.hscroll${js.nameType(attr.name)} = dom.find('div[widget-id=hscroll${js.nameType(attr.name)}]', this.page);
+  <#elseif widgetType?index_of('tabs') == 0>
+  this.tabs${js.nameType(attr.name)} = dom.find('div[widget-id=tabs${js.nameType(attr.name)}]', this.page);
+  <#elseif widgetType?index_of('listview') == 0>
+  this.list${js.nameType(attr.name)} = dom.find('div[widget-id=list${js.nameType(attr.name)}]', this.page);
+  </#if>
+</#list>
+}
+<#list mobile.attributes as attr>
+  <#if !attr.isLabelled('mobile')><#continue></#if>
+  <#assign widgetType = attr.getLabelledOptions('mobile')['widget']>
+  <#if widgetType?index_of('listview') == 0>
+    <#-- FIXME  -->
+    <#assign itemType = widgetType?substring(widgetType?index_of('<') + 1, widgetType?index_of('>'))>
+    <#assign sourceModel = attr.getLabelledOptions('source')['model']>
+    <#assign querybaseInstance = querybase.parse(sourceModel)>
+
+/**
+ * 从后台获取【${modelbase.get_attribute_label(attr)!'TODO'}】数据渲染【${modelbase.get_attribute_label(attr)!'TODO'}】列表.
+ */
+Page${js.nameType(mobile.name)}${js.nameType(action)}.prototype.render${js.nameType(attr.name)} = function(params) {
+  let self = this;
+  ${app.name}.${js.nameVariable(querybaseInstance.name)}(params, function(data) {
+    for (let i = 0; i < data.length; i++) {
+      self.renderItem${js.nameType(attr.name)}(data[i]);
+    }
+  });
+};
+
+Page${js.nameType(mobile.name)}${js.nameType(action)}.prototype.renderItem${js.nameType(attr.name)} = function(single) {
+  let row = {};
+  <#list querybaseInstance.select.attributes as attrSelect>
+      <#if attrSelect?index == 0>
+  row.primary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 1>
+  row.secondary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 2>
+  row.tertiary = single.${js.nameVariable(attrSelect.name)};      
+      <#elseif attrSelect?index == 3>
+  row.quaternary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 4>
+  row.quinary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 5>
+  row.senary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 6>
+  row.septenary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 7>
+  row.octonary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 8>
+  row.novenary = single.${js.nameVariable(attrSelect.name)};
+      <#elseif attrSelect?index == 9>
+  row.decenary = single.${js.nameVariable(attrSelect.name)};
+      </#if>
+    </#list>
+
+  let item = dom.element(`
+<@appbase.html_item_widget indent=4 type=itemType model={} />
+  `);
+  dom.model(item, single);
+
+  /*!
+  ** 绑定单项的点击事件。
+  */
+  dom.bind(item, 'click', function() {
+    // TODO: 此处加入事件逻辑
+  });
+  this.list${js.nameType(attr.name)}.appendChild(item);
+};
+  </#if>
+</#list>
+
+Page${js.nameType(mobile.name)}${js.nameType(action)}.prototype.setup = function(params) {
+  let self = this;
+  self.complete();
+};
+
+Page${js.nameType(mobile.name)}${js.nameType(action)}.prototype.complete = function(params) {
+  $('#page${js.nameType(mobile.name)}${js.nameType(action)}').transition('slide up');
+};
+
+Page${js.nameType(mobile.name)}${js.nameType(action)}.prototype.show = function(params) {
+  this.setup(params);
+};
+
+page${js.nameType(mobile.name)}${js.nameType(action)} = new Page${js.nameType(mobile.name)}${js.nameType(action)}();
+</script>
+</div>

@@ -1,0 +1,71 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<div id="page${java.nameType(entity.name)}List" class="card mb-0">
+  <div class="card-header">
+    <i class="fa fa-list"></i>
+    <strong>${modelbase.get_object_label(entity)}列表</strong>
+    <div class="card-header-actions">
+    </div>
+  </div>
+  <div class="card-body">
+<#if entity.isLabelled('treelike')>
+    <div widget-id="tree${java.nameType(entity.name)}List" class="col-md-12 pl-0 pr-0" style="height: calc(100% - 20px)"></div>
+<#else>
+    <div widget-id="table${java.nameType(entity.name)}List" class="col-md-12 pl-0 pr-0" style="height: calc(100% - 20px)"></div>
+</#if>
+  </div>
+</div>
+
+<script>
+function Page${java.nameType(entity.name)}List() {
+  
+}
+
+Page${java.nameType(entity.name)}List.prototype.show = function (params) {
+  let self = this;
+  stdbiz.${app.name}.option${java.nameType(entity.name)}({
+    customElementId: 'TABLE.${entity.name?upper_case}.LIST'
+  }, function(option) {
+    option.columns = option.children;
+<#if entity.isLabelled('treelike')>
+    self.tree${java.nameType(entity.name)}List = new TreelikeTable(option);
+<#else>
+    self.table${java.nameType(entity.name)}List = new PaginationTable(option);
+</#if>
+    self.setup(params);
+  });
+};
+
+Page${java.nameType(entity.name)}List.prototype.setup = function (params) {
+<#if entity.isLabelled('treelike')>
+  this.tree${java.nameType(entity.name)}List.render('#page${java.nameType(entity.name)}List div[widget-id=tree${java.nameType(entity.name)}List]');
+<#else>
+  this.table${java.nameType(entity.name)}List.render('#page${java.nameType(entity.name)}List div[widget-id=table${java.nameType(entity.name)}List]');
+</#if>
+};
+
+Page${java.nameType(entity.name)}List.prototype.edit${java.nameType(entity.name)} = function (params) {
+  ajax.sidebar({
+    containerId: '#page${java.nameType(entity.name)}List',
+    title: params.${java.nameVariable(entity.name)}Name,
+    url: 'html/stdbiz/${app.name}/${entity.name}/edit.html',
+    success: function() {
+      page${js.nameType(entity.name)}Edit.show(params);
+    }
+  });
+};
+
+Page${java.nameType(entity.name)}List.prototype.detail${java.nameType(entity.name)} = function (params) {
+  ajax.overlay({
+    containerId: '#page${java.nameType(entity.name)}List',
+    title: params.${java.nameVariable(entity.name)}Name,
+    url: 'html/stdbiz/${app.name}/${entity.name}/detail.html',
+    success: function() {
+      page${js.nameType(entity.name)}Detail.show(params);
+    }
+  });
+};
+
+page${java.nameType(entity.name)}List = new Page${java.nameType(entity.name)}List();
+page${java.nameType(entity.name)}List.show();
+
+</script>

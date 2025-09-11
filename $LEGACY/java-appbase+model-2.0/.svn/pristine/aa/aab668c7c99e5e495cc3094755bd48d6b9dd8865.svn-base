@@ -1,0 +1,478 @@
+<#import '/$/modelbase.ftl' as modelbase>
+
+<#--  -->
+<#function get_table_type obj>
+  <#if obj.isLabelled('entity')>
+    <#return "'N'">
+  <#elseif obj.isLabelled('value')>
+    <#return "'V'">
+  <#elseif obj.isLabelled('conjunction')>
+    <#return "'X'">
+  <#elseif obj.isLabelled('series')>
+    <#return "'S'">
+  <#elseif obj.getLabelledOptions('entity')['revision']??>
+    <#return "'R'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#--  -->
+<#function get_bool flag>
+  <#if flag?? && flag>
+    <#return 'T'>
+  </#if>
+  <#return 'F'>
+</#function>
+<#function get_ref attr>
+  <#if attr.constraint.domainType.toString()?index_of('&') == 0>
+    <#return "'" + attr.constraint.domainType.toString() + "'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#list model.objects as obj>
+  <#if !obj.persistenceName?? || obj.isLabelled('generated')><#continue></#if>
+  <#assign tabId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+  <#assign labelObj = modelbase.get_object_label(obj)!''>
+  <#if obj.isLabelled('entity')>
+    <#assign entity = obj>
+-- 列表  
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.LIST', '${labelObj}列表', 'LIST', '/html/stdbiz/${app.name}/${obj.name}/list.html', 'DESKTOP', 'E', '
+<div id="page${java.nameType(entity.name)}List" widget-type="Page" class="card fade fadeIn">
+  <div class="card-header">
+    <i class="fa fa-list"></i>
+    <strong>${modelbase.get_object_label(entity)}列表</strong>
+    <div class="card-header-actions">
+    </div>
+  </div>
+  <div class="card-body">
+<#if entity.isLabelled('treelike')>
+    <div class="col-md-12 pl-0 pr-0" style="height: calc(100% - 20px)"
+         widget-id="TREELIKETABLE.${entity.name?upper_case}.LIST" widget-type="TreelikeTable">
+    </div>
+<#else>
+    <div class="col-md-12 pl-0 pr-0" style="height: calc(100% - 20px)"
+         widget-id="PAGINATIONTABLE.${entity.name?upper_case}.LIST" widget-type="PaginationTable">
+    </div>
+</#if>
+  </div>
+</div>
+');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.LIST', 'PAGINATIONTABLE.${obj.name?upper_case}.LIST', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+-- 编辑
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.EDIT', '${labelObj}编辑', 'EDIT', '/html/stdbiz/${app.name}/${obj.name}/edit.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(entity.name)}Edit" widget-type="Page" class="card b-a-0">
+  <div widget-id="FORM.${entity.name?upper_case}.EDIT" widget-type="FormLayout" class="card-body mb-3">
+  </div>
+</div>
+');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.EDIT', 'FORM.${obj.name?upper_case}.EDIT', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+-- 概览
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.VIEW', '${labelObj}概览', 'VIEW', '/html/stdbiz/${app.name}/${obj.name}/view.html', 'DESKTOP', 'E');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.VIEW', 'PROFILE.${obj.name?upper_case}.VIEW', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+  <#if obj.getLabelledOptions('entity')['revision']??>
+-- 修改日志
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.LOG', '${labelObj}日志', 'LOG', '/html/stdbiz/${app.name}/${obj.name}/log.html', 'DESKTOP', 'E');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.LOG', 'TIMELINE.${obj.name?upper_case}.LOG', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+  </#if>
+  <#list obj.attributes as attr>
+    <#if attr.name == 'status'>
+-- 状态
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.STATUS', '${labelObj}状态', 'STATUS', '/html/stdbiz/${app.name}/${obj.name}/status.html', 'DESKTOP', 'E');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.STATUS', 'TIMELINE.${obj.name?upper_case}.STATUS', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+-- 向导
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.STEP', '${labelObj}状态', 'STEP', '/html/stdbiz/${app.name}/${obj.name}/step.html', 'DESKTOP', 'E');
+
+insert into tv_uxd_custwinelem (custwinid, custelemid, pos, sz, val, ordpos)
+values ('PAGE.${app.name?upper_case}.${obj.name?upper_case}.STEP', 'WIZARD.${obj.name?upper_case}.STEP', '(1, 1, 100%, 100%)', '(100%, 100%)', '', 1);
+
+    </#if>
+  </#list>
+<#---------------->
+<#-- 页面查询列表 -->
+<#---------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('PAGINATIONTABLE.${obj.name?upper_case}.LIST', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'table${js.nameType(obj.name)}List', '${labelObj}分页列表', 'PaginationTable', 'E', '
+{
+  url: ''/api/v2/common/script'',
+  usecase: ''stdbiz/${app.name}/${obj.name}/paginate'',
+  limit: 15,
+    <#if obj.isLabelled('treelike')>
+  fields: {
+    id: ''${js.nameVariable(obj.name)}Id'', 
+    name: ''${js.nameVariable(obj.name)}Name'',
+    parentId: ''parent${js.nameType(obj.name)}Id''
+  },
+  params: {
+    root: {
+      _and_condition: ''and ${obj.persistenceName?split('_')[2]}.par${modelbase.get_id_attributes(obj)[0].persistenceName} = \\''0\\''''
+    },
+    child: {
+
+    }
+  },
+    <#else>
+  params: params,
+    </#if>
+  columns: [{
+    title: ''名称'',
+    style: ''text-align: left;'',
+    display: function(row, td, rowidx, colidx) {
+      let strong = dom.create(''strong'');
+      strong.innerText = row.${js.nameVariable(obj.name)}Name;
+      let small = dom.create(''div'', ''small'', ''text-muted'');
+      small.innerText = '''';
+
+      td.appendChild(strong);
+      td.appendChild(small);
+    }
+  },{
+    title: ''操作'',
+    style: ''text-align: center;'',
+    display: function(row, td, rowidx, colidx) {
+      // 编辑
+      let link = dom.create(''a'', ''btn'', ''text-primary'');
+      dom.model(link, row);
+      let icon = dom.create(''i'', ''fas'', ''fa-edit'');
+      link.appendChild(icon);
+      td.appendChild(link);
+      dom.bind(link, ''click'', function() {
+        let params = dom.model(this);
+        // page${js.nameType(obj.name)}List.edit${js.nameType(obj.name)}(params);
+        stdbiz.sidebar(''#page${js.nameType(obj.name)}List'', ''PAGE.${app.name?upper_case}.${obj.name?upper_case}.EDIT'', ''#page${js.nameType(obj.name)}Edit'', params);
+      });
+
+      if (!row.state) return;
+
+      // 禁用和恢复
+      link = dom.create(''a'', ''btn'');
+      dom.model(link, row);
+      if (row.state == ''E'') {
+        link.classList.add(''text-danger'');
+        icon = dom.create(''i'', ''fas'', ''fa-trash-alt'');
+        dom.bind(link, ''click'', function() {
+          let ${js.nameVariable(obj.name)}Id = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-id'');
+          let ${js.nameVariable(obj.name)}Name = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-name'');
+          stdbiz.uxd.disableStateOfCustomElement(${js.nameVariable(obj.name)}Id, ''确定要禁用【'' + ${js.nameVariable(obj.name)}Name + ''】？'', function(data) {
+            page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}List.request();
+          });
+        });
+      } else {
+        dom.bind(link, ''click'', function() {
+          let ${js.nameVariable(obj.name)}Id = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-id'');
+          let ${js.nameVariable(obj.name)}Name = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-text'');
+          stdbiz.uxd.enableStateOfCustomElement(${js.nameVariable(obj.name)}Id, ''确定要恢复【'' + ${js.nameVariable(obj.name)}Name + ''】？'', function(data) {
+            page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}List.request();
+          });
+        });
+        link.classList.add(''text-primary'');
+        icon = dom.create(''i'', ''fas'', ''fa-recycle'');
+      }
+      link.appendChild(icon);
+      td.appendChild(link);
+    }
+  }],
+  // 查询条件
+  filter: {
+    fields: [{
+      title: ''名称'',
+      name: ''${js.nameVariable(obj.name)}Name'',
+      input: ''text''
+    },{
+      title: ''系统状态'',
+      input: ''check'',
+      name: ''state[]'',
+      values: [{
+        value: stdbiz.uxd.ENABLED, text: ''已激活'', checked: true
+      }, {
+        value: stdbiz.uxd.DISABLED, text: ''已禁用''
+      }]
+    }]
+  },
+  // 排序
+  sort: {
+    fields: [{
+      title: ''名称'',
+      name: ''${js.nameVariable(obj.name)}Name''
+    }]
+  }
+}
+');
+    <#assign columnedAttrs = []>
+    <#list obj.attributes as attr>
+      <#if attr.name == 'status'>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.name == 'name'>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.type.custom && attr.type.name == obj.name>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.type.custom>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.type == 'date'>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.type == 'type'>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      <#elseif attr.type.collection>
+        <#assign columnedAttrs = columnedAttrs + [attr]>
+      </#if>
+    </#list>
+    <#list columnedAttrs as attr>
+      <#assign labelAttr = modelbase.get_attribute_label(attr)>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, biz, req, ordpos, sta, srp)
+values ('TABLE.${obj.name?upper_case}.LIST:${attr.name?upper_case}', 'TABLE.${obj.name?upper_case}.LIST', '${obj.name?upper_case}:${modelbase.get_attribute_sql_name(attr)?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '${modelbase.get_attribute_sql_name(attr)}', '${labelAttr}', 'column', '${attr.constraint.domainType.name}', 'T', 'F', ${attr?index}, 'E', '
+{
+  title: ''${labelAttr}'',
+  style: ''text-align: <#if attr.name == 'name'>left<#else>center</#if>'',
+  display: function(row, td) {
+      <#if attr.type.custom>
+    if (row.${modelbase.get_attribute_sql_name(attr)?replace('Id', 'Name')}) {
+      td.append(row.${modelbase.get_attribute_sql_name(attr)?replace('Id', 'Name')});
+    }
+      <#else>
+    if (row.${modelbase.get_attribute_sql_name(attr)}) {
+      td.append(row.${modelbase.get_attribute_sql_name(attr)});
+    }
+      </#if>
+  }
+}
+');  
+    </#list>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, biz, req, ordpos, sta, srp)
+values ('TABLE.${obj.name?upper_case}.LIST:_OPERATE', 'TABLE.${obj.name?upper_case}.LIST', '${obj.name?upper_case}:_OPERATE', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '_OPERATE', '操作', 'column', '', 'T', 'F', ${columnedAttrs?size}, 'E', '
+{
+  title: ''操作'',
+  style: ''text-align: center'',
+  display: function(row, td) {
+    let link = dom.create(''a'', ''btn'', ''text-primary'');
+    dom.model(link, row);
+    let icon = dom.create(''i'', ''fas'', ''fa-edit'');
+    link.appendChild(icon);
+    td.appendChild(link);
+    dom.bind(link, ''click'', function() {
+      let params = dom.model(this);
+      page${js.nameType(obj.name)}List.edit${js.nameType(obj.name)}(params);
+    });
+
+    if (!row.state) return;
+    link = dom.create(''a'', ''btn'');
+    dom.model(link, row);
+    if (row.state == ''E'') {
+      link.classList.add(''text-danger'');
+      icon = dom.create(''i'', ''fas'', ''fa-trash-alt'');
+      dom.bind(link, ''click'', function() {
+        let ${js.nameVariable(obj.name)}Id = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-id'');
+        let ${js.nameVariable(obj.name)}Name = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-name'');
+        stdbiz.uxd.disableStateOfCustomElement(${js.nameVariable(obj.name)}Id, ''确定要禁用【'' + ${js.nameVariable(obj.name)}Name + ''】？'', function(data) {
+          page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}List.request();
+        });
+      });
+    } else {
+      dom.bind(link, ''click'', function() {
+        let ${js.nameVariable(obj.name)}Id = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-id'');
+        let ${js.nameVariable(obj.name)}Name = this.getAttribute(''data-model-${obj.name?replace('_', '-')}-text'');
+        stdbiz.uxd.enableStateOfCustomElement(${js.nameVariable(obj.name)}Id, ''确定要恢复【'' + ${js.nameVariable(obj.name)}Name + ''】？'', function(data) {
+          page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}List.request();
+        });
+      });
+      link.classList.add(''text-primary'');
+      icon = dom.create(''i'', ''fas'', ''fa-recycle'');
+    }
+    link.appendChild(icon);
+    td.appendChild(link);
+  }
+}
+');  
+
+<#---------------->
+<#-- 页面编辑表单 -->
+<#---------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('FORM.${obj.name?upper_case}.EDIT', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'form${js.nameType(obj.name)}Edit', '${labelObj}编辑表单', 'FormLayout', 'E', '
+{
+  columnCount: 1,
+  save: {
+    url: ''/api/v2/common/script'',
+    usecase: ''stdbiz/${app.name}/${obj.name}/save'',
+    callback: function() {
+      page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}List.request();
+    }
+  },
+  read: {
+    url: ''/api/v2/common/script'',
+    usecase: ''stdbiz/${app.name}/${obj.name}/read''
+  },
+  fields: [{
+    <#list obj.attributes as attr>
+      <#if attr?index != 0>
+  }, {
+      </#if>
+    name: ''${modelbase.get_attribute_sql_name(attr)}'',
+    title: ''${modelbase.get_attribute_label(attr)}'',
+    required: <#if attr.constraint.nullable>false<#else>true</#if>,
+      <#if attr.type.custom>
+        <#assign refObj = model.findObjectByName(attr.type.name)>
+    input: ''select'',
+    options: {
+      url: ''/api/v2/common/script'',
+      usecase: ''stdbiz/${app.name}/${refObj.name}/find'',
+      placeholder: ''请选择...'',
+      searchable: true,
+      fields: {value: ''${java.nameVariable(refObj.name)}Id'', text: ''${java.nameVariable(refObj.name)}Name''}
+    }
+      <#elseif attr.constraint.domainType.name?index_of('enum') == 0>
+        <#assign pairs = typebase.enumtype(attr.constraint.domainType.name)>
+    input: ''select'',
+    options: {
+      placeholder: ''请选择...'',
+      searchable: false,
+      values: [
+          <#list pairs as pair>
+        {value: "${pair.key}", text: "${pair.value}"}<#if pair?index != pairs?size - 1>,</#if>
+          </#list>
+      ]
+    }
+      <#else>
+    input: ''text''
+      </#if>
+    </#list>    
+  }]
+}
+');
+
+    <#list obj.attributes as attr>
+      <#assign labelAttr = modelbase.get_attribute_label(attr)>
+      <#assign role = modelbase.get_form_widget(attr)!'text'>
+      <#if attr.type.collection>
+        <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, pos, ordpos, identif, biz, req, sta, srp)
+values ('FORM.${obj.name?upper_case}.EDIT:${attr.name?upper_case}', 'FORM.${obj.name?upper_case}.EDIT', '${obj.name?upper_case}:${modelbase.get_attribute_sql_name(attr)?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '${modelbase.get_attribute_sql_name(attr)}', '${labelAttr}', 'checklist', '${attr.constraint.domainType.name}', '(${attr?index + 1}, 1)', '${attr?index + 1}', '<#if attr.constraint.identifiable>T<#else>F</#if>', <#if attr.getLabelledOptions('name')['label']??>'T'<#else>'F'</#if>, '<#if attr.constraint.nullable>F<#else>T</#if>', 'E', '
+{
+  name: ''${modelbase.get_attribute_sql_name(attr)}'',
+  title: ''${labelAttr}'',
+  input: ''checklist'',
+  required: <#if attr.constraint.nullable>false<#else>true</#if>,
+  options: {
+    url: ''/api/v2/common/script'',
+    usecase: ''stdbiz/${app.name}/${refObj.name}/find'',
+    fields: {value: ''${java.nameVariable(refObj.name)}Id'', text: ''${java.nameVariable(refObj.name)}Name''}
+  }
+}
+'); 
+
+      <#elseif attr.type.custom>
+        <#assign refObj = model.findObjectByName(attr.type.name)>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, pos, ordpos, identif, biz, req, sta, srp)
+values ('FORM.${obj.name?upper_case}.EDIT:${attr.name?upper_case}', 'FORM.${obj.name?upper_case}.EDIT', '${obj.name?upper_case}:${modelbase.get_attribute_sql_name(attr)?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '${modelbase.get_attribute_sql_name(attr)}', '${labelAttr}', '${role}', '${attr.constraint.domainType.name}', '(${attr?index + 1}, 1)', '${attr?index + 1}', '<#if attr.constraint.identifiable>T<#else>F</#if>', <#if attr.getLabelledOptions('name')['label']??>'T'<#else>'F'</#if>, '<#if attr.constraint.nullable>F<#else>T</#if>', 'E', '
+{
+  name: ''${modelbase.get_attribute_sql_name(attr)}'',
+  title: ''${modelbase.get_attribute_label(attr)}'',
+  input: ''select'',
+  required: <#if attr.constraint.nullable>false<#else>true</#if>,
+  options: {
+    url: ''/api/v2/common/script'',
+    usecase: ''stdbiz/${app.name}/${refObj.name}/find'',
+    placeholder: ''请选择...'',
+    searchable: true,
+    fields: {value: ''${java.nameVariable(refObj.name)}Id'', text: ''${java.nameVariable(refObj.name)}Name''}
+  }
+}
+');
+
+      <#elseif attr.constraint.domainType.name?index_of('enum') == 0>
+        <#assign pairs = typebase.enumtype(attr.constraint.domainType.name)>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, pos, ordpos, identif, biz, req, sta, srp)
+values ('FORM.${obj.name?upper_case}.EDIT:${attr.name?upper_case}', 'FORM.${obj.name?upper_case}.EDIT', '${obj.name?upper_case}:${modelbase.get_attribute_sql_name(attr)?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '${modelbase.get_attribute_sql_name(attr)}', '${labelAttr}', '${role}', '${attr.constraint.domainType.name}', '(${attr?index + 1}, 1)', '${attr?index + 1}', '<#if attr.constraint.identifiable>T<#else>F</#if>', <#if attr.getLabelledOptions('name')['label']??>'T'<#else>'F'</#if>, '<#if attr.constraint.nullable>F<#else>T</#if>', 'E', '
+{
+  name: ''${modelbase.get_attribute_sql_name(attr)}'',
+  title: ''${modelbase.get_attribute_label(attr)}'',
+  input: ''select'',
+  options: {
+    placeholder: ''请选择...'',
+    searchable: false,
+    values: [
+        <#list pairs as pair>
+      {value: "${pair.key}", text: "${pair.value}"}<#if pair?index != pairs?size - 1>,</#if>
+        </#list>
+    ]
+  }
+}
+');
+
+      <#else>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, dmntyp, pos, ordpos, identif, biz, req, sta, srp)
+values ('FORM.${obj.name?upper_case}.EDIT:${attr.name?upper_case}', 'FORM.${obj.name?upper_case}.EDIT', '${obj.name?upper_case}:${modelbase.get_attribute_sql_name(attr)?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY_FIELD', '${modelbase.get_attribute_sql_name(attr)}', '${labelAttr}', '${role}', '${attr.constraint.domainType.name}', '(${attr?index + 1}, 1)', '${attr?index + 1}', '<#if attr.constraint.identifiable>T<#else>F</#if>', <#if attr.getLabelledOptions('name')['label']??>'T'<#else>'F'</#if>, '<#if attr.constraint.nullable>F<#else>T</#if>', 'E', '
+{
+  name: ''${modelbase.get_attribute_sql_name(attr)}'',
+  title: ''${modelbase.get_attribute_label(attr)}'',
+  input: ''${role}'',
+  value: '''',
+  domain: '''',
+  readonly: false,
+  required: <#if attr.constraint.nullable>false<#else>true</#if>,
+  tooltip: ''''
+}
+'); 
+
+      </#if>
+    </#list>
+  </#if>
+
+<#------------------>
+<#-- 页面分组展示 -->
+<#------------------>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('PROFILE.${obj.name?upper_case}.VIEW', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'group${js.nameType(obj.name)}View', '${labelObj}展示分组', 'GroupLayout', 'E', '
+{
+
+}
+');
+
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, biz, ordpos, sta, srp)
+values ('PROFILE.${obj.name?upper_case}.VIEW:OVERVIEW', 'VIEW.${obj.name?upper_case}.VIEW', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'group${js.nameType(obj.name)}View', '概览', 'group', 'T', 1, 'E', '
+{
+  title: ''概览'',
+  onRender: function(container, opts) {
+
+  }
+}
+');
+
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, biz, ordpos, sta, srp)
+values ('PROFILE.${obj.name?upper_case}.VIEW:BASE', 'VIEW.${obj.name?upper_case}.VIEW', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'g${js.nameType(obj.name)}View', '基本信息', 'group', 'T', 2, 'E', '
+{
+  title: ''基本信息'',
+  onRender: function(container, opts) {
+    
+  }
+}
+');
+
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, biz, ordpos, sta, srp)
+values ('PROFILE.${obj.name?upper_case}.VIEW:DETAILS', 'VIEW.${obj.name?upper_case}.VIEW', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'row${js.nameType(obj.name)}Layout', '其他信息', 'group', 'T', 3, 'E', '
+{
+  title: ''其他信息'',
+  onRender: function(container, opts) {
+    
+  }
+}
+');
+</#list>

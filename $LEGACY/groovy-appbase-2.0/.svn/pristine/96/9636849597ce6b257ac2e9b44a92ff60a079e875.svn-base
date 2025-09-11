@@ -1,0 +1,102 @@
+import java.util.List
+import java.util.Map
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+
+import org.springframework.context.ApplicationContext
+
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.Pagination
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.util.Datasets
+
+def transact(ApplicationContext spring, GroovyShell shell, String scriptRoot, ObjectMap params, ObjectMap parentData) {
+  for (Map.Entry<String, Object> entry : params.entrySet()) {
+    String key = entry.getKey()
+    if (key.indexOf('||') != 0) continue;
+
+    String usecase = key.substring(2)
+    Object innerParams = entry.getValue()
+    Script script = shell.parse(new File(scriptRoot + "/" + usecase + ".groovy"))
+    
+    if (List.class.isAssignableFrom(innerParams.getClass())) {
+      List innerParamsList = (List) innerParams;
+      for (Map innerParamsItem : innerParamsList) {
+        String resultName = innerParamsItem.get("_result_name")
+        // parameter expression support
+        ObjectMap inner = ObjectMap.templatize(innerParamsItem, parentData);
+        Object result = script.handle(spring, inner)
+        if (resultName != null)
+          parentData.add(resultName, result)
+      }
+    } else {
+      String resultName = innerParams.get("_result_name")
+      // parameter expression support
+      ObjectMap inner = ObjectMap.templatize(innerParams, parentData);
+      Object result = script.handle(spring, inner)
+      if (resultName != null)
+        parentData.set(resultName, result)
+    }
+  }
+  return parentData
+}
+
+def conjunct(ApplicationContext spring, GroovyShell shell, String scriptRoot, ObjectMap params, List<ObjectMap> original) {
+  for (Map.Entry<String, Object> entry : params.entrySet()) {
+    String key = entry.getKey()
+    if (key.indexOf('<<') == 0) {
+      String usecase = key.substring(2)
+      ObjectMap innerParams = entry.getValue()
+      String sourceField = innerParams.get("_source_field")
+      String targetField = innerParams.get("_target_field")
+      String prefixName = innerParams.get("_prefix_name")
+      if (Strings.isBlank(prefixName)) prefixName = ''
+      for (ObjectMap item : original) {
+        if (item.get(sourceField) != null) {
+          innerParams.add(targetField + "s", item.get(sourceField))
+        }
+      }
+      Script script = shell.parse(new File(scriptRoot + "/" + usecase + ".groovy"))
+      Object result = script.handle(spring, innerParams)
+      List<ObjectMap> rows = null
+      if (result.getClass() == Pagination.class) {
+        rows = result.getData()
+      } else {
+        rows = result
+      }
+      original = Datasets.conjunct(original, sourceField, rows, targetField, prefixName);
+    }
+  }
+  return original
+}
+
+def hierarchize(ApplicationContext spring, GroovyShell shell, String scriptRoot, ObjectMap params, List<ObjectMap> original) {
+  for (Map.Entry<String, Object> entry : params.entrySet()) {
+    String key = entry.getKey()
+    if (key.indexOf('//') == 0) {
+      String usecase = key.substring(1)
+      ObjectMap innerParams = entry.getValue()
+      String sourceField = innerParams.get("_source_field")
+      String targetField = innerParams.get("_target_field")
+      String hierarchyName = innerParams.get("_hierarchy_name")
+      if (Strings.isBlank(hierarchyName)) hierarchyName = ''
+      for (ObjectMap item : original) {
+        if (item.get(sourceField) != null) {
+          innerParams.add(targetField + "s", item.get(sourceField))
+        }
+      }
+      Script script = shell.parse(new File(scriptRoot + "/" + usecase + ".groovy"))
+      Object result = script.handle(spring, innerParams)
+      List<ObjectMap> rows = null
+      if (result.getClass() == Pagination.class) {
+        rows = result.getData()
+      } else {
+        rows = result
+      }
+      original = Datasets.hierarchize(original, sourceField, rows, targetField, hierarchyName);
+    }
+  }
+  return original
+}

@@ -1,0 +1,5 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign containerId = child.containerId>
+$('#${js.nameVariable(containerId)} button[type=back]').on('click', function() {
+  displayWidget('${js.nameVariable(containerId?replace('edit', 'list'))}');
+});

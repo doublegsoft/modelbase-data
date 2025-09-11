@@ -1,0 +1,490 @@
+<#import '/$/modelbase.ftl' as modelbase>
+if (typeof stdbiz === 'undefined') stdbiz = {};
+
+<#assign constants = {}>
+<#list model.objects as obj>
+  <#if obj.isLabelled('generated')><#continue></#if>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name?index_of('enum') == 0>
+      <#assign pairs = typebase.enumtype(attr.constraint.domainType.name)>
+      <#list pairs as pair>
+        <#assign constants = constants + {attr.name + '_' + pair.key: pair}>
+      </#list>
+    </#if>
+  </#list>
+</#list>
+stdbiz.${app.name} = {
+<#list model.objects as obj>
+  <#if obj.isLabelled('generated')><#continue></#if>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name?index_of('enum') == 0>
+      <#-- 属性类型为枚举类型 -->
+      <#assign pairs = typebase.enumtype(attr.constraint.domainType.name)>
+  ${obj.name?upper_case}_${attr.name?upper_case}: {
+      <#list pairs as pair>
+    '${pair.key}': '${pair.value}'<#if pair?index != pairs?size - 1>,</#if>
+      </#list>
+  },
+  ${obj.name?upper_case}_${attr.name?upper_case}_VALUES: [
+      <#list pairs as pair>
+    {value: '${pair.key}', text: '${pair.value}'}<#if pair?index != pairs?size - 1>,</#if>
+      </#list>
+  ],
+    </#if>
+  </#list>
+  ${obj.name?upper_case}: 'STDBIZ.${app.name?upper_case}.${obj.name?upper_case}',
+</#list>
+<#list constants as name, pair>
+  // ${pair.value}
+  ${name?upper_case}: '${pair.key}',
+</#list>
+  ENABLED: 'E',
+  DISABLED: 'D',
+  TRUE: 'T',
+  FALSE: 'F'
+};
+
+stdbiz.${app.name}.isTrue = function (val) {
+  if (typeof val === 'undefined') return false;
+  return val == 'T' || val == true;
+};
+
+stdbiz.${app.name}.isFalse = function (val) {
+  if (typeof val === 'undefined') return true;
+  return val == 'F' || val == false;
+};
+
+<#list model.objects as obj>
+  <#if obj.isLabelled('generated')><#continue></#if>
+  <#assign attrIds = modelbase.get_id_attributes(obj)>
+  <#if attrIds?size == 0><#continue></#if>
+  <#assign attrId = modelbase.get_id_attributes(obj)[0]>
+  <#assign implicitReferences = modelbase.get_object_implicit_references(obj)>
+// 验证【${modelbase.get_object_label(obj)}】对象的属性的有效性
+stdbiz.${app.name}.validate${js.nameType(obj.name)} = function (containerId) {
+  var errors = $('#' + containerId).validate();
+  if (errors.length > 0) {
+    dialog.error(utils.message(errors));
+    return null;
+  }
+  return $('#' + containerId).formdata();
+};
+
+// 保存【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.save${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/save',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 读取【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.read${js.nameType(obj.name)} = function (${modelbase.get_attributes_as_sql_name_arguments(attrIds)}, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/read',
+    data: {
+  <#list attrIds as __attrId>
+      ${modelbase.get_attribute_sql_name(__attrId)}: ${modelbase.get_attribute_sql_name(__attrId)}<#if __attrId?index != attrIds?size - 1>,</#if>
+  </#list>
+    },
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 查询【${modelbase.get_object_label(obj)}】对象列表
+stdbiz.${app.name}.find${js.nameType(obj.plural)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/<#if obj.isLabelled('entity')>find<#else>get</#if>',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 删除【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.delete${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/delete',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 排斥【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.exclude${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/exclude',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 排序【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.reorder${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/reorder',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 增加${modelbase.get_object_label(obj)}】对象关联
+stdbiz.${app.name}.add${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/add',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 去掉${modelbase.get_object_label(obj)}】对象关联
+stdbiz.${app.name}.remove${js.nameType(obj.name)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/remove',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+// 获取${modelbase.get_object_label(obj)}】对象关联
+stdbiz.${app.name}.get${js.nameType(obj.plural)} = function (data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/get',
+    data: data,
+    success: function(resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+  <#-- 通过属性判断模式化得方法 -->
+  <#list obj.attributes as attr>
+    <#if attr.name == 'state'>
+    <#-- 属性为系统状态 -->
+// 激活【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.enableStateOf${js.nameType(obj.name)} = function (${modelbase.get_attribute_sql_name(attrId)}, message, resolve) {
+  dialog.confirm(message, function() {
+    xhr.post({
+      url: '/api/v2/common/script',
+      usecase: 'stdbiz/${app.name}/${obj.name}/save',
+      data: {
+        ${modelbase.get_attribute_sql_name(attrId)}: ${modelbase.get_attribute_sql_name(attrId)},
+        state: stdbiz.${app.name}.ENABLED
+      },
+      success: function (resp) {
+        if (resp.error) {
+          dialog.error(resp.error.message);
+          return;
+        }
+        if (resolve)
+          resolve(resp.data);
+      }
+    });
+  });
+};
+
+// 禁用【${modelbase.get_object_label(obj)}】对象
+stdbiz.${app.name}.disableStateOf${js.nameType(obj.name)} = function (${modelbase.get_attribute_sql_name(attrId)}, message, resolve) {
+  dialog.confirm(message, function() {
+    xhr.post({
+      url: '/api/v2/common/script',
+      usecase: 'stdbiz/${app.name}/${obj.name}/save',
+      data: {
+        ${modelbase.get_attribute_sql_name(attrId)}: ${modelbase.get_attribute_sql_name(attrId)},
+        state: stdbiz.${app.name}.DISABLED
+      },
+      success: function (resp) {
+        if (resp.error) {
+          dialog.error(resp.error.message);
+          return;
+        }
+        if (resolve)
+          resolve(resp.data);
+      }
+    });
+  });
+};
+
+    <#elseif attr.name == 'status'>
+    <#-- 属性为业务状态 -->
+// 改变${modelbase.get_object_label(obj)}】的业务状态
+stdbiz.${app.name}.changeStatusOf${js.nameType(obj.name)} = function (${modelbase.get_attribute_sql_name(attrId)}, status, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/save',
+    data: {
+      ${modelbase.get_attribute_sql_name(attrId)}: ${modelbase.get_attribute_sql_name(attrId)},
+      status: status
+    },
+    success: function (resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+    <#elseif attr.type.custom>
+    <#-- 属性为自定义对象 -->
+// 加载【${modelbase.get_attribute_label(attr)}】对应的对象集合
+stdbiz.${app.name}.load${js.nameType(attr.name)}${js.nameType(obj.name)} = function(data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${attr.type.name}/find',
+    data: data,
+    success: function (resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+    <#elseif attr.type.collection>
+    <#-- 属性为集合对象 -->
+// 加载【${modelbase.get_attribute_label(attr)}】对应的对象集合
+stdbiz.${app.name}.load${js.nameType(attr.name)}${js.nameType(obj.name)} = function(data, resolve) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${attr.type.name}/find',
+    data: data,
+    success: function (resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (resolve)
+        resolve(resp.data);
+    }
+  });
+};
+
+    </#if>
+  </#list>
+  <#-- 隐式引用所对应的模型方法 -->
+  <#list implicitReferences as implicitReferenceName, implicitReference>
+    <#assign attrRefId = ''>
+    <#assign attrRefType = ''>
+    <#list implicitReference as value, attr>
+      <#if value == 'type'>
+        <#assign attrRefType = attr>
+      <#elseif value == 'id'>
+        <#assign attrRefId = attr>
+      </#if>
+    </#list>
+// 加载隐式引用的${implicitReferenceName}对应的对象集合
+stdbiz.${app.name}.load${js.nameType(implicitReferenceName)} = function(referenceType, callback) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: referenceType.toLowerCase().replace('\\.', '/') + '/find',
+    data: {
+      state: stdbiz.${app.name}.ENABLED
+    },
+    success: function (resp) {
+      if (resp.error) {
+        dialog.error(resp.error.message);
+        return;
+      }
+      if (callback)
+        callback(resp.data);
+    }
+  });
+};
+
+  </#list>
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ${obj.name?upper_case} OPTIONS
+//
+////////////////////////////////////////////////////////////////////////////////
+
+stdbiz.${app.name}.option${js.nameType(obj.name)} = function (params, complete) {
+  xhr.post({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/uxd/custom_element/read',
+    data: {
+      customElementId: params.customElementId,
+      state: stdbiz.${app.name}.ENABLED,
+      readChildren: 'true'
+    },
+    success: function(resp) {
+      var data = resp.data;
+      var options = eval('(' + data.options + ')');
+      options.children = [];
+      var children = [];
+      for (var i = 0; i < data.children.length; i++) {
+        if (data.children[i].state === stdbiz.uxd.ENABLED) {
+          children.push(data.children[i]);
+        }
+      }
+      children = children.sort(function(a, b) {
+        if (a.ordinalPosition > b.ordinalPosition) return 1;
+        if (a.ordinalPosition < b.ordinalPosition) return -1;
+        return 0;
+      });
+      for (var i = 0; i < children.length; i++) {
+        var row = children[i];
+        var child = eval('(' + row.options + ')');
+        options.children.push(child);
+      }
+      complete(options);
+    }
+  });
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ${obj.name?upper_case} RENDERER
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// 渲染【${modelbase.get_object_label(obj)}】为下拉选择框
+stdbiz.${app.name}.render${js.nameType(obj.name)}AsFileList = function (selector, query, selection) {
+  selection = selection || null;
+  $(selector).searchselect({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/find',
+    data: query,
+    fields: {
+      text: '${js.nameVariable(obj.name)}Name',
+      value: '${modelbase.get_attribute_sql_name(attrId)}'
+    },
+    selection: selection
+  });
+};
+
+// 渲染【${modelbase.get_object_label(obj)}】为多项选择框
+stdbiz.${app.name}.render${js.nameType(obj.name)}AsMultiselect = function (selector, query, selection) {
+  selection = selection || [];
+  var checklist = new Checklist({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/find',
+    data: query,
+    name: '${modelbase.get_attribute_sql_name(attrId)}',
+    fields: {
+      text: '${js.nameVariable(obj.name)}Name', 
+      value: '${modelbase.get_attribute_sql_name(attrId)}'
+    }
+  });
+  checklist.render(selector, {
+    selection: selection
+  });
+  return checklist;
+};
+  <#if obj.isLabelled('treelike')>
+
+// 渲染【${modelbase.get_object_label(obj)}】为树型多项选择框
+stdbiz.${app.name}.render${js.nameType(obj.name)}AsTreeselect = function (selector, query, selection) {
+  selection = selection || [];
+  var checktree = new Checktree({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/treerize',
+    data: query,
+    name: '${modelbase.get_attribute_sql_name(attrId)}',
+    fields: {
+      name: '${js.nameVariable(obj.name)}Name', 
+      id: '${modelbase.get_attribute_sql_name(attrId)}',
+      parentId: 'parent${modelbase.get_attribute_sql_name(attrId)?cap_first}'
+    }
+  });
+  checktree.render(selector, {
+    selection: selection
+  });
+  return cehcktree;
+};
+  </#if>
+
+// 渲染【${modelbase.get_object_label(obj)}】的表型展示
+stdbiz.${app.name}.render${js.nameType(obj.name)}AsTable = function (selector, queryId, query, columns) {
+  var table = new PaginationTable({
+    url: '/api/v2/common/script',
+    usecase: 'stdbiz/${app.name}/${obj.name}/paginate',
+    queryId: queryId,
+    columns: columns
+  });
+  table.render(selector, query);
+};
+
+// 渲染【${modelbase.get_object_label(obj)}】的树型展示
+stdbiz.${app.name}.render${js.nameType(obj.name)}AsTree = function (selector, query, columns) {
+  
+};
+
+</#list>

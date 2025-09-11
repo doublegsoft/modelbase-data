@@ -1,0 +1,24 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign grid = Grid.layout(children)>
+<div id="${js.nameVariable(id)}" class="col-md-${guidbase.get_widget_width(position)} form-horizontal">
+<#list grid.rows as row>
+  <div class="form-group row">
+  <#list row.cells as cell>
+    <#assign widgets = cell.values>
+    <#assign width = guidbase.get_widget_width(widgets[0].position)>
+    <#if widgets[0].role == 'hidden'>
+${plugin.render(widgets[0], 4, 'html')}
+      <#continue>
+    </#if>
+    <#if widgets[0].role == 'checklist'>
+${plugin.render(widgets[0], 6, 'html')}
+    <#else>
+    <label class="col-md-${(width / 3)?floor} col-form-label">${widgets[0].title!'未指定'}：</label>
+    <div class="col-md-${(width / 3 * 2)?floor}">
+${plugin.render(widgets[0], 6, 'html')}
+    </div>
+    </#if>
+  </#list>
+  </div>
+</#list>
+</div>

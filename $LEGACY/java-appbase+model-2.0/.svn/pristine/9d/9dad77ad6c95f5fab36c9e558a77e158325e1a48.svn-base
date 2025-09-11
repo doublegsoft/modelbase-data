@@ -1,0 +1,49 @@
+<#import '/$/modelbase.ftl' as modelbase>
+
+<#--  -->
+<#function get_table_type obj>
+  <#if obj.isLabelled('entity')>
+    <#return "'N'">
+  <#elseif obj.isLabelled('value')>
+    <#return "'V'">
+  <#elseif obj.isLabelled('conjunction')>
+    <#return "'X'">
+  <#elseif obj.isLabelled('series')>
+    <#return "'S'">
+  <#elseif obj.getLabelledOptions('entity')['revision']??>
+    <#return "'R'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#--  -->
+<#function get_bool flag>
+  <#if flag?? && flag>
+    <#return 'T'>
+  </#if>
+  <#return 'F'>
+</#function>
+<#function get_ref attr>
+  <#if attr.constraint.domainType.toString()?index_of('&') == 0>
+    <#return "'" + attr.constraint.domainType.toString() + "'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#list model.objects as obj>
+  <#if !obj.persistenceName?? || obj.isLabelled('generated')><#continue></#if>
+  <#assign tabId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+  <#assign label = modelbase.get_object_label(obj)!''>
+insert into tn_dmm_tab (tabid, schmnm, modnm, modtxt, tabnm, tabtxt, tabtyp, nt)
+values ('${obj.name?upper_case}', 'STDBIZ', '${app.name?upper_case}', null, '${obj.persistenceName?trim}', '${label?trim}', ${get_table_type(obj)}, null);
+
+  <#assign col_index = 1>
+  <#list obj.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
+    <#assign colId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+insert into tn_dmm_col (colid, tabid, colnm, coltxt, dattyp, dmntyp, identif, nul, uniq, ordpos, 
+                        fmt, rng, regexpr, valexpr, qryexpr, cmdexpr, refexpr, uniqsql, refsql, opt, nt)
+values ('${obj.name?upper_case}:${attr.name?upper_case}', '${obj.name?upper_case}', '${attr.persistenceName?trim}', '${modelbase.get_attribute_label(attr)}', '${(typebase.typename(attr.constraint.domainType, "sql")!'varchar(64)')}', '${attr.constraint.domainType.name}', '${get_bool(attr.constraint.identifiable)}', '${get_bool(!attr.constraint.identifiable && attr.constraint.nullable)}', '${get_bool(attr.constraint.unique)}', '${col_index}', 
+        null, null, null, null, null, null, null, null, null, null, null);
+    <#assign col_index = col_index + 1>
+  </#list>
+
+</#list>

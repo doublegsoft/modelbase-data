@@ -1,0 +1,103 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign attrId = modelbase.get_id_attributes(entity)[0]>
+import java.util.List
+import java.util.ArrayList
+import java.util.Map
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+
+import org.springframework.context.ApplicationContext
+
+import net.doublegsoft.appbase.JsonData
+import net.doublegsoft.appbase.SqlParams
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.Pagination
+import net.doublegsoft.appbase.service.CommonService
+import net.doublegsoft.appbase.service.RepositoryService
+import net.doublegsoft.appbase.service.GroovyService
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.util.Datasets
+
+Pagination paginate(ApplicationContext spring, ObjectMap params) {
+  def start = params.get("start")
+  def limit = params.get("limit")
+
+  def commonService = spring.getBean(CommonService.class)
+  def repositoryService = spring.getBean(RepositoryService.class)
+
+  def pagination = commonService.paginate("${entity.persistenceName}.find", start, limit, new SqlParams().set(params))
+
+  // 拼音转换
+  if (params.containsKey("_pinyin_fields")) {
+    List<String> fields = params.get("_pinyin_fields");
+    for (ObjectMap item : pagination.getData()) {
+      for (String field : fields) {
+        if (!Strings.isBlank(item.get(field))) {
+          item.set(field + "Pinyin", Strings.pinyin(item.get(field)));
+        }
+      }
+    }
+  }
+
+  List<ObjectMap> items = new ArrayList()
+  items.addAll(pagination.getData())
+  <#assign implicitReferences = modelbase.get_object_implicit_references(entity)>
+  <#if implicitReferences?size != 0>
+  ObjectMap groupingIds = null
+    <#list implicitReferences as implicitReferenceName, implicitReference>
+      <#assign attrRefId = ''>
+      <#assign attrRefType = ''>
+      <#list implicitReference as value, attr>
+        <#if value == 'type'>
+          <#assign attrRefType = attr>
+        <#elseif value == 'id'>
+          <#assign attrRefId = attr>
+        </#if>
+      </#list>
+  if (params.get("get${java.nameType(implicitReferenceName)}") == "true" || params.get("_get_${implicitReferenceName}") == "true") {
+    groupingIds = new ObjectMap()
+    for (ObjectMap item : pagination.getData()) {
+      if (item.get("${modelbase.get_attribute_sql_name(attrRefId)}") != null) {
+        groupingIds.add(item.get("${modelbase.get_attribute_sql_name(attrRefType)}"), item.get("${modelbase.get_attribute_sql_name(attrRefId)}"))
+      }
+    }
+    for (Map.Entry<String, Object> entry : groupingIds.entrySet()) {
+      String group = entry.getKey();
+      List<ObjectMap> rows = repositoryService.findObjectsByIds(entry.getValue(), group);
+      items = Datasets.conjunct(items, "${modelbase.get_attribute_sql_name(attrRefId)}", rows, Strings.nameVariable(group.substring(group.lastIndexOf(".") + 1)) + "Id", "${java.nameVariable(implicitReferenceName)}");
+    }
+  }
+    </#list>
+  </#if>
+  pagination.getData().clear()
+  pagination.getData().addAll(items)
+  return pagination
+}
+
+Pagination handle(ApplicationContext spring, ObjectMap params) {
+  return paginate(spring, params)
+}
+
+def spring = binding.getVariable("spring")
+def params = binding.getVariable("params")
+GroovyService groovyService = spring.getBean(GroovyService.class)
+GroovyShell shell = new GroovyShell()
+
+String scriptRoot = groovyService.getRoot()
+Script common = shell.parse(new File(scriptRoot + "/common.groovy"))
+
+Pagination pagination = paginate(spring, params);
+
+List<ObjectMap> items = new ArrayList()
+items.addAll(pagination.getData())
+
+items = common.conjunct(spring, shell, scriptRoot, params, items)
+
+pagination.getData().clear()
+pagination.getData().addAll(items)
+
+def retVal = new JsonData()
+retVal.set(pagination)
+return retVal

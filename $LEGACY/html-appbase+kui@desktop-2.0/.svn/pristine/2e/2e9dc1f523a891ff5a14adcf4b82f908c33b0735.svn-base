@@ -1,0 +1,19 @@
+//
+// 初始化【${title!''}】下拉选择框。
+//
+xhr.post({
+  url: '',
+  data: {
+
+  },
+  success: function (resp) {
+    var select = $('#${js.nameVariable(container.id)} select[name=${js.nameVariable(id)}]');
+    for (var i = 0; i < resp.data.length; i++) {
+      var item = resp.data[i];
+      var option = $('<option></option>');
+      option.attr('value', '');
+      option.text('');
+      select.append(option);
+    }
+  }
+});

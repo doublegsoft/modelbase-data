@@ -1,0 +1,23 @@
+<#if !role??>
+  <#assign role = 'list'>
+</#if>
+<div id="${js.nameVariable(id)}" class="row ${style!''}">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fa fa-${role}"></i>
+        <strong>${title}</strong>
+      </div>
+      <div id="${js.nameVariable(id)}Body" class="card-body row">
+<#list children as child>
+  <#if child.title??>
+        <div class="card-title col-md-12 title-bordered">
+          <h6>${child.title}</h6>
+        </div>
+  </#if>
+${plugin.render(child, 8, 'html')}
+</#list>
+      </div>
+    </div>
+  </div>
+</div>

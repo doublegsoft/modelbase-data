@@ -1,0 +1,214 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign WidgetModelExpressionParser = statics['com.doublegsoft.jcommons.metaui.WidgetModelExpressionParser']>
+<#list model.objects as obj>
+  <#if obj.isLabelled('conjunction') || obj.isLabelled('generated')><#continue></#if>
+  <#-- 在表单中的显示属性集合 -->
+  <#assign formHiddenAttrs = []>
+  <#assign formShownAttrs = []>
+  <#-- 在查询中的显示属性集合 -->
+  <#assign queryAttrs = []>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable>
+      <#assign formHiddenAttrs = formHiddenAttrs + [attr]>
+    <#else>
+      <#assign formShownAttrs = formShownAttrs + [attr]>
+    </#if>
+    <#if attr.getLabelledOptions('persistence')['query']?? && !attr.constraint.identifiable>
+      <#assign queryAttrs = queryAttrs + [attr]>
+    </#if>
+  </#list>
+
+/*
+ * 【${modelbase.get_object_label(obj)}】容器页面。
+ */ 
+main:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "main")<
+  <#list obj.getLabelledOptions('usecases') as role, title>
+  widget_${obj.name}_${role}:panel(title: "${modelbase.get_object_label(obj)}${title!'位置'}", role: "${role}", style: "hide"),
+  </#list>
+  widget_${obj.name}_list:panel(title: "${modelbase.get_object_label(obj)}列表", role: "list", style: "show"),
+  widget_${obj.name}_edit:panel(title: "${modelbase.get_object_label(obj)}编辑", role: "edit", style: "hide"),
+  widget_${obj.name}_view:panel(title: "${modelbase.get_object_label(obj)}查看", role: "view", style: "hide")
+>
+
+  <#if obj.getLabelledOptions('widgets')['table']??>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['table']>
+    <#assign tableWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['query']!>
+    <#if modelExpr != ''>
+      <#assign queryWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+      <#assign queryAttrs = []>
+      <#list queryWidgetModel.widgetModels as elementModel>
+        <#assign queryAttr = model.findAttributeByNames(obj.name, elementModel.source)>
+        <#assign queryAttrs = queryAttrs + [queryAttr]>
+      </#list>
+    </#if>
+/*
+ * 【${modelbase.get_object_label(obj)}】列表页面。
+ */ 
+list:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "list")<
+  query_${obj.name}:query(position: "(1,1,100,0)")<
+  <#list queryAttrs as queryAttr>
+    <#assign index = queryAttr?index>
+    <#assign size = queryAttrs?size>
+    <#assign title = modelbase.get_attribute_label(queryAttr)>
+    <#assign role = modelbase.get_query_widget(queryAttr)!'text'>
+    <#assign options = ''>
+    <#assign bound = ''>
+    <#if queryAttr.constraint.domainType.name?index_of('enum') == 0>
+      <#assign options = queryAttr.constraint.domainType.name?replace('enum','')>
+    <#elseif queryAttr.constraint.domainType.name?index_of('enum') == 0>
+      <#assign options = '[T:是,F:否]'>
+      <#assign role = 'check'>
+    <#elseif queryAttr.constraint.domainType.name == 'state'>
+      <#assign options = '[E:有效,D:禁用]'>
+      <#assign role = 'check'>
+    <#elseif role == 'date'>
+      <#assign role = 'daterange'>
+    <#elseif queryAttr.type.custom>
+      <#assign bound = queryAttr.type.name>
+    </#if>
+    ${modelbase.get_attribute_sql_name(queryAttr)}:input(title: "${title}", role: "${role}", <#if options != ''>options: "${options}", </#if><#if bound != ''>bound: "${bound}",  fieldText: "${java.nameVariable(bound)}Name", fieldValue: "${java.nameVariable(bound)}Id", </#if>position: "(${(index / 2)?floor + 1},${index % 2 + 1},50,0)")<#if index != size - 1>,</#if>
+  </#list>      
+  >,
+  buttons_${obj.name}:buttons(position: "2,1,100,0")<
+    button(role: "query", title: "查询", containerId: "widget_list_${obj.name}", @action: ""),
+    button(role: "new", title: "新建", containerId: "widget_list_${obj.name}", @action: "")
+  >,
+  <#if obj.getLabelledOptions('entity')['collection']! == 'tree'>
+  tree_${obj.name}:tree(position: "(3,1,100,0)",
+  <#else>
+  table_${obj.name}:table(position: "(3,1,100,0)",
+  </#if>
+      @load: "/api/v1/${js.nameVariable(obj.name)}/find")<
+  <#list tableWidgetModel.widgetModels as elementModel>
+    <#assign index = elementModel?index>
+    <#assign size = tableWidgetModel.widgetModels?size>
+    <#assign elements = ''>
+    <#assign attr = ''>
+    <#assign options = ''>
+    <#if elementModel.class.simpleName == 'GroupingWidgetModel'>
+      <#assign title = elementModel.text>
+      <#list elementModel.primitiveWidgetModels as primitiveModel>
+        <#if elements != ''><#assign elements = elements + '+'></#if>
+        <#if primitiveModel.action??>
+          <#assign elements = elements + '@' + primitiveModel.action>
+        <#else>
+          <#assign primitiveModelSource = primitiveModel.source>
+          <#assign primitiveModelAttribute = model.findAttributeByNames(obj.name, primitiveModelSource)!>
+          <#if primitiveModelSource == 'id'>
+            <#assign primitiveModelSource = obj.name + '_id'>
+          <#elseif primitiveModelSource == 'name'>
+            <#assign primitiveModelSource = obj.name + '_name'>
+          </#if>
+          <#if primitiveModelAttribute != '' && primitiveModelAttribute.type.custom>
+            <#assign primitiveModelSource = primitiveModelAttribute.name + '.name'>
+          </#if>
+          <#assign elements = elements + primitiveModelSource>
+        </#if>
+      </#list>
+    <#else>
+      <#assign attr = model.findAttributeByNames(obj.name, elementModel.source)>
+      <#assign title = modelbase.get_attribute_label(attr)>
+      <#if attr.type.custom>
+        <#assign elements = attr.name + '.name'>
+      </#if>
+      <#if attr.constraint.domainType.name?index_of('enum') == 0>
+        <#assign options = attr.constraint.domainType.name?replace('enum','')>
+      <#elseif attr.constraint.domainType.name?index_of('enum') == 0>
+        <#assign options = '[T:是,F:否]'>
+      <#elseif attr.constraint.domainType.name == 'state'>
+        <#assign options = '[E:有效,D:禁用]'>
+      </#if>
+    </#if>
+    <#if attr != ''>${attr.name}:</#if>text(title: "${title}"<#if options != ''>, options: "${options}"</#if><#if elements != ''>, elements: "${elements}"</#if>)<#if index != size - 1>,</#if>
+  </#list>
+  > 
+>
+  </#if>
+  <#if obj.getLabelledOptions('widgets')['form']??>
+    <#assign modelExpr = obj.getLabelledOptions('widgets')['form']>
+    <#assign formWidgetModel = WidgetModelExpressionParser.parseWidgetModelExpression(modelExpr)>
+    <#assign elementModels = formWidgetModel.widgetModels>
+    <#assign elementCount = modelbase.get_form_widget_count(formWidgetModel)>
+/*
+ * 【${modelbase.get_object_label(obj)}】编辑页面。
+ */ 
+edit:page(module: "${application}/${obj.name}", bound: "${obj.name}", role: "edit")<
+  form_${obj.name}:form(position: "(1,1,100,0)", title: "${modelbase.get_object_label(obj)}",
+      @load: "@/api/v1/${js.nameVariable(obj.name)}/find",
+      @save: "@/api/v1/${js.nameVariable(obj.name)}/save",
+      @delete: "@/api/v1/${js.nameVariable(obj.name)}/delete",
+      @close: "")<
+  <#list formHiddenAttrs as formHiddenAttr>
+    ${modelbase.get_attribute_sql_name(formHiddenAttr)}:input(title: "${modelbase.get_attribute_label(formHiddenAttr)}", role: "hidden"),
+  </#list>
+  <#assign rowCount = elementModels?size>
+  <#list elementModels as elementModel>
+    <#assign rowIndex = elementModel?index + 1>
+    <#assign cellIndex = 1>
+    <#assign elementWidth = 50>
+    <#if elementModel.class.simpleName == 'GroupingWidgetModel'>
+      <#assign elementSize = elementModel.primitiveWidgetModels?size>
+      <#assign elementWidth = (100 / elementSize)?floor>
+      <#list elementModel.primitiveWidgetModels as primitiveWidgetModel>
+        <#assign cellIndex = primitiveWidgetModel?index + 1>
+        <#assign formShownAttr = model.findAttributeByNames(obj.name, primitiveWidgetModel.source)!>
+        <#if formShownAttr == ''><#stop '无法在【' + obj.name + '】中找到【' + primitiveWidgetModel.source + '】属性！'></#if>
+        <#assign title = modelbase.get_attribute_label(formShownAttr)>
+        <#assign role = modelbase.get_form_widget(formShownAttr)!'text'>
+        <#assign unit = formShownAttr.getLabelledOptions('name')['unit']!>
+        <#assign domain = ''>
+        <#assign range = formShownAttr.getLabelledOptions('persistence')['range']!>
+        <#if range != ''>
+          <#assign domain = 'range' + range>
+        <#elseif formShownAttr.type.name == 'number'>
+          <#assign domain = 'number'>
+        </#if>
+        <#if formShownAttr.type.collection && formShownAttr.type.componentType.custom>
+          <#assign refObj = model.findObjectByName(formShownAttr.type.componentType.name)>
+          <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+          <#if refObj.getLabelledOptions('entity')['collection']! == 'tree'><#assign role = 'checktree'></#if>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}", bound: "${refObj.name}", fieldText: "${java.nameVariable(refObj.name)}Name", fieldValue: "${java.nameVariable(refObj.name)}Id"<#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+        <#elseif formShownAttr.type.custom>
+          <#assign refObj = model.findObjectByName(formShownAttr.type.name)>
+          <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}", bound: "${refObj.name}", fieldText: "${java.nameVariable(refObj.name)}Name", fieldValue: "${java.nameVariable(refObj.name)}Id"<#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+        <#else>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}"<#if role == 'select'>, options: "${formShownAttr.constraint.domainType.toString()?replace('enum', '')}"</#if><#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+        </#if>
+      </#list>
+    <#else>
+      <#assign formShownAttr = model.findAttributeByNames(obj.name, elementModel.source)>
+      <#assign title = modelbase.get_attribute_label(formShownAttr)>
+      <#assign role = modelbase.get_form_widget(formShownAttr)!'text'>
+      <#assign unit = formShownAttr.getLabelledOptions('name')['unit']!>
+      <#assign domain = ''>
+      <#assign range = formShownAttr.getLabelledOptions('persistence')['range']!>
+      <#if range != ''>
+        <#assign domain = 'range' + range>
+      <#elseif formShownAttr.type.name == 'number'>
+        <#assign domain = 'number'>
+      <#elseif formShownAttr.type.collection && formShownAttr.type.componentType.custom>
+        <#assign refObj = model.findObjectByName(formShownAttr.type.componentType.name)>
+        <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+        <#if refObj.getLabelledOptions('entity')['collection']! == 'tree'><#assign role = 'checktree'></#if>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}", bound: "${refObj.name}", fieldText: "${java.nameVariable(refObj.name)}Name", fieldValue: "${java.nameVariable(refObj.name)!'Id'}"<#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+        <#continue>
+      <#elseif formShownAttr.type.custom>
+        <#assign refObj = model.findObjectByName(formShownAttr.type.name)>
+        <#assign refObjAttrId = modelbase.get_id_attributes(refObj)[0]>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}", bound: "${refObj.name}", fieldText: "${java.nameVariable(refObj.name)}Name", fieldValue: "${java.nameVariable(refObj.name)!'Id'}"<#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount || cellIndex != elementSize>,</#if>
+        <#continue>
+      </#if>
+    ${modelbase.get_attribute_sql_name(formShownAttr)}:input(title: "${title}", role: "${role}", position: "(${rowIndex},${cellIndex},${elementWidth},0)", domain: "${domain}"<#if role == 'select'>, options: "${formShownAttr.constraint.domainType.toString()?replace('enum', '')}"</#if><#if unit != ''>, unit: "${unit}"</#if><#if !formShownAttr.constraint.nullable>, required: "true"</#if>)<#if rowIndex != rowCount>,</#if>
+    </#if>
+  </#list>
+  >,
+  buttons_${obj.name}:buttons(position: "(2,1,100,0)")<
+    button(role: "save", title: "保存", containerId: "widget_edit_${obj.name}", @action: ""),
+    button(role: "reset", title: "重置", containerId: "widget_edit_${obj.name}", @action: ""),
+    button(role: "back", title: "返回", containerId: "widget_edit_${obj.name}", @action: "")
+  >
+>
+  </#if>
+</#list>

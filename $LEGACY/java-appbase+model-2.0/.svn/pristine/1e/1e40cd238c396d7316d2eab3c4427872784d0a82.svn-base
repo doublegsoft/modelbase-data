@@ -1,0 +1,369 @@
+<#import '/$/modelbase.ftl' as modelbase>
+
+<#macro print_package namespace module facet>
+package ${namespace}<#if module??>.${module}</#if><#if group??>.${facet}</#if>;
+</#macro>
+
+<#macro print_imports namespace module dependencies>
+import java.io.Serializable;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.ArrayList;
+
+import net.doublegsoft.appbase.ddd.DomainException;
+import net.doublegsoft.appbase.ddd.Repository;
+import net.doublegsoft.appbase.ObjectMap;
+import net.doublegsoft.appbase.SqlParams;
+import net.doublegsoft.appbase.service.CommonService;
+import net.doublegsoft.appbase.service.ServiceException;
+
+<#list dependencies as dep>
+import ${namespace}.<#if dep.module??>.${dep.module}</#if><#if dep.facet??>.${dep.facet}</#if>.*;
+</#list>
+</#macro>
+
+
+<#macro print_attributes_as_parameters attrs>
+<#list attrs as attr>${modelbase.get_type_name(attr.type)} ${java.nameVariable(attr.name)}<#if attr?index != attrs?size - 1>, </#if></#list></#macro>
+
+<#macro print_attributes_as_primitive_parameters attrs>
+${modelbase.get_attributes_as_primitive_parameters(attrs)}</#macro>
+
+
+<#macro print_attributes_as_arguments attrs>
+<#list attrs as attr>${java.nameVariable(attr.name)}<#if attr?index != attrs?size - 1>, </#if></#list></#macro>
+
+<#macro print_attributes_as_primitive_arguments attrs>
+<#list attrs as attr><#if attr.type.collection><#continue></#if><#if attr.type.custom>${java.nameVariable(attr.name)}.${get_primitive_getter(attr.directRelationship.targetAttribute)}<#else>${java.nameVariable(attr.name)}</#if><#if attr?index != attrs?size - 1>, </#if></#list></#macro>
+
+<#function get_primitive_getter targetAttribute>
+  <#assign attrGetter = targetAttribute>
+  <#assign getterStatement = 'get' + java.nameType(attrGetter.name) + '()'>
+  <#list 1..10 as i>
+    <#if attrGetter.type.primitive || !attrGetter.directRelationship??><#break></#if>
+    <#assign attrGetter = attrGetter.directRelationship.targetAttribute>
+    <#assign attrGetter = modelbase.get_id_attributes(attrGetter.parent)[0]>
+    <#assign getterStatement = getterStatement + '.get' + java.nameType(attrGetter.name) + '()'>
+  </#list>
+  <#return getterStatement>
+</#function>
+
+<#macro print_attributes_as_persistent_arguments attrs>
+<#list attrs as attr>${modelbase.get_type_name(attr.type)} ${java.nameVariable(attr.name)}<#if attr?index != attrs?size - 1>,</#if></#list>
+</#macro>
+
+<#macro print_object_new obj>
+${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = new ${java.nameType(obj.name)}();
+</#macro>
+
+<#macro print_assemble_sqlparams obj indent>
+  <#list obj.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
+    <#if attr.type.custom>
+      <#assign valObj = model.findObjectByName(attr.type.name)>
+      <#assign valObjIdAttrs = modelbase.get_id_attributes(valObj)>
+${''?left_pad(indent)}if (${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}() != null) {
+${''?left_pad(indent)}  retVal.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}().get${java.nameType(valObjIdAttrs[0].name)}());
+${''?left_pad(indent)}}
+  <#elseif attr.type.name == 'bool'>
+${''?left_pad(indent)}retVal.set("${modelbase.get_attribute_sql_name(attr)}", (${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}() == null || !${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}()) ? FALSE : TRUE);
+  <#elseif attr.type.name == 'json'>
+${''?left_pad(indent)}retVal.set("${modelbase.get_attribute_sql_name(attr)}", JSON.toJSONString(${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}()));
+  <#else>
+${''?left_pad(indent)}retVal.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(obj.name)}.get${java.nameType(attr.name)}());
+  </#if>
+</#list>
+</#macro>
+
+<#macro indent_line indent>${''?left_pad(indent)}</#macro>
+
+<#--
+ ### Renders javascript for table column declaration.
+ ###
+ ### @param attr
+ ###        the attribute definition
+ ###
+ ### @param indent
+ ###        the indent count
+ -->
+<#macro render_table_column attr indent>
+  <#assign tableField = attr.getLabelledOptions('gui')['table']!>
+  <#if tableField == 'text'>
+<@indent_line indent=indent/>template: '{${modelbase.get_attribute_sql_name(attr)}}',
+  <#elseif tableField == 'state'>
+<@indent_line indent=indent/>display: function(row, td) {
+<@indent_line indent=indent/>  if (row.${modelbase.get_attribute_sql_name(attr)} == 'A') {
+<@indent_line indent=indent/>    $(td).append('<span class="badge badge-success">已激活</span>')；
+<@indent_line indent=indent/>  } else if (row.${modelbase.get_attribute_sql_name(attr)} == 'D') {
+<@indent_line indent=indent/>    $(td).append('<span class="badge badge-danger">已禁用</span>')；
+<@indent_line indent=indent/>  } else {
+<@indent_line indent=indent/>    $(td).append('<span class="badge badge-secondary">其他</span>');
+<@indent_line indent=indent/>  }
+<@indent_line indent=indent/>},
+  <#elseif tableField == 'progress'>
+<@indent_line indent=indent/>display: function(row, td) {
+<@indent_line indent=indent/>
+<@indent_line indent=indent/>},
+  <#else>
+<@indent_line indent=indent/>display: function(row, td) {
+<@indent_line indent=indent/>
+<@indent_line indent=indent/>},
+  </#if>
+</#macro>
+
+<#--
+ ### Renders sql-where statements.
+ ###
+ ### @param obj
+ ###        the object definition
+ ###
+ ### @param indent
+ ###        the indent count
+ -->
+<#macro print_sql_where obj indent>
+<#assign attrIds = modelbase.get_id_attributes(obj)>
+<#assign groups = modelbase.group_object_references(obj, model)>
+<#assign o2mRefAttrs = groups.o2mRefAttrs![]>
+<#assign o2mRefObjs = groups.o2mRefObjs![]>
+<#assign o2mConjObjs  = groups.o2mConjObjs![]>
+<#-- 内置的必查询字段，后续查询将忽略 -->
+<#assign builtin = {}>
+<#list obj.attributes as attr>
+  <#if attr.name == 'state'>
+    <#-- state -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.type.name == 'code'>
+    <#-- code -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_rlike('}${modelbase.get_attribute_sql_name(attr)}${r's)}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name == 'status'>
+    <#-- status -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name == 'type'>
+    <#-- type -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name == 'group'>
+    <#-- group -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name == 'name'>
+    <#-- name -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_like('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name == 'text'>
+    <#-- text -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_like('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.name != 'last_modified_time' && (attr.type.name == 'date' || attr.type.name == 'datetime' || attr.type.name == 'time')>
+    <#-- date and time -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"0)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} >= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'0}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"1)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} <= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'1}'}
+<@indent_line indent=indent/>${r"</#if>"}
+    <#if attr.constraint.identifiable>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+    </#if>
+  <#elseif attr.type.name == 'int' || attr.type.name == 'integer' || attr.type.name == 'long' || attr.constraint.domainType.name?index_of('number') == 0>
+    <#-- number -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"0)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} >= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'0}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"1)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} <= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'1}'}
+<@indent_line indent=indent/>${r"</#if>"}
+    <#if attr.constraint.identifiable>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+    </#if>
+  <#elseif attr.constraint.identifiable>
+    <#-- id -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"s)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r's)}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.getLabelledOptions('reference')['value']! == 'id'>
+    <#-- reference id --> 
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"s)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r's)}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.getLabelledOptions('reference')['value']! == 'type'>
+    <#-- reference type --> 
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.type.custom>
+    <#-- custom -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"s)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r's)}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  <#elseif attr.type.name == 'string'>
+    <#-- name -->
+    <#assign builtin = builtin + {attr.name: attr}>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_like('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+</#list>
+<#list obj.attributes as attr>
+  <#if !attr.persistenceName??><#continue></#if>
+  <#if attr.constraint.identifiable && !builtin[attr.name]??>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"s)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r's)}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#assign persistenceQuery = attr.getLabelledOptions('persistence')['query']!''>
+  <#if persistenceQuery == '' || builtin[attr.name]??><#continue></#if>
+  <#if attr.type.collection>
+    <#assign m2mObj = model.findObjectByName(attr.type.componentType.name)>
+    <#if !m2mObj.isLabelled('value')><#continue></#if>
+    <#list m2mObj.attributes as m2mObjAttr>
+      <#if !m2mObjAttr.isLabelled('query')><#continue></#if>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(m2mObjAttr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attrIds[0].persistenceName} in (
+<@indent_line indent=indent/>  select ${attrIds[0].persistenceName}
+<@indent_line indent=indent/>  from ${m2mObj.persistenceName}
+<@indent_line indent=indent/>  where ${m2mObjAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(m2mObjAttr)}${r'}'}
+<@indent_line indent=indent/>)
+<@indent_line indent=indent/>${r"</#if>"}
+    </#list>
+  </#if>
+  <#if persistenceQuery?index_of('=') != -1 && persistenceQuery?index_of('[]') == -1>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if persistenceQuery?index_of('%%') != -1>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_like('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if persistenceQuery?index_of('_%') != -1>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_rlike('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if persistenceQuery?index_of('%_') != -1>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ${r'${_llike('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if persistenceQuery?index_of('[]') != -1 && singleRefObj??>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if persistenceQuery?index_of('<>') != -1>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"0)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} >= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'0}'}
+<@indent_line indent=indent/>${r"</#if>"}
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(attr)}${r"1)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} <= ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'1}'}
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#if attr.type.name == obj.name>
+<@indent_line indent=indent/>${r"<#if _null("}${modelbase.get_attribute_sql_name(attr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} is null
+<@indent_line indent=indent/>${r"</#if>"}
+  </#if>
+  <#assign singleRefObj = modelbase.get_single_reference(attr, model)!>
+  <#if singleRefObj != ''>
+    <#list singleRefObj.attributes as singleRefObjAttr>
+      <#if !singleRefObjAttr.isLabelled('query')><#continue></#if>
+      <#-- the identifiable attribute is ignored -->
+      <#if singleRefObjAttr.constraint.identifiable><#continue></#if>
+      <#assign singleRefObjAttrName = singleRefObjAttr.getLabelledOptions('query')['name']!>
+      <#assign singleRefObjAttrOperator = singleRefObjAttr.getLabelledOptions('query')['operator']!>
+      <#assign singleRefObjAttrTarget = attr.directRelationship.targetAttribute>
+      <#if singleRefObjAttrOperator == '=' && singleRefObjAttr.persistenceName??>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(singleRefObjAttr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in (
+<@indent_line indent=indent/>  select ${singleRefObjAttrTarget.persistenceName} from <#if databaseName??>${databaseName}.</#if>${singleRefObj.persistenceName}
+<@indent_line indent=indent/>  where ${singleRefObjAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(singleRefObjAttr)}${r'}'}
+<@indent_line indent=indent/>)
+<@indent_line indent=indent/>${r"</#if>"}
+      </#if>
+    </#list>
+  </#if>
+</#list>
+<#list o2mRefAttrs as o2mRefAttr>
+  <#if !o2mRefAttr.getLabelledOptions('persistence')['query']??><#continue></#if>
+  <#assign o2mRefObj = o2mRefObjs[o2mRefAttr?index]>
+  <#assign o2mConjObj = o2mConjObjs[o2mRefAttr?index]>
+  <#if o2mConjObj == ''>
+    <#assign o2mRefObjTgtAttr = o2mRefAttr.directRelationship.targetAttribute>
+    <#assign selectAttrName = o2mRefAttr.getLabelledOptions('persistence')['select']!>
+    <#if selectAttrName == ''>
+      <#stop '在一对多的对应关系中，无法知道从关联对象中去哪个属性，出错属性：' + obj.name + '.' + o2mRefAttr.name>
+    </#if>
+    <#assign selectAttr = model.findAttributeByNames(o2mRefObj.name, selectAttrName)>
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(o2mRefObjTgtAttr)}${r"s)>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${attrIds[0].persistenceName} in (
+<@indent_line indent=indent/>  select ${selectAttr.persistenceName}
+<@indent_line indent=indent/>  from ${o2mRefObj.persistenceName}
+<@indent_line indent=indent/>  where ${o2mRefObjTgtAttr.persistenceName} in ${r'${_in('}${modelbase.get_attribute_sql_name(o2mRefObjTgtAttr)}s${r')}'}
+<@indent_line indent=indent/>)
+<@indent_line indent=indent/>${r"</#if>"}
+  <#else>
+  </#if>
+<#--
+<@indent_line indent=indent/>${r"<#if !_empty("}${modelbase.get_attribute_sql_name(o2mRefAttr)}${r")>"}
+<@indent_line indent=indent/>and ${modelbase.get_object_sql_alias(obj)}.${o2mRefingAttrs[attr?index].persistenceName} in (
+<@indent_line indent=indent/>  select ${o2mRefingAttrs[attr?index].persistenceName}
+<@indent_line indent=indent/>  from ${o2mRefedObjs[attr?index].persistenceName}
+<@indent_line indent=indent/>  where ${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+<@indent_line indent=indent/>)
+<@indent_line indent=indent/>${r"</#if>"}
+-->
+</#list>
+</#macro>
+
+<#macro print_statement_attribute_new attr indent>
+</#macro>
+
+<#macro print_statement_object_new obj name indent>
+<@indent_line indent=indent/>${java.nameType(obj.name)} ${java.nameVariable(name)} = new ${java.nameType(obj.name)}();</#macro>
+

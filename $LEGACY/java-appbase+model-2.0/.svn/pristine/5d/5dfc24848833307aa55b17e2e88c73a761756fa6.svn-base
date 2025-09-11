@@ -1,0 +1,326 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.repository;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.sql.Date;
+import java.sql.Timestamp;
+
+import net.doublegsoft.appbase.ddd.DomainException;
+import net.doublegsoft.appbase.ddd.Repository;
+import net.doublegsoft.appbase.ObjectMap;
+import net.doublegsoft.appbase.SqlParams;
+import net.doublegsoft.appbase.service.CommonService;
+import net.doublegsoft.appbase.service.ServiceException;
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_entity_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.entity.*;
+</#if>
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.value.*;
+</#if>
+
+<#-- 实体类名 -->
+<#assign typename = java.nameType(entity.name)>
+<#-- 实体变量名 -->
+<#assign varname = java.nameVariable(entity.name)>
+<#assign label = modelbase.get_object_label(entity)>
+<#-- 名称的单数和复数形式 -->
+<#assign singular = modelbase.get_attribute_labelled_option(entity, 'name', 'singular')>
+<#assign plural   = modelbase.get_attribute_labelled_option(entity, 'name', 'plural')>
+
+<#-- 实体的标识属性 -->
+<#assign idAttrs  = modelbase.get_id_attributes(entity)>
+<#-- 所有关联对象根据业务关系的分组 -->
+<#assign groups   = modelbase.group_object_references(entity, model)>
+
+<#-- 实体访问库集合 -->
+<#assign anyRefObjs = groups.anyRefObjs>
+<#-- 引用一个 -->
+<#assign o2oRefAttrs = groups.o2oRefAttrs>
+<#assign o2oRefObjs  = groups.o2oRefObjs>
+<#-- 引用多个 -->
+<#assign o2mRefAttrs = groups.o2mRefAttrs>
+<#assign o2mRefObjs  = groups.o2mRefObjs>
+<#assign o2mConjObjs = groups.o2mConjObjs>
+
+/**
+ * 【${label}】实体对象库的访问接口。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since ${version}
+ */
+public interface ${typename}Repository extends Repository<${typename}> {
+
+<#--#################################################################################################################-->
+<#-- 创建【CREATE】操作                                                                                                -->
+<#--#################################################################################################################-->
+  /**
+   * 创建【${label!''}】实体对象。
+   *
+   * @param ${varname}
+   *        待创建的${label}实体对象
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void create${java.nameType(entity.name)}(${java.nameType(entity.name)} ${java.nameVariable(entity.name)}) throws DomainException;
+
+<#--#################################################################################################################-->
+<#-- 读取【READ】操作                                                                                                  -->
+<#--#################################################################################################################-->
+  /**
+   * 读取一个【${label}】实体对象。
+   *
+<#list idAttrs as attr>
+   * @param ${java.nameVariable(attr.name)}
+   *        【${modelbase.get_attribute_label(attr)}】属性
+   *
+</#list>
+   * @param withChildren
+   *        是否加载子对象集合，{@code true}表示加载，{@code false}表示不加载
+   *
+   * @return 如果找到则返回找到的对象，否则返回空
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  ${typename} read${typename}(${modelbase.get_attributes_as_parameters(idAttrs)}, boolean withChildren) throws DomainException;
+
+  /**
+   * @see #read${typename}(${modelbase.get_attributes_as_parameters(idAttrs)}, boolean withChildren)
+   */
+  default ${typename} read${typename}(${modelbase.get_attributes_as_parameters(idAttrs)}) throws DomainException {
+    return read${typename}(${modelbase.get_attributes_as_arguments(idAttrs)}, true);
+  }
+
+  /**
+   * 更新一个【${label}】实体对象.
+   *
+   * @param ${varname}
+   *        待更新的实体对象
+   *
+   * @param updateChildren
+   *        是否更新子对象集合，{@code true}表示更新，{@code false}表示不更新
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void update${typename}(${typename} ${varname}, boolean updateChildren) throws DomainException;
+
+  /**
+   * @see #update${java.nameType(entity.name)}(${typename}, boolean)
+   */
+  default void update${typename}(${typename} ${varname}) throws DomainException {
+    update${typename}(${varname}, true);
+  }
+
+  /**
+   * 删除一个【${label}】实体对象.
+   *
+<#list idAttrs as attr>
+   * @param ${java.nameVariable(attr.name)}
+   *        【${modelbase.get_attribute_label(attr)}】属性
+   *
+</#list>
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void delete${typename}(<@appbase.print_attributes_as_parameters attrs=idAttrs/>) throws DomainException;
+<#if idAttrs[0].type.custom>
+
+  /**
+   * 删除一个【${label}】实体对象.
+   *
+<#list idAttrs as attr>
+   * @param ${java.nameVariable(attr.name)}
+   *        【${modelbase.get_attribute_label(attr)}】属性
+   *
+</#list>
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  default void delete${typename}(<@appbase.print_attributes_as_primitive_parameters attrs=idAttrs/>) throws DomainException {
+    <#assign attrs = []>
+    <#list idAttrs as idAttr>
+      <#if idAttr.type.custom>
+    ${modelbase.type_attribute(idAttr)} ${java.nameVariable(idAttr.type.name)}${java.nameType(idAttr.name)} = new ${modelbase.type_attribute(idAttr)}();
+    ${java.nameVariable(idAttr.type.name)}${java.nameType(idAttr.name)}.set${java.nameType(idAttr.directRelationship.targetAttribute.name)}(${java.nameVariable(idAttr.name)});
+      <#assign attrs = attrs + [{'name': java.nameVariable(idAttr.type.name) + java.nameType(idAttr.name)}]>
+      <#else>
+        <#assign attrs = attrs + [idAttr]>
+      </#if>
+    </#list>
+    delete${typename}(<#list attrs as attr>${java.nameVariable(attr.name)}<#if attr?index != attrs?size - 1>, </#if></#list>);
+  }
+</#if>
+  /**
+   * 查询满足条件的【${label}】实体对象集合，默认不查询子对象.
+   *
+   * @param params
+   *        查询条件，对应具体的SQL语句
+   *
+   * @return 满足条件的【${label}】实体对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   *
+   * @see #find${java.nameType(plural)}By(ObjectMap, boolean)
+   */
+  default List<${typename}> find${java.nameType(plural)}By(ObjectMap params) throws DomainException {
+    return find${java.nameType(plural)}By(params, false);
+  }
+
+  /**
+   * 查询满足条件的【${label!''}】实体对象集合.
+   *
+   * @param params
+   *        查询条件，对应具体的SQL语句
+   *
+   * @param withChildren
+   *        是否同时查询出子对象
+   *
+   * * @return 满足条件的【${label!''}】实体对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  List<${typename}> find${java.nameType(plural)}By(ObjectMap params, boolean withChildren) throws DomainException;
+  <#-- 单一实体对象引用 -->
+<#list o2oRefAttrs as o2oRefAttr>
+  <#if !o2oRefAttr.persistenceName??><#continue></#if>
+  <#assign o2oRefObj = o2oRefObjs[o2oRefAttr?index]>
+  <#assign o2oRefObjAttr = o2oRefAttr.directRelationship.targetAttribute>
+
+  /**
+   * 通过【${modelbase.get_attribute_label(o2oRefAttr)}】属性查询【${label!''}】实体对象.
+   *
+   * @param ${java.nameVariable(o2oRefObj.name)}
+   *        【${modelbase.get_attribute_label(o2oRefAttr)}】属性实体对象
+   *
+   * @return 满足条件的【${label!''}】实体对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  List<${typename}> find${java.nameType(entity.plural)}By${java.nameType(o2oRefAttr.name)}(${java.nameType(o2oRefObj.name)} ${java.nameVariable(o2oRefObj.name)}) throws DomainException;
+
+  /**
+   * 通过【${modelbase.get_attribute_label(o2oRefAttr)}】属性查询【${label!''}】实体对象.
+   *
+   * @param ${modelbase.get_attribute_sql_name(o2oRefObjAttr)}
+   *        ${modelbase.get_attribute_label(o2oRefObjAttr)}
+   *
+   * @return 满足条件的【${label!''}】实体对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   *
+   * @see #find${java.nameType(entity.plural)}By${java.nameType(o2oRefAttr.name)}(${java.nameType(o2oRefObj.name)})
+   */
+  List<${typename}> find${java.nameType(entity.plural)}By${java.nameType(o2oRefAttr.name)}(${modelbase.get_attribute_primitive_type_name(o2oRefObjAttr)} ${modelbase.get_attribute_sql_name(o2oRefObjAttr)}) throws DomainException;
+</#list>
+<#list o2mRefAttrs as o2mRefAttr>
+  <#assign o2mRefObj  = o2mRefObjs[o2mRefAttr?index]>
+  <#assign o2mConjObj = o2mConjObjs[o2mRefAttr?index]>
+  <#assign o2mRefObjIdAttrs = modelbase.get_id_attributes(o2mRefObj)>
+  <#if o2mConjObj == '' && o2mRefObj.isLabelled('entity')><#-- 如果不存在中间关联表，并且关联的是实体对象，则忽略 --><#continue></#if>
+  <#if o2mRefObj.isLabelled('value')>
+    <#-- 如果是值域对象，则通过实体对象读取 -->
+
+  /**
+   * 读取一个【${modelbase.get_attribute_label(o2mRefAttr)}】值对象。
+    <#list o2mRefObjIdAttrs as o2mRefObjIdAttr>
+   *
+   * @param ${java.nameVariable(o2mRefObjIdAttr.name)}
+   *        【${modelbase.get_attribute_label(o2mRefObjIdAttr)}】属性
+    </#list>
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  ${java.nameType(o2mRefObj.name)} read${java.nameType(modelbase.get_attribute_singular(o2mRefAttr))}(<@appbase.print_attributes_as_primitive_parameters attrs=o2mRefObjIdAttrs/>) throws DomainException;
+  </#if>
+
+  /**
+   * 添加多个【${modelbase.get_attribute_label(o2mRefAttr)}】实体对象到【${label!''}】实体对象.
+   *
+   * @param ${varname}
+   *        持有【${modelbase.get_attribute_label(o2mRefAttr)}】对象的【${label}】实体对象
+   *
+   * @param ${java.nameVariable(o2mRefAttr.name)}
+   *        【${modelbase.get_attribute_label(o2mRefAttr)}】对象
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void add${java.nameType(o2mRefAttr.name)}(${typename} ${varname}, List<${java.nameType(o2mRefObj.name)}> ${java.nameVariable(o2mRefAttr.name)}) throws DomainException;
+
+  <#if o2mConjObj == '' || o2mRefObj.isLabelled('value')>
+    <#-- 如果不是多对多关联，或者是多对多关联，且关联的是值对象，才会存在【添加单个值对象】的方法。 -->
+
+  /**
+   * 添加一个【${modelbase.get_attribute_label(o2mRefAttr)}】实体对象到【${label!''}】实体对象.
+   *
+   * @param ${varname}
+   *        持有【${modelbase.get_attribute_label(o2mRefAttr)}】对象的【${label}】实体对象
+   *
+   * @param ${java.nameVariable(o2mRefObj.singular)}
+   *        【${modelbase.get_attribute_label(o2mRefAttr)}】对象
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void add${java.nameType(modelbase.get_attribute_singular(o2mRefAttr))}(${typename} ${varname}, ${java.nameType(o2mRefObj.name)} ${java.nameVariable(modelbase.get_attribute_singular(o2mRefAttr))}) throws DomainException;
+  </#if>
+
+  /**
+   * 删除【${label!''}】实体对象的所有【${modelbase.get_attribute_label(o2mRefAttr)}】实体对象.
+   *
+   * @param ${varname}
+   *        持有【${modelbase.get_attribute_label(o2mRefAttr)}】对象的【${label}】实体对象
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  void remove${java.nameType(o2mRefAttr.name)}(${typename} ${varname}) throws DomainException;
+
+  <#if o2mConjObj == ''>
+    <#-- 如果不是多对多关联，才会存在【删除单个值对象】的方法。 -->
+
+  void remove${java.nameType(modelbase.get_attribute_singular(o2mRefAttr))}(${typename} ${varname}, ${java.nameType(o2mRefObj.name)} ${java.nameType(modelbase.get_attribute_singular(o2mRefAttr))}) throws DomainException;
+  </#if>
+
+  /**
+   * 根据【${modelbase.get_attribute_label(o2mRefAttr)}】属性查询【${label!''}】对象.
+   *
+   * @param ${java.nameVariable(o2mRefAttr.name)}
+   *        持有【${label}】值对象的【${modelbase.get_attribute_label(o2mRefAttr)}】实体对象
+   *
+   * @return 【${label}】对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  List<${typename}> find${java.nameType(plural)}By${java.nameType(o2mRefAttr.name)}(List<${java.nameType(o2mRefObj.name)}> ${java.nameVariable(o2mRefAttr.name)}) throws DomainException;
+</#list>
+
+  /**
+   * 设置实体对象的标识属性值，支持UUID、最大数加1、业务编码或者外键作为主键、多主键等方法。
+   *
+   * @param ${varname}
+   *        实体对象
+   *
+   * @throw DomainException
+   *        捕获到任何异常则抛出
+   */
+  void setIdentifiableAttributes(${typename} ${varname}) throws DomainException;
+}

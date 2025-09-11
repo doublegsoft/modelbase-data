@@ -1,0 +1,6 @@
+new Checklist({
+  url: 'data/json/checklist.json', // '/api/v1/common/script',
+  usecase: '${pageOwner.module?substring(0, pageOwner.module?index_of('/'))}/${bound}/find',
+  name: '${js.nameVariable(id)}',
+  fields: {text: '${fieldText!''}', value: '${fieldValue!''}'}
+}).render('checklist${js.nameType(id)}');

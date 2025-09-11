@@ -1,0 +1,1 @@
+$('#${js.nameVariable(container.id)} input[name=${js.nameVariable(id)}]')..data("DateTimePicker").date(new Date());

@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<#import '/$/appbase.ftl' as appbase>
+<#import '/../../$/modelbase.ftl' as modelbase>
+<#if license??>
+${xml.license(license)}
+</#if>
+<sqls>
+
+<#list model.objects as obj>
+  <#-- 所有关联对象根据业务关系的分组 -->
+  <#-- 间接对象（多对多）引用 -->
+  <#assign o2mRefAttrs = []>
+  <#assign o2mRefObjs = []>
+  <#assign o2mConjObjs  = []>
+  <#if obj.isLabelled('entity')>
+    <#assign groups = modelbase.group_object_references(obj, model)>
+    <#assign o2mRefAttrs = groups.o2mRefAttrs>
+    <#assign o2mRefObjs = groups.o2mRefObjs>
+    <#assign o2mConjObjs  = groups.o2mConjObjs>
+  </#if>
+  <#assign countPerRow = 0>
+  <#assign idAttrs = []>
+  <#assign nonIdAttrs = []>
+  <#assign attrRows = []>
+  <#assign attrRow = []>
+  <#assign countInRows = 0>
+  <#list obj.attributes as attr>
+    <#if attr.persistenceName??>
+      <#if attr.identifiable>
+        <#assign idAttrs = idAttrs + [attr]>
+      <#else>
+        <#assign nonIdAttrs = nonIdAttrs + [attr]>
+        <#assign attrRow = attrRow + [attr]>
+        <#assign countPerRow = countPerRow + 1>
+        <#if countPerRow == 5>
+          <#assign attrRows = attrRows + [attrRow]>
+          <#assign attrRow = []>
+          <#assign countPerRow = 0>
+        </#if>
+        <#assign countInRows = countInRows + 1>
+      </#if>
+    </#if>
+  </#list>
+  <#if attrRow?size != 0>
+    <#assign attrRows = attrRows + [attrRow]>
+  </#if>
+  <#if !obj.persistenceName?? || obj.isLabelled('generated') || !obj.isLabelled('persistence')>
+    <#continue>
+  </#if>
+
+  <!-- 插入${modelbase.get_object_persistence_text(obj)} -->
+  <sql id="${obj.persistenceName?lower_case}.create">
+  <![CDATA[
+    insert into <#if databaseName??>${databaseName}.</#if>${obj.persistenceName} (
+  <#list idAttrs as attr>
+      ${attr.persistenceName}<#if (attr?index != idAttrs?size - 1) || (attrRows?size > 0)>,</#if>
+  </#list>
+  <#list attrRows as row>
+      <#list row as attr>${attr.persistenceName}<#if !(row?index == attrRows?size - 1 && attr?index == row?size - 1)>, </#if></#list>
+  </#list>
+    ) values (
+  <#list idAttrs as attr>
+      ${r"${"}${modelbase.get_attribute_sql_name(attr)}${r"}"}<#if (attr?index != idAttrs?size - 1) || (attrRows?size > 0)>,</#if>
+  </#list>
+  <#list attrRows as row>
+      <#list row as attr>${modelbase.get_attribute_sql_initial_var(attr)}<#if !(row?index == attrRows?size - 1 && attr?index == row?size - 1)>, </#if></#list>
+  </#list>
+    );
+  <#list obj.attributes as attr>
+    <#if attr.name == 'ordinal_position' || attr.name == 'sequence'>
+      <#assign inAttr = model.findAttributeByNames(obj.name, attr.getLabelledOptions('order')['in'])!attr>
+    update <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    set ${attr.persistenceName} = (select ${attr.persistenceName} from (
+      select (max(${attr.persistenceName}) + 1) as ${attr.persistenceName} from ${obj.persistenceName}
+      where 1 = 1
+      <#if inAttr != attr>
+      and ${inAttr.persistenceName} = ${r"${"}${modelbase.get_attribute_sql_name(inAttr)}${r"}"}
+      </#if>
+    ) as dummy)
+    where 1 = 1
+    <#list idAttrs as attr>
+    and ${attr.persistenceName} = ${r"${"}${modelbase.get_attribute_sql_name(attr)}${r"}"}
+    </#list>
+    ;
+    </#if>
+  </#list>
+  ]]>
+  </sql>
+
+  <#assign parentObj = model.findObjectByName(obj.getLabelledOptions('entity')['parent'])!>
+  <#assign parentObjAttrs = []>
+  <#assign extensionObj = model.findObjectByName(obj.getLabelledOptions('entity')['extension'])!>
+  <#assign extensionObjAttrs = []>
+  <#assign referenceObjsAndAttrs = {}>
+  <#-- 在此对象中，搜集所有直接引用的对象 -->
+  <#list obj.attributes as attr>
+    <#-- 主键关联，会自然带入，无需额外操作 -->
+    <#if attr.type.custom> <#-- && !attr.constraint.identifiable -->
+      <#assign refObj = model.findObjectByName(attr.type.name)>
+      <#assign refObjAttrs = []>
+      <#list refObj.attributes as refObjAttr>
+        <#if refObjAttr.type.name == 'name' || refObjAttr.name == 'name'>
+          <#assign refObjAttrs = refObjAttrs + [refObjAttr]>
+        </#if>
+      </#list>
+      <#if (refObjAttrs?size > 0)>
+        <#assign referenceObjsAndAttrs = referenceObjsAndAttrs + {attr: {'obj': refObj, 'attrs': refObjAttrs, 'attr': attr}}>
+      </#if>
+    </#if>
+  </#list>
+  <#if extensionObj != ''>
+    <#list extensionObj.attributes as extensionObjAttr>
+      <#if !extensionObjAttr.isLabelled('persistence')?? || !extensionObjAttr.persistenceName??><#continue></#if>
+      <#assign attrIgnored = false>
+      <#list obj.attributes as objAttr>
+        <#if !objAttr.isLabelled('persistence')?? || !objAttr.persistenceName??><#continue></#if>
+        <#if objAttr.persistenceName == extensionObjAttr.persistenceName>
+          <#assign attrIgnored = true>
+          <#break>
+        </#if>
+      </#list>
+      <#if !attrIgnored>
+        <#assign extensionObjAttrs = extensionObjAttrs  + [extensionObjAttr]>
+      </#if>
+    </#list>
+  </#if>
+  <#if parentObj != ''>
+    <#list parentObj.attributes as parentObjAttr>
+      <#if !parentObjAttr.isLabelled('persistence')?? || !parentObjAttr.persistenceName?? || parentObjAttr.constraint.identifiable><#continue></#if>
+      <#assign parentObjAttrs = parentObjAttrs  + [parentObjAttr]>
+    </#list>
+  </#if>
+  <#assign extensionObjAttrRows = modelbase.array_to_matrix(extensionObjAttrs, 5)>
+  <#assign parentObjAttrRows = modelbase.array_to_matrix(parentObjAttrs, 5)>
+  <#assign selectAttrRows = attrRows + extensionObjAttrRows>
+  <!-- 查询${modelbase.get_object_persistence_text(obj)} -->
+  <sql id="${obj.persistenceName?lower_case}.find">
+  <![CDATA[
+    select <#list idAttrs as attr>${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} as ${modelbase.get_attribute_sql_name_mysql(attr)},</#list>
+  <#list selectAttrRows as row>
+           <#list row as attr>${modelbase.get_object_sql_alias(attr.parent)}.${attr.persistenceName} as ${modelbase.get_attribute_sql_name_mysql(attr)}, </#list>
+  </#list>
+  <#list parentObjAttrRows as row>
+           <#list row as attr>par${modelbase.get_object_sql_alias(attr.parent)}.${attr.persistenceName} as parent${java.nameType(modelbase.get_attribute_sql_name(attr))}, </#list>
+  </#list>
+  <#list referenceObjsAndAttrs?keys as attr>
+    <#assign selfAttr = referenceObjsAndAttrs[attr]['attr']>
+    <#assign refObj = referenceObjsAndAttrs[attr]['obj']>
+    <#assign refObjAttrs = referenceObjsAndAttrs[attr]['attrs']>
+    <#list refObjAttrs as refObjAttr>
+           ${modelbase.get_object_sql_alias(refObj)}${java.nameType(selfAttr.name)}.${refObjAttr.persistenceName} as ${java.nameVariable(selfAttr.name)}<#if selfAttr.name != selfAttr.type.name>${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}<#else>${java.nameType(refObjAttr.name)}</#if>, 
+    </#list>
+  </#list>
+  ${r"<#if !_empty(_other_select)>"}
+           ${r"${_keyword(_other_select)?replace('\'\'', '\'')}"},
+  ${r"</#if>"}
+           0
+    from <#if databaseName??>${databaseName}.</#if>${obj.persistenceName} ${modelbase.get_object_sql_alias(obj)}
+  <#if extensionObj != ''>
+    <#assign extensionObjIdAttr = modelbase.get_id_attributes(extensionObj)[0]>
+    <#list obj.attributes as objAttr>
+      <#if objAttr.type.name == extensionObj.name>
+        <#assign refExtensionObjAttr = objAttr>
+        <#break>
+      </#if>
+    </#list>
+    left join <#if databaseName??>${databaseName}.</#if>${extensionObj.persistenceName} ${modelbase.get_object_sql_alias(extensionObj)} on ${modelbase.get_object_sql_alias(extensionObj)}.${extensionObjIdAttr.persistenceName} = ${modelbase.get_object_sql_alias(obj)}.${refExtensionObjAttr.persistenceName}
+  </#if>
+  <#if parentObj != ''>
+    <#assign parentObjIdAttr = modelbase.get_id_attributes(parentObj)[0]>
+    <#list obj.attributes as objAttr>
+      <#if objAttr.type.name == parentObj.name>
+        <#assign refExtensionObjAttr = objAttr>
+        <#break>
+      </#if>
+    </#list>
+    left join <#if databaseName??>${databaseName}.</#if>${parentObj.persistenceName} par${modelbase.get_object_sql_alias(parentObj)} on par${modelbase.get_object_sql_alias(parentObj)}.${parentObjIdAttr.persistenceName} = ${modelbase.get_object_sql_alias(obj)}.${refExtensionObjAttr.persistenceName}
+  </#if>
+  <#list referenceObjsAndAttrs?keys as attr>
+    <#assign selfAttr = referenceObjsAndAttrs[attr]['attr']>
+    <#assign refObj = referenceObjsAndAttrs[attr]['obj']>
+    <#assign refObjAttrs = referenceObjsAndAttrs[attr]['attrs']>
+    <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+    left join ${refObj.persistenceName} ${modelbase.get_object_sql_alias(refObj)}${java.nameType(selfAttr.name)} on ${modelbase.get_object_sql_alias(refObj)}${java.nameType(selfAttr.name)}.${refObjIdAttr.persistenceName} = ${modelbase.get_object_sql_alias(obj)}.${selfAttr.persistenceName}
+  </#list>
+    ${r"<#if !_empty(_left_join)>"}
+    ${r"${_keyword(_left_join)?replace('\'\'', '\'')}"}
+    ${r"</#if>"}
+    where 1 = 1
+<@appbase.print_sql_where obj=obj indent=4/>
+  <#-- SPEC：多对多的关联查询 -->
+  <#list obj.attributes as attr>
+    <#if !attr.getLabelledOptions('persistence')['conjunction']??><#continue></#if>
+    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions('persistence')['conjunction'])>
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == obj.name>
+        <#assign conjObjAttrSelf = conjObjAttr>
+        <#assign conjObjAttrSelfSingular = attr.getLabelledOptions('name')['singular']!attr.type.componentType.name>
+        <#break>
+      </#if>
+    </#list>
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == conjObjAttrSelfSingular>
+        <#assign conjObjAttrAnother = conjObjAttr>
+        <#break>
+      </#if>
+    </#list>
+    <#if conjObjAttrAnother??>
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r")>"}
+    and ${modelbase.get_object_sql_alias(obj)}.${idAttrs[0].persistenceName} in (
+      select ${conjObjAttrSelf.persistenceName} from ${conjObj.persistenceName}
+      where ${conjObjAttrAnother.persistenceName} in ${r"${_in("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r")}"}
+    )
+    ${r"</#if>"}
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r"s)>"}
+    and ${modelbase.get_object_sql_alias(obj)}.${idAttrs[0].persistenceName} in (
+      select ${conjObjAttrSelf.persistenceName} from ${conjObj.persistenceName}
+      where ${conjObjAttrAnother.persistenceName} in ${r"${_in("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r"s)}"}
+    )
+    ${r"</#if>"}
+    </#if>
+  </#list>
+    ${r"<#if !_empty(_and_condition)>"}
+    ${r"${_keyword(_and_condition)?replace('\'\'', '\'')}"}
+    ${r"</#if>"}
+    ${r"<#if !_empty(authority)>"}
+    ${r"${authority.sql('"}${obj.persistenceName}','${idAttrs[0].persistenceName}${r"')}"}
+    ${r"</#if>"}
+    ${r"<#if !_empty(orderBy)>"}
+    order by ${r"${orderBy}"}
+    ${r"</#if>"}
+    ${r"<#if !_empty(_order_by)>"}
+    order by ${r"${_order_by}"}
+    ${r"</#if>"}
+  ]]>
+  </sql>
+
+  <!-- 更新${modelbase.get_object_persistence_text(obj)} -->
+  <sql id="${obj.persistenceName?lower_case}.update">
+  <![CDATA[
+    update <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+  <#list attrRows as row>
+    <#if row?index == 0>
+    set    <#list row as attr>${attr.persistenceName} = <#if attr.constraint.domainType.toString() == 'now'>current_timestamp<#else>${r"${_original("}${modelbase.get_attribute_sql_name(attr)}, '${attr.persistenceName}'${r")}"}</#if><#if !(row?index == attrRows?size - 1 && attr?index == row?size - 1)>, </#if></#list>
+    <#else>
+           <#list row as attr>${attr.persistenceName} = <#if attr.constraint.domainType.toString() == 'now'>current_timestamp<#else>${r"${_original("}${modelbase.get_attribute_sql_name(attr)}, '${attr.persistenceName}'${r")}"}</#if><#if !(row?index == attrRows?size - 1 && attr?index == row?size - 1)>, </#if></#list>
+    </#if>
+  </#list>
+    where 1 = 1
+  <#if (idAttrs?size == 1)>
+    and   ${idAttrs[0].persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttrs[0])}${r'}'}
+  <#else>
+    ${r"<#if "}<#list idAttrs as idAttr>${r"_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")"}<#if idAttr?index != idAttrs?size - 1> && </#if></#list>${r">"}
+    and '无指定主键的更新操作' = '被禁止'
+    ${r"</#if>"}
+    <#list idAttrs as idAttr>
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")>"}
+    and   ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+    ${r"</#if>"}
+    </#list>
+  </#if>
+  ]]>
+  </sql>
+
+  <!-- 删除${modelbase.get_object_persistence_text(obj)} -->
+  <sql id="${obj.persistenceName?lower_case}.delete">
+  <![CDATA[
+  <#list obj.attributes as attr>
+    <#if attr.name == 'ordinal_position' || attr.name == 'sequence'>
+      <#assign inAttr = model.findAttributeByNames(obj.name, attr.getLabelledOptions('order')['in'])!attr>
+    update <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    set ${attr.persistenceName} = ${attr.persistenceName} - 1
+    where 1 = 1
+    and ${attr.persistenceName} > (
+      select ordpos from (
+        select ${attr.persistenceName} from ${obj.persistenceName}
+        where ${idAttrs[0].persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttrs[0])}${r'}'}
+      ) dummy
+    )
+      <#if inAttr != attr>
+    and ${inAttr.persistenceName} = ${r"${"}${modelbase.get_attribute_sql_name(inAttr)}${r"}"}
+      </#if>
+    ;
+    </#if>
+  </#list>
+    delete from <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where 1 = 1
+  <#if (idAttrs?size == 1)>
+    and   ${idAttrs[0].persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttrs[0])}${r'}'}
+  <#else>
+    ${r"<#if "}<#list idAttrs as idAttr>${r"_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")"}<#if idAttr?index != idAttrs?size - 1> && </#if></#list>${r">"}
+    and '无指定主键的删除操作' = '被禁止'
+    ${r"</#if>"}
+    <#list idAttrs as idAttr>
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")>"}
+    and   ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+    ${r"</#if>"}
+    </#list>
+  </#if>
+    ;
+  ]]>
+  </sql>
+  <#if obj.getLabelledOptions('persistence')['revision']??>
+
+  <!-- 修订${modelbase.get_object_persistence_text(obj)}数据 -->
+  <sql id="${obj.persistenceName?lower_case}.revision">
+  <![CDATA[
+    insert into <#if databaseName??>${databaseName}.</#if>${obj.getLabelledOptions('persistence')['revision']}
+    select * from <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where 1 = 1
+    ${r"<#if "}<#list idAttrs as idAttr>${r"_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")"}<#if idAttr?index != idAttrs?size - 1> && </#if></#list>${r">"}
+    and '无指定主键的修订操作' = '被禁止'
+    ${r"</#if>"}
+    <#list idAttrs as idAttr>
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(idAttr)}${r")>"}
+    and   ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+    ${r"</#if>"}
+    </#list>
+  ]]>
+  </sql>
+  </#if>
+  <#--
+   ###
+   ### 扩展SQL。
+   ###
+   -->
+  <#list idAttrs as attr>
+
+  <!-- 获取${modelbase.get_object_persistence_text(obj)}中${modelbase.get_attribute_persistence_text(attr)}字段的最大值 -->
+  <sql id="${obj.persistenceName?lower_case}.${attr.persistenceName?lower_case}.max">
+  <![CDATA[
+    select max(${attr.persistenceName}) as max${java.nameType(modelbase.get_attribute_sql_name(attr))}
+    from   <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where 1 = 1
+    ${r"<#if !_empty(parent"}${java.nameType(modelbase.get_attribute_sql_name(attr))}${r")>"}
+    and ${attr.persistenceName} like ${r'${_rlike(parent'}${java.nameType(modelbase.get_attribute_sql_name(attr))}${r')}'}
+    ${r"</#if>"}
+  ]]>
+  </sql>
+  </#list>
+
+    <!-- 根据某个或者某些字段统计【${modelbase.get_object_persistence_text(obj)}】中某些字段的聚合函数 -->
+  <sql id="${obj.persistenceName?lower_case}.aggregate">
+  <![CDATA[
+    select 
+    ${r'   <#list groupingFields as groupingField>'}
+    ${r'     <#if groupingField.persistenceName == groupingField.attributeName>'}
+    ${r'   ${_keyword(groupingField.attributeName)},'}
+    ${r'     <#else>'}
+    ${r'   ${_keyword(groupingField.persistenceName)} as `${_keyword(groupingField.attributeName)}'}`,
+    ${r'     </#if>'}
+    ${r'   </#list>'}
+    ${r'   <#list aggregateFields![] as aggregateField>'}
+    ${r'   ${_keyword(aggregateField.operator)}(${_keyword(aggregateField.persistenceName)}) as `${_keyword(aggregateField.operator)}${_keyword(aggregateField.attributeName)?cap_first}`<#if aggregateField?index != aggregateFields?size - 1>,</#if>'}
+    ${r'   </#list>'}
+    from   <#if databaseName??>${databaseName}.</#if>${obj.persistenceName} ${modelbase.get_object_sql_alias(obj)}
+    ${r"<#if !_empty(_left_join)>"}
+    ${r"${_keyword(_left_join)?replace('\'\'', '\'')}"}
+    ${r"</#if>"}
+    where 1 = 1
+<@appbase.print_sql_where obj=obj indent=4/>
+  <#-- SPEC：多对多的关联查询 -->
+  <#list obj.attributes as attr>
+    <#if !attr.getLabelledOptions('persistence')['conjunction']??><#continue></#if>
+    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions('persistence')['conjunction'])>
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == obj.name>
+        <#assign conjObjAttrSelf = conjObjAttr>
+        <#assign conjObjAttrSelfSingular = attr.getLabelledOptions('name')['singular']!attr.type.componentType.name>
+        <#break>
+      </#if>
+    </#list>
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == conjObjAttrSelfSingular>
+        <#assign conjObjAttrAnother = conjObjAttr>
+        <#break>
+      </#if>
+    </#list>
+    <#if conjObjAttrAnother??>
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r")>"}
+    and ${modelbase.get_object_sql_alias(obj)}.${idAttrs[0].persistenceName} in (
+      select ${conjObjAttrSelf.persistenceName} from ${conjObj.persistenceName}
+      where ${conjObjAttrAnother.persistenceName} in ${r"${_in("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r")}"}
+    )
+    ${r"</#if>"}
+    ${r"<#if !_empty("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r"s)>"}
+    and ${modelbase.get_object_sql_alias(obj)}.${idAttrs[0].persistenceName} in (
+      select ${conjObjAttrSelf.persistenceName} from ${conjObj.persistenceName}
+      where ${conjObjAttrAnother.persistenceName} in ${r"${_in("}${modelbase.get_attribute_sql_name(conjObjAttrAnother)}${r"s)}"}
+    )
+    ${r"</#if>"}
+    </#if>
+  </#list>
+  ${r'<#if groupingFields?size != 0>'}
+    group by
+    ${r'     <#list groupingFields as groupingField>'}
+    ${r'     <#if groupingField.persistenceName == groupingField.attributeName>'}
+    ${r'   ${_keyword(groupingField.attributeName)?substring(_keyword(groupingField.attributeName)?last_index_of(" "))}'}
+    ${r'     <#else>'}
+    ${r'   `${_keyword(groupingField.attributeName)}`'}
+    ${r'     </#if>'}
+    ${r'     <#if groupingField?index != groupingFields?size - 1>,</#if>'}
+    ${r'     </#list>'}
+  ${r'</#if>'}
+  ${r"<#if !_empty(orderBy)>"}
+    order by ${r"${orderBy}"}
+    ${r"</#if>"}
+  ]]>
+  </sql>
+  <#--
+   ###
+   ### 特殊字段的SQL，比如唯一字段，二进制字段
+   ###
+   -->
+  <#list obj.attributes as attr>
+    <#if attr.constraint.unique>
+
+  <!-- 获取${modelbase.get_object_persistence_text(obj)}唯一值${modelbase.get_attribute_persistence_text(attr)}字段的已有值 -->
+  <sql id="${obj.persistenceName?lower_case}.${attr.persistenceName?lower_case}.find">
+  <![CDATA[
+    select <#list idAttrs as idAttr>${idAttr.persistenceName} as ${modelbase.get_attribute_sql_name(idAttr)}<#if idAttr?index != idAttrs?size - 1>, </#if></#list>
+    from   <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where  ${attr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+  ]]>
+  </sql>
+    <#elseif attr.type.name == 'image' || attr.type.name == 'file'>
+
+  <!-- 获取${modelbase.get_object_persistence_text(obj)}的BLOB值${modelbase.get_attribute_persistence_text(attr)}字段 -->
+  <sql id="${obj.persistenceName?lower_case}.${attr.persistenceName?lower_case}.find">
+  <![CDATA[
+    select ${attr.persistenceName} as ${r'${'}${modelbase.get_attribute_sql_name(attr)}${r'}'}
+    from   <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where  1 = 1
+      <#list idAttrs as idAttr>
+    and ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+      </#list>
+  ]]>
+  </sql>
+    <#elseif attr.constraint.domainType.name?index_of('code') == 0>
+
+  <!-- 获取${modelbase.get_object_persistence_text(obj)}的编码${modelbase.get_attribute_persistence_text(attr)}最大值 -->
+  <sql id="${obj.persistenceName?lower_case}.${attr.persistenceName?lower_case}.max">
+  <![CDATA[
+    select max(${attr.persistenceName}) as `max${modelbase.get_attribute_sql_name(attr)?cap_first}`
+    from   <#if databaseName??>${databaseName}.</#if>${obj.persistenceName}
+    where  1 = 1
+    and ${attr.persistenceName} like ${r'${_rlike('}${modelbase.get_attribute_sql_name(attr)}${r')}'}
+  ]]>
+  </sql>
+
+  <#elseif attr.name == 'ordinal_position' || attr.name == 'sequence'>
+    <#assign inAttr = model.findAttributeByNames(obj.name, attr.getLabelledOptions('order')['in'])!attr>
+
+  <!-- 获取${modelbase.get_object_persistence_text(obj)}的编码${modelbase.get_attribute_persistence_text(attr)}最大值 -->
+  <sql id="${obj.persistenceName?lower_case}.ascend">
+  <![CDATA[
+    update ${obj.persistenceName} 
+    set ${attr.persistenceName} = ${attr.persistenceName} + 1
+    where 1 = 1
+    <#if inAttr != attr>
+    and ${inAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(inAttr)}${r'}'}
+    </#if>
+    and ${attr.persistenceName} >= ${r'${newPosition}'} and ${attr.persistenceName} <= ${r'${oldPosition?number - 1}'};
+
+    update ${obj.persistenceName} 
+    set ${attr.persistenceName} = ${r'${newPosition}'}
+    where 1 = 1
+      <#list idAttrs as idAttr>
+    and ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+      </#list>
+    ;
+  ]]>
+  </sql>
+
+  <sql id="${obj.persistenceName?lower_case}.descend">
+  <![CDATA[
+    update ${obj.persistenceName} 
+    set ${attr.persistenceName} = ${attr.persistenceName} - 1
+    where 1 = 1
+    <#if inAttr != attr>
+    and ${inAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(inAttr)}${r'}'}
+    </#if>
+    and ${attr.persistenceName} >= ${r'${oldPosition?number + 1}'} and ${attr.persistenceName} <= ${r'${newPosition}'};
+
+    update ${obj.persistenceName} 
+    set ${attr.persistenceName} = ${r'${newPosition}'}
+    where 1 = 1
+      <#list idAttrs as idAttr>
+    and ${idAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(idAttr)}${r'}'}
+      </#list>
+    ;
+  ]]>
+  </sql>
+    </#if>
+  </#list>
+  <#--
+   ###
+   ### 一对多关联的SQL。
+   ###
+   -->
+  <#list o2mConjObjs as o2mConjObj>
+    <#if o2mConjObj == ''><#continue></#if>
+    <#assign o2mRefObj = o2mRefObjs[o2mConjObj?index]>
+    <#-- 指向当前obj的属性 -->
+    <#assign o2mRefObjRefAttr = ''>
+    <#list o2mConjObj.attributes as o2mConjObjAttr>
+      <#if o2mConjObjAttr.type.name == obj.type.name>
+        <#assign o2mRefObjRefAttr = o2mConjObjAttr>
+        <#break>
+      </#if>
+    </#list>
+    <#if o2mRefObjRefAttr == ''><#stop '无法在关联对象' + o2mConjObj.name + '中找到关联' + obj.name + '的属性，请检查模型设计'></#if>
+
+  <!-- 删除${modelbase.get_object_persistence_text(o2mConjObj)}，${modelbase.get_object_persistence_text(obj)}和${modelbase.get_object_persistence_text(o2mRefObj)}的关联关系 -->
+  <sql id="${o2mConjObj.persistenceName?lower_case}.${o2mRefObjRefAttr.persistenceName}.delete">
+  <![CDATA[
+    delete from ${o2mConjObj.persistenceName}
+    where ${o2mRefObjRefAttr.persistenceName} = ${r'${'}${modelbase.get_attribute_sql_name(o2mRefObjRefAttr)}${r'}'}
+  ]]>
+  </sql>
+  </#list>
+</#list>
+</sqls>

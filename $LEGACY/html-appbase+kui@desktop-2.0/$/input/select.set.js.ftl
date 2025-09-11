@@ -1,0 +1,2 @@
+$('#${js.nameVariable(container.type)}${js.nameType(objname)} select[name=${js.nameVariable(id)}]').val('');
+$('#${js.nameVariable(container.type)}${js.nameType(objname)} select[name=${js.nameVariable(id)}]').trigger('change');

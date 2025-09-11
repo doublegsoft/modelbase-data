@@ -1,0 +1,57 @@
+<#assign objName = module?substring(module?index_of('/') + 1)>
+<#list children as child>
+${plugin.render(child, 0, 'html')}
+</#list>
+
+<script>
+<#list pageOwner.pageWidgets as widget>
+
+  <#attempt>
+${plugin.render(widget, 0, 'init.js')}
+  <#recover>
+  </#attempt>
+</#list>
+
+<#if role ?? && role == 'edit'>
+
+/**
+ * 在数据保存过程中，禁用按钮。
+ */
+function disableButtonsWhenSaving() {
+  $('#widgetEdit${js.nameType(objName)} button[type=save]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=reset]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=back]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=close]').button('loading');
+}
+
+/**
+ * 重新启用按钮。
+ */
+function enableButtonsAfterSaving() {
+  $('#widgetEdit${js.nameType(objName)} button[type=save]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=reset]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=back]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=close]').button('reset');
+}
+</#if>
+<#if role?? && role == 'main'>
+  <#list children as child>
+    <#if child.style?? && child.style == 'show'>
+      <#assign showingWidget = child>
+      <#break>
+    </#if>
+  </#list>
+  <#if showingWidget??>
+// 
+// 加载默认显示的组件。
+// 
+ajax.view({
+  url: 'html/${pageOwner.module}/${showingWidget.role!'TODO'}.html',
+  containerId: '${js.nameVariable(showingWidget.id)}Body',
+  success: function(resp) {
+    displayWidget('${js.nameVariable(showingWidget.id)}');
+  }
+});
+  </#if>
+</#if>
+</script>

@@ -1,0 +1,16 @@
+<#assign defaultOption = '请选择...'>
+<#if container.type == 'query'>
+  <#assign defaultOption = '不限'>
+</#if>
+<div class="input-prepend input-group">
+  <select name="${js.nameVariable(id)}"<#if required??> required</#if> label="${title}" class="form-control">
+    <option value="-1">${defaultOption}</option>
+  </select>
+<#if required??>
+  <div class="input-group-append">
+    <span class="input-group-text">
+      <i class="fas fa-asterisk icon-required"></i>
+    </span>
+  </div>
+</#if>
+</div>

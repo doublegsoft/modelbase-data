@@ -1,0 +1,141 @@
+<#import "/$/modelbase.ftl" as modelbase>
+<#assign attrId = modelbase.get_id_attributes(entity)[0]>
+import java.util.List
+import java.util.ArrayList
+import java.util.Map
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+import org.slf4j.Logger
+
+import org.springframework.context.ApplicationContext
+
+import ${namespace}.${java.nameNamespace(app.name)}.model.event.*
+import ${namespace}.${java.nameNamespace(app.name)}.model.entity.${java.nameType(entity.name)}
+import ${namespace}.${java.nameNamespace(app.name)}.model.assembler.${java.nameType(entity.name)}Assembler
+import ${namespace}.${java.nameNamespace(app.name)}.model.repository.${java.nameType(entity.name)}Repository
+import net.doublegsoft.appbase.dao.CommonDataAccess
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.JsonData
+import net.doublegsoft.appbase.SqlParams
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.service.GroovyService
+import net.doublegsoft.appbase.service.CommonService
+import net.doublegsoft.appbase.ddd.EventDispatcher
+
+ObjectMap merge(ApplicationContext spring, ObjectMap params) {
+	EventDispatcher eventDispatcher = spring.getBean(EventDispatcher.class)
+  ${java.nameType(entity.name)} ${java.nameVariable(entity.name)} = ${java.nameType(entity.name)}Assembler.assemble${java.nameType(entity.name)}FromFrontend(params)
+  ${java.nameType(entity.name)}Repository ${java.nameVariable(entity.name)}Repository = spring.getBean(${java.nameType(entity.name)}Repository.class)
+
+  String _data_source = params.get("_data_source") == null ? "" : params.get("_data_source")
+  CommonService commonService = (CommonService) spring.getBean('commonService' + _data_source)
+
+  // 根据唯一字段查询
+  ObjectMap unique = null
+  String uniqueFieldName = params.get('_unique_field')
+  if (uniqueFieldName != null) {
+    String uniqueFieldValue = params.get(uniqueFieldName)
+    unique = commonService.single('${entity.persistenceName}.' + ${java.nameType(entity.name)}.getPersistenceName(uniqueFieldName) + '.find', new SqlParams().set(uniqueFieldName, uniqueFieldValue))
+  }  
+  String uniqueExpression = params.get("_unique_expression");
+  if (!Strings.isBlank(uniqueExpression)) {
+    SqlParams uniqueParams = new SqlParams()
+    uniqueParams.set("_and_condition", uniqueExpression)
+    unique = commonService.single('${entity.persistenceName}.find', uniqueParams)
+  }
+
+  ${java.nameType(entity.name)} existing = null
+
+  if (unique != null) {
+    params.set('${modelbase.get_attribute_sql_name(attrId)}', unique.get('${modelbase.get_attribute_sql_name(attrId)}'))
+  } 
+
+  ObjectMap templateData = params.get("_template_data")
+  if (templateData == null) templateData = new ObjectMap()
+  params.remove("_template_data")
+  params = ObjectMap.templatize(params, templateData)
+
+<#if attrId.type.custom>
+  <#assign idEntity = model.findObjectByName(attrId.type.name)>
+  <#assign idEntityIdAttr = modelbase.get_id_attributes(idEntity)[0]>
+  if (params.get("${modelbase.get_attribute_sql_name(attrId)}") != null) {
+    if ((params.get("${modelbase.get_attribute_sql_name(attrId)}") instanceof String)) {
+      if (!Strings.isBlank(params.get("${modelbase.get_attribute_sql_name(attrId)}"))) {
+        existing = ${java.nameVariable(entity.name)}Repository.read${java.nameType(entity.name)}(params.get("${modelbase.get_attribute_sql_name(attrId)}"))
+      }
+    } else if (!Strings.isBlank(params.get("${modelbase.get_attribute_sql_name(attrId)}").get("${modelbase.get_attribute_sql_name(idEntityIdAttr)}"))) {
+      existing = ${java.nameVariable(entity.name)}Repository.read${java.nameType(entity.name)}(params.get("${modelbase.get_attribute_sql_name(attrId)}").get("${modelbase.get_attribute_sql_name(idEntityIdAttr)}"))
+    }
+  }
+<#else>
+  if (!Strings.isBlank(params.get("${modelbase.get_attribute_sql_name(attrId)}"))) {
+    existing = ${java.nameVariable(entity.name)}Repository.read${java.nameType(entity.name)}(params.get("${modelbase.get_attribute_sql_name(attrId)}"))
+  }
+</#if>
+
+  if (existing == null) {
+    ${java.nameVariable(entity.name)}Repository.create${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    ${java.nameType(entity.name)}CreatedEvent createdEvent = new ${java.nameType(entity.name)}CreatedEvent()
+    createdEvent.set${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    eventDispatcher.dispatch(createdEvent)
+  } else {
+<#list entity.attributes as attr>
+  <#if attr.constraint.domainType == 'json'>
+    // 处理JSON类型的字段
+    Map<String, Object> existing${java.nameType(attr.name)} = existing.get${java.nameType(attr.name)}()
+    existing${java.nameType(attr.name)}.putAll(${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}())
+    ${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}().putAll(existing${java.nameType(attr.name)})
+  </#if>
+</#list>
+    ${java.nameType(entity.name)}Assembler.assemble${java.nameType(entity.name)}From${java.nameType(entity.name)}(${java.nameVariable(entity.name)}, existing)
+    ${java.nameVariable(entity.name)}Repository.update${java.nameType(entity.name)}(existing, 'true' == params.get('_update_children'))
+    ${java.nameVariable(entity.name)} = existing
+    
+    ${java.nameType(entity.name)}UpdatedEvent updatedEvent = new ${java.nameType(entity.name)}UpdatedEvent()
+    updatedEvent.set${java.nameType(entity.name)}(${java.nameVariable(entity.name)})
+    eventDispatcher.dispatch(updatedEvent)
+  }
+  ObjectMap ret = ${java.nameType(entity.name)}Assembler.assembleObjectMapToFrontend(${java.nameVariable(entity.name)});
+  ret.set('${modelbase.get_attribute_sql_name(attrId)}', ${java.nameVariable(entity.name)}.get${java.nameType(attrId.name)}())
+  return ret;
+}
+
+ObjectMap handle(ApplicationContext spring, ObjectMap params) {
+  return merge(spring, params);
+}
+
+ApplicationContext spring = binding.getVariable("spring")
+ObjectMap params = binding.getVariable("params")
+Logger logger = binding.getVariable("logger")
+GroovyService groovyService = spring.getBean(GroovyService.class)
+
+String _data_source = params.get("_data_source") == null ? "" : params.get("_data_source")
+CommonDataAccess commonDataAccess = spring.getBean("commonDataAccess" + _data_source)
+GroovyShell shell = new GroovyShell()
+
+String scriptRoot = groovyService.getRoot()
+Script common = shell.parse(new File(scriptRoot + "/common.groovy"))
+
+ObjectMap data = new ObjectMap()
+try {
+  commonDataAccess.beginTransaction()
+  ObjectMap result = merge(spring, params)
+  String resultName = params.get("_result_name")
+  if (!Strings.isBlank(resultName)) {
+    data.set(resultName, result)
+  }
+  data.putAll(result)
+  data = common.transact(spring, shell, scriptRoot, params, data)
+  commonDataAccess.commit()
+} catch (Throwable ex) {
+  logger.error(ex.getMessage(), ex)
+  commonDataAccess.rollback()
+  return new JsonData().error(ex.getMessage())
+}
+
+// 返回对象
+JsonData retVal = new JsonData()
+retVal.set("data", data)
+return retVal

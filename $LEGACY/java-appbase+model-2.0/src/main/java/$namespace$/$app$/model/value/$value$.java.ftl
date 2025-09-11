@@ -1,0 +1,79 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.value;
+
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.io.InputStream;
+
+import com.alibaba.fastjson.annotation.JSONField;
+import net.doublegsoft.appbase.ddd.Value;
+
+<#list imports as imp>
+import ${imp}.model.entity.*;
+import ${imp}.model.value.*;
+</#list>
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.entity.*;
+</#if>
+
+/**
+ * ${modelbase.get_object_label(value)}值对象封装。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since 1.0.0
+ */
+public class ${modelbase.type_object(value)} implements Value, Serializable {
+
+  private static final long serialVersionUID = -1L;
+
+<#list value.attributes as attr>
+  /**
+   * ${modelbase.get_attribute_label(attr)}<#if !attr.type.collection>——${attr.persistenceName!'TODO'}</#if>.
+   */
+  <#assign defaultValue = modelbase.get_attribute_default_value(attr)>
+  <#if attr.name == 'id' || attr.name == 'name' || attr.name == 'type' || attr.name == 'code' || attr.name == 'text'>
+  @JSONField(name="${modelbase.get_attribute_sql_name(attr)}")
+  </#if>
+  private <#if attr.type.collection || attr.type.name == 'json'>final </#if>${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}<#if defaultValue != ''> = ${defaultValue}</#if>;
+
+</#list>
+<#list value.attributes as attr>
+  public ${modelbase.type_attribute(attr)} get${java.nameType(attr.name)}() {
+    return ${java.nameVariable(attr.name)};
+  }
+
+  <#if !attr.type.collection && attr.type.name != 'json'>
+  public void set${java.nameType(attr.name)}(${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
+  }
+
+  </#if>
+</#list>
+
+  public static String getPersistenceName(String attributeName) {
+<#list value.attributes as attr>
+  <#if !attr.persistenceName??><#continue></#if>
+    if (attributeName.equals("${modelbase.get_attribute_sql_name(attr)}")) {
+      return "${attr.persistenceName}";
+    }
+</#list>    
+    return attributeName;
+  }
+
+  public static String getPersistenceName() {
+    return "${value.persistenceName!''}";
+  }
+}

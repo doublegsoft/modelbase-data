@@ -1,0 +1,53 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.value;
+
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.io.InputStream;
+
+import net.doublegsoft.appbase.ddd.Value;
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.entity.*;
+</#if>
+
+/**
+ * ${modelbase.get_object_label(value)}值对象封装。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since 1.0.0
+ */
+public class ${modelbase.type_object(value)} implements Value, Serializable {
+
+  private static final long serialVersionUID = -1L;
+
+<#list value.attributes as attr>
+  /**
+   * ${modelbase.get_attribute_label(attr)}.
+   */
+  private <#if attr.type.collection>final </#if>${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}<#if attr.type.collection> = new ArrayList<>()</#if>;
+
+</#list>
+<#list value.attributes as attr>
+  public ${modelbase.type_attribute(attr)} get${java.nameType(attr.name)}() {
+    return ${java.nameVariable(attr.name)};
+  }
+
+  <#if !attr.type.collection>
+  public void set${java.nameType(attr.name)}(${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
+  }
+
+  </#if>
+</#list>
+}

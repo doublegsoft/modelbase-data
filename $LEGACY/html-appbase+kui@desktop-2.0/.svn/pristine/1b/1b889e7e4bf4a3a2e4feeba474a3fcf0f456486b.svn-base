@@ -1,0 +1,19 @@
+<div id="widgetList${java.nameType(module)}" class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fa fa-list"></i>
+        <strong>${text}</strong>
+      </div>
+      <div class="card-body">
+<#list children as child>
+${plugin.render(child, 'html', 8)}
+</#list>
+      </div>
+    </div>
+  </div>
+</div>
+<#if action == 'list'>
+<div id="widgetEdit${java.nameType(module)}" class="row hide"></div>
+<div id="widgetView${java.nameType(module)}" class="row hide"></div>
+</#if>

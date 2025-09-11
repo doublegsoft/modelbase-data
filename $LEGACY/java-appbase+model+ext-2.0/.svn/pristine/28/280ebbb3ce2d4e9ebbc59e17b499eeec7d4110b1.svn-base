@@ -1,0 +1,23 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<div id="page${js.nameType(entity.name)}Edit" class="card b-a-0">
+  <div widget-id="FORM.${entity.name?upper_case}.EDIT" widget-type="FormLayout" class="card-body mb-3">
+  </div>
+
+<script>
+
+function Page${js.nameType(entity.name)}Edit () {
+  
+}
+
+Page${js.nameType(entity.name)}Edit.prototype.show = function (params) {
+  this.setup(params);
+};
+
+Page${js.nameType(entity.name)}Edit.prototype.setup = function (params) {
+  stdbiz.render('PAGE.${app.name?upper_case}.${entity.name?upper_case}.EDIT', '#page${java.nameType(entity.name)}Edit', params);
+};
+
+page${js.nameType(entity.name)}Edit = new Page${js.nameType(entity.name)}Edit();
+
+</script>
+</div>

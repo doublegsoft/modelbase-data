@@ -1,0 +1,97 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign objName = module?substring(module?index_of('/') + 1)>
+<#list children as child>
+${plugin.render(child, 0, 'html')}
+</#list>
+
+<script>
+<#if role?? && role == 'edit'>
+  <#list children as child>
+    <#if child.type == 'form'>
+      <#assign formEdit = child>
+      <#break>
+    </#if>
+  </#list>
+/**
+ * 初始化编辑页面。
+ */
+function initialize(persistent) {
+  persistent = persistent || {};
+  $('#form${js.nameType(objName)}').formdata(persistent);
+  $('#form${js.nameType(objName)} input[name=${js.nameVariable(objName)}Id]').val(persistent.id);
+  $('#form${js.nameType(objName)} input[name=${js.nameVariable(objName)}Name]').val(persistent.name);
+  <#list pageOwner.pageWidgets as widget>
+
+    <#attempt>
+${plugin.render(widget, 2, 'init.js')}
+    <#recover>
+    </#attempt>
+  </#list>
+}
+
+/**
+ * 在数据保存过程中，禁用按钮。
+ */
+function disableButtonsWhenSaving() {
+  $('#widgetEdit${js.nameType(objName)} button[type=save]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=reset]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=back]').button('loading');
+  $('#widgetEdit${js.nameType(objName)} button[type=close]').button('loading');
+}
+
+/**
+ * 重新启用按钮。
+ */
+function enableButtonsAfterSaving() {
+  $('#widgetEdit${js.nameType(objName)} button[type=save]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=reset]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=back]').button('reset');
+  $('#widgetEdit${js.nameType(objName)} button[type=close]').button('reset');
+}
+
+//
+// 初始化编辑页面
+//
+if (globals.parameters.${guidbase.get_widget_identifiable(formEdit).id}) {
+  xhr.post({
+    url: '/api/v1/common/script',
+    data: {
+      usecase: '${module}/read',
+      ${guidbase.get_widget_identifiable(formEdit).id}: globals.parameters.${guidbase.get_widget_identifiable(formEdit).id}
+    },
+    success: function(resp) {
+      initialize(resp.data);
+    }
+  });
+} else {
+  initialize();
+}
+<#elseif role?? && role == 'list'>
+  <#list pageOwner.pageWidgets as widget>
+    <#attempt>
+${plugin.render(widget, 0, 'init.js')}
+    <#recover>
+    </#attempt>
+
+  </#list>
+<#elseif role?? && role == 'main'>
+  <#list children as child>
+    <#if child.style?? && child.style == 'show'>
+      <#assign showingWidget = child>
+      <#break>
+    </#if>
+  </#list>
+  <#if showingWidget??>
+// 
+// 加载默认显示的组件。
+// 
+ajax.view({
+  url: 'html/${pageOwner.module}/${showingWidget.role!'TODO'}.html',
+  containerId: '${js.nameVariable(showingWidget.id)} div.card-body',
+  success: function(resp) {
+    displayWidget('${js.nameVariable(showingWidget.id)}');
+  }
+});
+  </#if>
+</#if>
+</script>

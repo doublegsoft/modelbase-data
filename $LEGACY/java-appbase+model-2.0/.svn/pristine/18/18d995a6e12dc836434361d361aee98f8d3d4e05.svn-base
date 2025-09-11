@@ -1,0 +1,164 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.entity;
+
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.io.InputStream;
+
+import com.alibaba.fastjson.annotation.JSONField;
+import net.doublegsoft.appbase.ddd.Entity;
+
+<#list imports as imp>
+import ${imp}.model.entity.*;
+</#list>
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.value.*;
+</#if>
+
+<#assign idAttrs = modelbase.get_id_attributes(entity)>
+<#assign label = modelbase.get_object_label(entity)>
+/**
+ * ${label}实体对象封装。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since 1.0.0
+ */
+public class ${java.nameType(entity.name)} implements Entity, Serializable {
+
+  private static final long serialVersionUID = -1L;
+
+<#list entity.attributes as attr>
+  /**
+   * ${modelbase.get_attribute_label(attr)}<#if !attr.type.collection>——${attr.persistenceName!'TODO'}</#if>.
+   */
+  <#assign defaultValue = modelbase.get_attribute_default_value(attr)>
+  <#if attr.name == 'id' || attr.name == 'name' || attr.name == 'type' || attr.name == 'code' || attr.name == 'text'>
+  @JSONField(name="${modelbase.get_attribute_sql_name(attr)}")
+  </#if>
+  private <#if attr.type.collection || attr.type.name == 'json'>final </#if>${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}<#if defaultValue != ''> = ${defaultValue}</#if>;
+
+</#list>
+<#assign implicitReferences = modelbase.get_object_implicit_references(entity)>
+<#list implicitReferences as implicitReferenceName, implicitReference>
+  private Object ${js.nameVariable(implicitReferenceName)};
+
+</#list>
+<#list entity.attributes as attr>
+  public ${modelbase.type_attribute(attr)} get${java.nameType(attr.name)}() {
+    return ${java.nameVariable(attr.name)};
+  }
+
+  <#if attr.constraint.identifiable && attr.type.custom>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
+    <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+  public void set${java.nameType(attr.name)}(${modelbase.type_attribute_primitive(attr)} ${java.nameVariable(attr.name)}) {
+    ${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+    ${java.nameVariable(refObj.name)}.set${java.nameType(attr.name)}(${java.nameVariable(attr.name)});
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(refObj.name)};
+  }
+
+  </#if>
+  <#if !attr.type.collection && attr.type.name != 'json'>
+  public void set${java.nameType(attr.name)}(${modelbase.type_attribute(attr)} ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
+  }
+
+  </#if>
+</#list>
+<#list implicitReferences as implicitReferenceName, implicitReference>
+  public Object get${js.nameType(implicitReferenceName)}() {
+    return ${js.nameVariable(implicitReferenceName)};
+  }
+
+  public void set${js.nameType(implicitReferenceName)}(Object ${js.nameVariable(implicitReferenceName)}) {
+    this.${js.nameVariable(implicitReferenceName)} = ${js.nameVariable(implicitReferenceName)};
+  }
+
+</#list>
+
+  /**
+   * Checks whether anyone of id attributes is null.
+   *
+   * @return if there is anyone of id attributes is null return {@code true}, otherwise return {@code false}
+   */
+  public boolean hasNullId() {
+<#list idAttrs as idAttr>
+    if (${java.nameVariable(idAttr.name)} == null) {
+      return true;
+    }
+    <#assign idEntityIdAttr = idAttr>
+    <#assign getterCallerName = java.nameVariable(idEntityIdAttr.name)>
+  <#list 0..10 as index>
+    <#if idEntityIdAttr.type.name == 'uuid' ||  idEntityIdAttr.type.primitive>
+      <#break>
+    <#else>
+      <#assign idEntity = model.findObjectByName(idEntityIdAttr.type.name)>
+      <#assign idEntityIdAttr = modelbase.get_id_attributes(idEntity)[0]>
+      <#assign getterCallerName = getterCallerName + '.get' + java.nameType(idEntityIdAttr.name) + '()'>
+    if (${getterCallerName} == null) {
+      return true;
+    } 
+    </#if>
+  </#list>
+</#list>
+    return false;    
+  }
+
+  /**
+   * Uses entity id attributes to check {@code this} instance equals to 
+   * another {@link ${java.nameType(entity.name)}} object.
+   *
+   * @return {@code true} if equals or {@code false}
+   */
+  public boolean equals(${java.nameType(entity.name)} another) {
+<#list idAttrs as idAttr>
+    if (${java.nameVariable(idAttr.name)} == null) {
+      return false;
+    }
+    if (another.${java.nameVariable(idAttr.name)} == null) {
+      return false;
+    }
+</#list>
+<#list idAttrs as idAttr>
+    if (!${java.nameVariable(idAttr.name)}.equals(another.${java.nameVariable(idAttr.name)})) {
+      return false;
+    }
+</#list>  
+    return true;  
+  }
+
+  @Override
+  public String toString() {
+    if (${java.nameVariable(idAttrs[0].name)} != null) {
+      return ${java.nameVariable(idAttrs[0].name)}.toString();
+    }
+    return null;
+  }
+
+  public static String getPersistenceName(String attributeName) {
+<#list entity.attributes as attr>
+  <#if !attr.persistenceName??><#continue></#if>
+    if (attributeName.equals("${modelbase.get_attribute_sql_name(attr)}")) {
+      return "${attr.persistenceName}";
+    }
+</#list>    
+    return attributeName;
+  }
+
+  public static String getPersistenceName() {
+    return "${entity.persistenceName!''}";
+  }
+}

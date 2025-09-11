@@ -1,0 +1,49 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign Timestamp = statics['java.sql.Timestamp']>
+<#assign Date = statics['java.sql.Date']>
+goto("http://localhost:8088")
+
+# 登录
+click("//button[@id='buttonLogin']")
+sleep("2")
+
+# 展开模块：组织结构
+click("//a[contains(text(),'组织结构')]")
+sleep("1")
+
+<#list model.objects as obj>
+click("//a[contains(@href,'${modelbase.get_object_label(obj)}')]")
+sleep("2")
+
+click("//a[contains(@class,'card-header-action')]")
+sleep("1")
+
+click("//a[contains(@href,'新建')]")
+sleep("2")
+
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name?contains('enum')>
+<#--TODO-->
+    <#elseif attr.constraint.domainType.name == 'json'>
+      <#--TODO-->
+    <#elseif attr.type.name == 'string'>
+input("//div[contains(@class,'rightbar')]//input[@name='${js.nameType(attr.name)}']" = "${tatabase.string((attr.type.length!12)/4)}")
+    <#elseif attr.type.name == 'bool'>
+      <#--TODO-->
+    <#elseif attr.type.name == 'number'>
+input("//div[contains(@class,'rightbar')]//input[@name='${js.nameType(attr.name)}']" = "${tatabase.number(0,100)}")
+    <#elseif attr.type.name == 'date'>
+input("//div[contains(@class,'rightbar')]//input[@name='${js.nameType(attr.name)}']" = "${Date.valueOf(tatabase.date())?long?string('#')}")
+    <#elseif attr.type.name == 'datetime'>
+input("//div[contains(@class,'rightbar')]//input[@name='${js.nameType(attr.name)}']" = "${Timestamp.valueOf(tatabase.datetime())?long?string('#')}")
+    <#elseif attr.type.custom>
+      <#--TODO-->
+    <#else>
+      <#--TODO-->
+    </#if>
+  </#list>
+
+click("//div[contains(@class,'rightbar')]//button[contains(@class, 'btn-save')]")
+sleep("2")
+
+</#list>

@@ -1,0 +1,29 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<div id="page${js.nameType(entity.name)}Detail" class="card b-a-0">
+  <div widget-id="form{js.nameType(entity.name)}Detail" class="card-body mb-3">
+  </div>
+</div>
+
+<script>
+
+function PageProjectDetail () {
+  
+}
+
+Page${js.nameType(entity.name)}Detail.prototype.show = function (params) {
+  let self = this;
+  stdbiz.${app.name}.optionForm${js.nameType(entity.name)}Edit({
+    customElementId: 'FORM.${entity.name?upper_case}.EDIT' 
+  }, function(option) {
+    self.form{js.nameType(entity.name)}Edit = new FormLayout(option);
+    self.setup(params);
+  });
+};
+
+Page${js.nameType(entity.name)}Detail.prototype.setup = function (params) {
+  this.form{js.nameType(entity.name)}Edit.render('#page${js.nameType(entity.name)}Detail div[widget-id=form{js.nameType(entity.name)}Detail]', params);
+};
+
+page${js.nameType(entity.name)}Detail = new Page${js.nameType(entity.name)}Detail();
+
+</script>

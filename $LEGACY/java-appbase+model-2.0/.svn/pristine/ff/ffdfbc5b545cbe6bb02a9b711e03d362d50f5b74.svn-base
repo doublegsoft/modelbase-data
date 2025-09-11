@@ -1,0 +1,23 @@
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model;
+
+/**
+ * ${app.name}常量定义。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since ${version}
+ */
+public interface Constants {
+
+  String TRUE = "T";
+
+  String FALSE = "F";
+
+  String ACTIVATED = "A";
+
+  String DEACTIVATED = "D";
+
+}

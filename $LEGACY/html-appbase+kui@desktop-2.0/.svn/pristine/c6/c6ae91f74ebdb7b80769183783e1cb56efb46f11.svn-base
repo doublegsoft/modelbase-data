@@ -1,0 +1,37 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign objName = pageOwner.module?substring(pageOwner.module?index_of('/') + 1)>
+<#assign containerId = child.containerId>
+$('#${js.nameVariable(containerId)} button[type=save]').on('click', function () {
+  // 避免重复提交，禁用按钮
+  disableButtonsWhenSaving();
+
+  // 验证【TODO】数据有效性
+  var errors = $('#form${js.nameType(objName)}').validate();
+  if (errors.length > 0) {
+    // 显示错误信息
+    dialog.error(utils.message(errors));
+    // 恢复按钮
+    enableButtonsAfterSaving();
+    return;
+  }
+  
+  // 提交保存【TODO】数据到后台
+  var data = $('#form${js.nameType(objName)}').formdata();
+  data.usecase = '${pageOwner.module}/save';
+  xhr.post({
+    url: '/api/v1/common/script',
+    data: data,
+    success: function (resp) {
+      if (resp.error) {
+        // 显示服务器端错误
+        dialog.error(resp.error.message);
+        // 恢复按钮
+        enableButtonsAfterSaving();
+        return;
+      }
+      // 成功提示
+      // 恢复按钮
+      enableButtonsAfterSaving();
+    }
+  });
+});

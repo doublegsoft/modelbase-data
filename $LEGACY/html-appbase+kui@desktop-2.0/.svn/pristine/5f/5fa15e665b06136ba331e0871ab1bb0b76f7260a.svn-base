@@ -1,0 +1,14 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign containerId = child.containerId>
+$('#${js.nameVariable(containerId)} button[type=new]').on('click', function() {
+  ajax.view({
+    url: 'html/${pageOwner.module}/edit.html',
+    containerId: '${js.nameVariable(containerId?replace('list', 'edit'))}Body',
+    data: {
+      
+    },
+    success: function() {
+      displayWidget('${js.nameVariable(containerId?replace('list', 'edit'))}')
+    }
+  });
+});

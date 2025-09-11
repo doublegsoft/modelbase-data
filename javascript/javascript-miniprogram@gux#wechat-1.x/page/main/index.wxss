@@ -1,0 +1,89 @@
+@import "/app.wxss";
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  display: none;
+}
+
+.tab-item {
+  background:var(--color-secondary);
+  color:var(--color-text-primary-inverse);
+}
+
+.tab-item.checked {
+  background:var(--color-primary-inverse);
+  color:var(--color-text-primary);
+}
+
+view.content {
+  margin: auto; 
+  align-items: center; 
+  justify-items: center;
+  text-align: center;
+}
+
+view.theme-image {
+  font-size: 128px; 
+  color: var(--color-primary);
+}
+
+button.primary {
+  width: 80%; 
+  height: 48px; 
+  background-color: var(--color-primary);
+  color: white; 
+  line-height: 32px; 
+  font-size: 20px;
+}
+
+button.secondary {
+  width: 80%; 
+  height: 48px; 
+  background-color: var(--color-success-lighter);
+  color: var(--color-success); 
+  line-height: 32px; 
+  font-size: 20px;
+}
+
+text.title {
+  font-size: 22px;
+  text-align: center;
+  display: block;
+}
+
+text.description {
+  padding-top: 8px;
+  font-size: 18px;
+  color: var(--color-text-secondary);
+}
+
+.swiper-container {
+  width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.slide-advertisement {
+  width: 100%;
+  height: 100%;
+}
+
+.slide-feature {
+  width: 100%;
+  height: 100%;
+  margin-left: 16px; 
+  margin-right: 16px;
+}
+
+.marquee {
+  transition: all 0.5s;
+  margin-top: -60rpx;
+}

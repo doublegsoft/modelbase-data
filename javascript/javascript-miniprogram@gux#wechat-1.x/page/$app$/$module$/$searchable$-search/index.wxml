@@ -1,0 +1,26 @@
+<view class="page" style="">
+  <view class="head-search" catch:tap="gotoSearch">
+    <icon type="search" color="#999" class="search" />
+    <input type="text" style="flex: 1;" placeholder-class="placeholder-style" placeholder="{{tooltip}}" />
+  </view>
+  <view class="gx-fs-15 gx-fb gx-mt-16">历史搜索</view>
+  <view class="gx-d-flex" style="flex-wrap: wrap;">
+    <view wx:for="{{history}}" wx:key="text"
+          class="gx-bg-success gx-px-8 gx-py-4 gx-mt-4 gx-mx-4" 
+          style="border-radius:20px;"
+          bind:tap="gotoBackWithCriteria"
+          data-text="{{item.text}}">
+      <text class="gx-fs-13 gx-text-inverse">{{item.text}}</text>
+    </view>
+  </view>
+  <view class="gx-fs-15 gx-fb gx-mt-16">分类搜索</view>
+  <view class="gx-d-flex" style="flex-wrap: wrap;">
+    <view wx:for="{{category}}" wx:key="text"
+          class="gx-bg-success gx-px-8 gx-py-4 gx-mt-4 gx-mx-4" 
+          style="border-radius:20px;"
+          bind:tap="gotoBackWithCriteria"
+          data-text="{{item.text}}">
+      <text class="gx-fs-13 gx-text-inverse">{{item.text}}</text>
+    </view>
+  </view>
+</view>

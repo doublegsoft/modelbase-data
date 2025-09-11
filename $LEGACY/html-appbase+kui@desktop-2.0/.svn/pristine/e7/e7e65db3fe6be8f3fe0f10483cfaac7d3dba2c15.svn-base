@@ -1,0 +1,6 @@
+<#import '/$/guidbase.ftl' as guidbase>
+<#assign objName = pageOwner.module?substring(pageOwner.module?index_of('/') + 1)>
+<#assign containerId = child.containerId>
+$('#${js.nameVariable(containerId)} button[type=reset]').on('click', function() {
+  $('#form${js.nameType(objName)}').formdata({});
+});

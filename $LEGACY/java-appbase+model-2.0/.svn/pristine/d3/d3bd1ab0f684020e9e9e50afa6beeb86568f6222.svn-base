@@ -1,0 +1,338 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#import '/$/appbase.ftl' as appbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.defaults.repository;
+
+import java.sql.Connection;
+import java.util.List;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.sql.Date;
+import java.sql.Timestamp;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.Lazy;
+
+import net.doublegsoft.appbase.ddd.DomainException;
+import net.doublegsoft.appbase.ObjectMap;
+import net.doublegsoft.appbase.SqlParams;
+import net.doublegsoft.appbase.service.CommonService;
+import net.doublegsoft.appbase.service.RepositoryService;
+import net.doublegsoft.appbase.service.ServiceException;
+import net.doublegsoft.appbase.util.Strings;
+import net.doublegsoft.appbase.util.IdGenerator;
+
+<#list imports as imp>
+import ${imp}.model.constant.*;
+import ${imp}.model.assembler.*;
+import ${imp}.model.validation.*;
+import ${imp}.model.repository.*;
+</#list>
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_entity_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.entity.*;
+import <#if namespace??>${namespace}.</#if>${app.name}.model.assembler.*;
+import <#if namespace??>${namespace}.</#if>${app.name}.model.validation.*;
+import <#if namespace??>${namespace}.</#if>${app.name}.model.repository.*;
+</#if>
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.value.*;
+import <#if namespace??>${namespace}.</#if>${app.name}.model.assembler.*;
+</#if>
+<#-- 实体类名 -->
+<#assign typename = java.nameType(constant.name)>
+<#-- 实体变量名 -->
+<#assign varname = java.nameVariable(constant.name)>
+<#assign label = modelbase.get_object_label(constant)>
+<#-- 名称的单数和复数形式 -->
+<#attempt>
+  <#assign singular = modelbase.get_attribute_labelled_option(constant, 'name', 'singular')>
+  <#assign plural   = modelbase.get_attribute_labelled_option(constant, 'name', 'plural')>
+<#recover>
+  <#stop constant.name + '没有单复数的名称'>
+</#attempt>
+
+<#-- 实体访问库集合 -->
+<#-- 实体的标识属性 -->
+<#assign idAttrs  = modelbase.get_id_attributes(constant)>
+/**
+ * 实现【${label}】实体对象库的访问。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since 1.0
+ */
+@Repository("defaults.${app.name}.Default${typename}Repository")
+public class Default${typename}Repository implements ${typename}Repository {
+
+  /**
+   * 通用数据访问服务。
+   */
+  @Autowired
+  @Qualifier("commonService<#if databaseName??>4${java.nameType(databaseName)?lower_case}</#if>")
+  protected CommonService commonService;
+
+  /**
+   * 通用对象访问服务。
+   */
+  @Autowired
+  @Qualifier("repositoryService<#if databaseName??>4${java.nameType(databaseName)?lower_case}</#if>")
+  protected RepositoryService repositoryService;
+
+<#--#################################################################################################################-->
+<#-- 创建【CREATE】操作                                                                                                -->
+<#--#################################################################################################################-->
+  /**
+   * 创建【${label}】实体对象。
+   *
+   * @param ${varname}
+   *        待创建的【${label}】实体对象
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public void create${typename}(${typename} ${varname}) throws DomainException {
+<#-- SPEC: 必填项的服务器端校验 -->
+    // validate the ${java.nameVariable(constant.name)}
+    ${typename}Validation validation = new ${typename}Validation(commonService);
+    String validationErrors = validation.validate(${varname});
+    if (!Strings.isBlank(validationErrors)) {
+      throw new DomainException(validationErrors);
+    }
+<#list idAttrs as idAttr>
+    ${modelbase.type_attribute(idAttr)} ${java.nameVariable(idAttr.name)} = ${java.nameVariable(constant.name)}.get${java.nameType(idAttr.name)}();
+</#list>
+    // 如果标识为空则赋值
+    setIdentifiableAttributes(${java.nameVariable(constant.name)});
+    // 对象标识属性
+<#list idAttrs as idAttr>
+    ${java.nameVariable(idAttr.name)} = ${java.nameVariable(constant.name)}.get${java.nameType(idAttr.name)}();
+</#list>
+    try {
+      // 创建【${label}】主实体
+      commonService.execute("${constant.persistenceName?lower_case}.create", ${java.nameType(constant.name)}Assembler.assembleSqlParams(${java.nameVariable(constant.name)}));
+    } catch (ServiceException ex) {
+      throw new DomainException(ex);
+    }
+  }
+
+<#--#################################################################################################################-->
+<#-- 读取【READ】操作                                                                                                  -->
+<#--#################################################################################################################-->
+  /**
+   * 读取一个【${label}】实体对象。
+   *
+<#list idAttrs as attr>
+   * @param ${java.nameVariable(attr.name)}
+   *        【${modelbase.get_attribute_label(attr)}】属性
+   *
+</#list>
+   * @param withChildren
+   *        是否加载子对象集合，{@code true}加载，{@code false}不加载
+   *
+   * @return 如果找到则返回找到的对象，否则返回空
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public ${java.nameType(constant.name)} read${java.nameType(constant.name)}(${modelbase.get_attributes_as_parameters(idAttrs)}, boolean withChildren) throws DomainException {
+    SqlParams params = new SqlParams();
+<#list idAttrs as attr>
+    params.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(attr.name)});
+</#list>
+    ObjectMap found = null;
+    try {
+      found = commonService.single("${constant.persistenceName?lower_case}.find", params);
+    } catch (ServiceException ex) {
+      throw new DomainException(ex);
+    }
+    if (found == null) {
+      return null;
+    }
+    ${java.nameType(constant.name)} retVal = ${java.nameType(constant.name)}Assembler.assemble${java.nameType(constant.name)}(found);
+    return retVal;
+  }
+
+<#--#################################################################################################################-->
+<#-- 更新【UPDATE】操作                                                                                                -->
+<#--#################################################################################################################-->
+  /**
+   * 更新一个【${label}】实体对象.
+   *
+   * @param ${varname}
+   *        待更新的实体对象
+   *
+   * @param updateChildren
+   *        是否更新子对象集合，{@code true}更新，{@code false}不更新
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public void update${typename}(${typename} ${varname}, Set<String> updateChildren) throws DomainException {
+    SqlParams params = ${typename}Assembler.assembleSqlParams(${varname});
+    try {
+<#if constant.getLabelledOptions('persistence')['revision']??>
+      commonService.execute("${constant.persistenceName?lower_case}.revision", params);
+</#if>
+      commonService.execute("${constant.persistenceName?lower_case}.update", params);
+    } catch (ServiceException ex) {
+      throw new DomainException(ex);
+    }
+  }
+
+<#--#################################################################################################################-->
+<#-- 物理删除【DELETE】操作                                                                                                -->
+<#--#################################################################################################################-->
+  /**
+   * 删除一个【${label}】实体对象.
+   *
+<#list idAttrs as attr>
+   * @param ${java.nameVariable(attr.name)}
+   *        【${modelbase.get_attribute_label(attr)}】属性
+   *
+</#list>
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public void delete${typename}(<@appbase.print_attributes_as_parameters attrs=idAttrs/>) throws DomainException {
+    SqlParams params = new SqlParams();
+    try {
+      // 删除主实体
+<#list idAttrs as idAttr>
+  <#if idAttr.type.custom>
+      params.set("${modelbase.get_attribute_sql_name(idAttr)}", ${java.nameVariable(idAttr.name)}.get${java.nameType(idAttr.directRelationship.targetAttribute.name)}());
+  <#else>    
+      params.set("${modelbase.get_attribute_sql_name(idAttr)}", ${java.nameVariable(idAttr.name)});
+  </#if>
+</#list>
+      commonService.execute("${constant.persistenceName?lower_case}.delete", params);
+    } catch (ServiceException ex) {
+      throw new DomainException(ex);
+    }
+  }
+
+<#--#################################################################################################################-->
+<#-- 查询【FIND】操作                                                                                                -->
+<#--#################################################################################################################-->
+  /**
+   * 查询满足条件的【${label}】实体对象集合.
+   *
+   * @param params
+   *        查询条件，对应具体的SQL语句
+   *
+   * @param children
+   *        是否同时查询出子对象
+   *
+   * @return 满足条件的【${label!''}】实体对象集合
+   *
+   * @throws DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public List<${typename}> find${java.nameType(constant.plural)}By(ObjectMap params, boolean children) throws DomainException {
+    List<${typename}> retVal = new ArrayList<>();
+    try {
+      List<ObjectMap> data = commonService.all("${constant.persistenceName?lower_case}.find", new SqlParams().set(params));
+      for (ObjectMap row : data) {
+        retVal.add(${java.nameType(constant.name)}Assembler.assemble${java.nameType(constant.name)}(row));
+      }
+    } catch (ServiceException ex) {
+      throw new DomainException("find${java.nameType(constant.plural)}By", ex);
+    }
+    return retVal;
+  }
+
+  @Override
+  public List<ObjectMap> findObjectMapsBy(ObjectMap params) throws DomainException {
+    try {
+      return commonService.all("${constant.persistenceName?lower_case}.find", new SqlParams().set(params));
+    } catch (ServiceException ex) {
+      throw new DomainException("find${java.nameType(constant.plural)}By", ex);
+    }
+  }
+
+  <#--#################################################################################################################-->
+  <#-- 创建【聚合】操作                                                                                                  -->
+  <#--#################################################################################################################-->
+  @Override
+  public List<ObjectMap> aggregate${java.nameType(constant.plural)}(ObjectMap params) throws DomainException {
+    List<String> grouping${java.nameType(constant.name)}Attributes = params.get("grouping${java.nameType(constant.name)}Attributes");
+    for (String groupingAttributeName : grouping${java.nameType(constant.name)}Attributes) {
+      ObjectMap groupingField = new ObjectMap();
+      groupingField.set("persistenceName", ${java.nameType(constant.name)}.getPersistenceName(groupingAttributeName));
+      groupingField.set("attributeName", groupingAttributeName);
+      params.add("groupingFields", groupingField);
+    }
+    
+    try {
+      return commonService.all("${constant.persistenceName?lower_case}.aggregate", new SqlParams().set(params));
+    } catch (ServiceException ex) {
+      throw new DomainException("count${java.nameType(constant.plural)}By", ex);
+    }
+  }
+
+  /**
+   * 设置实体对象的标识属性值，支持UUID、最大数加1、业务编码或者外键作为主键、多主键等方法。
+   *
+   * @param ${varname}
+   *        实体对象
+   *
+   * @throw DomainException
+   *        捕获到任何异常则抛出
+   */
+  @Override
+  public void setIdentifiableAttributes(${typename} ${varname}) throws DomainException {
+<#list idAttrs as idAttr>
+    if (${varname}.get${java.nameType(idAttr.name)}() == null) {
+  <#if idAttr.type.name == 'uuid'>
+      ${varname}.set${java.nameType(idAttr.name)}(IdGenerator.uuid());
+  <#elseif idAttr.type.name == 'integer' || idAttr.type.name == 'int' || idAttr.type.name == 'long' || idAttr.type.name == 'number'>
+      try {
+        ${varname}.set${java.nameType(idAttr.name)}(IdGenerator.sequence(commonService, "${constant.persistenceName?lower_case}.${idAttr.persistenceName?lower_case}.max", "${idAttr.persistenceName?lower_case}"));
+      } catch (ServiceException ex) {
+        throw new DomainException(ex);
+      }
+  <#elseif idAttr.type.name?index_of('code') == 0>
+    <#assign domainType = idAttr.constraint.domainType?string>
+    <#assign numberCount = 0>
+    <#if domainType?index_of('N') != -1>
+      <#assign numberCount = domainType?substring(domainType?index_of('N'))?length - 1>
+    </#if>
+    <#if numberCount != 0>
+      <#assign codeFormat = domainType?replace('code', '')?replace('(', '')?replace(')', '')?replace('~', '')?replace('N', '')>
+    <#else>
+      <#assign numberCount = domainType?replace('code(', '')?replace(')', '')>
+    </#if>
+      try {
+        ${varname}.set${java.nameType(idAttr.name)}(IdGenerator.code("${codeFormat!''}", ${numberCount}, commonService, "${constant.persistenceName?lower_case}.${idAttr.persistenceName?lower_case}.max", "${idAttr.persistenceName?lower_case}"));
+      } catch (ServiceException ex) {
+        throw new DomainException(ex);
+      }
+  <#elseif idAttr.constraint.domainType.name == 'now'>
+      ${varname}.set${java.nameType(idAttr.name)}(new Timestamp(System.currentTimeMillis()));
+  <#elseif idAttr.type.custom>
+      <#assign refObj = model.findObjectByName(idAttr.type.name)>
+      ${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+      ${java.nameVariable(refObj.name)}Repository.setIdentifiableAttributes(${java.nameVariable(refObj.name)});
+      ${varname}.set${java.nameType(idAttr.name)}(${java.nameVariable(refObj.name)});
+  <#else>
+      // TODO: IMPLEMENT YOUR OWN ID GENERATION
+      ${varname}.set${java.nameType(idAttr.name)}(IdGenerator.uuid());
+  </#if>
+    }
+</#list>
+  }
+}

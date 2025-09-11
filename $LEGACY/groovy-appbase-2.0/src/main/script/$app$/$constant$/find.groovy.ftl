@@ -1,0 +1,135 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#assign attrId = modelbase.get_id_attributes(constant)[0]>
+import java.util.List
+import java.util.ArrayList
+import java.util.Map
+import java.io.File
+
+import groovy.lang.GroovyShell
+import groovy.lang.Script
+
+import org.springframework.context.ApplicationContext
+
+import ${namespace}.${java.nameNamespace(app.name)}.model.repository.${java.nameType(constant.name)}Repository
+import net.doublegsoft.appbase.JsonData
+import net.doublegsoft.appbase.SqlParams
+import net.doublegsoft.appbase.ObjectMap
+import net.doublegsoft.appbase.Pagination
+import net.doublegsoft.appbase.service.CommonService
+import net.doublegsoft.appbase.service.RepositoryService
+import net.doublegsoft.appbase.service.GroovyService
+import net.doublegsoft.appbase.util.Strings
+import net.doublegsoft.appbase.util.Datasets
+
+List<ObjectMap> find(ApplicationContext spring, ObjectMap params) {
+  def ${java.nameVariable(constant.name)}Repository = spring.getBean(${java.nameType(constant.name)}Repository.class)
+
+  String _data_source = params.get("_data_source") == null ? "" : params.get("_data_source")
+  def commonService = spring.getBean("commonService" + _data_source)
+  def repositoryService = spring.getBean("repositoryService")
+  def groovyService = spring.getBean(GroovyService.class)
+
+  // 用户喜好关联
+  if (params.containsKey("_favourite")) {
+    params.set("_other_select", "fav.entyid as favouriteEntityId")
+    params.set("_left_join", "left join tv_upm_fav fav on fav.entytyp = 'STDBIZ.${app.name?upper_case}.${constant.name?upper_case}' \n" + 
+      "and fav.entyid = ${modelbase.get_object_sql_alias(constant)}.${attrId.persistenceName} \n" + 
+      "and fav.usrid = '" + (params.get("userId") == null ? "0" : params.get("userId")) + "' \n" + 
+      "and fav.usrtyp = 'STDBIZ.SAM.USER'")
+  }
+  if (params.get("_favourite") == "true") {
+    params.set("_and_condition", "and ${attrId.persistenceName} in ( \n" +
+      "select entyid from tv_upm_fav \n" +
+      "where entytyp = 'STDBIZ.${app.name?upper_case}.${constant.name?upper_case}' \n" +
+      "and usrid = '" + (params.get("userId") == null ? "0" : params.get("userId")) + "' \n" + 
+      "and usrtyp = 'STDBIZ.SAM.USER' \n" +
+      ")")
+  }
+
+  List<ObjectMap> ${java.nameVariable(modelbase.get_object_plural(constant))} = ${java.nameVariable(constant.name)}Repository.findObjectMapsBy(params);
+
+  // 可选项转换
+  for (ObjectMap row : ${java.nameVariable(modelbase.get_object_plural(constant))}) {
+    if (row.containsKey('options')) {
+      try {
+        row.set('options', JSON.parse(row.get('options')))
+      } catch (Exception ex) {
+
+      }
+    }
+  }
+
+  // 拼音转换
+  if (params.containsKey("_pinyin_fields")) {
+    List<String> fields = params.get("_pinyin_fields");
+    for (ObjectMap item : ${java.nameVariable(modelbase.get_object_plural(constant))}) {
+      for (String field : fields) {
+        if (!Strings.isBlank(item.get(field))) {
+          item.set("_pinyin_" + field, Strings.pinyin(item.get(field)));
+        }
+      }
+    }
+  }
+
+  // 隐式引用
+  ObjectMap groupingIds = null
+  <#assign implicitReferences = modelbase.get_object_implicit_references(constant)>
+  <#if implicitReferences?size != 0>
+    <#list implicitReferences as implicitReferenceName, implicitReference>
+      <#assign attrRefId = ''>
+      <#assign attrRefType = ''>
+      <#list implicitReference as value, attr>
+        <#if value == 'type'>
+          <#assign attrRefType = attr>
+        <#elseif value == 'id'>
+          <#assign attrRefId = attr>
+        </#if>
+      </#list>
+  if (params.get("get${java.nameType(implicitReferenceName)}") == "true" || params.get("_get_${implicitReferenceName}") == "true") {
+    groupingIds = new ObjectMap()
+    for (ObjectMap item : ${java.nameVariable(modelbase.get_object_plural(constant))}) {
+      if (item.get("${modelbase.get_attribute_sql_name(attrRefId)}") != null) {
+        groupingIds.add(item.get("${modelbase.get_attribute_sql_name(attrRefType)}"), item.get("${modelbase.get_attribute_sql_name(attrRefId)}"))
+      }
+    }
+    for (Map.Entry<String, Object> entry : groupingIds.entrySet()) {
+      String group = entry.getKey();
+      List<ObjectMap> rows = repositoryService.findObjectsByIds(entry.getValue(), group);
+      ${java.nameVariable(modelbase.get_object_plural(constant))} = Datasets.conjunct(${java.nameVariable(modelbase.get_object_plural(constant))}, "${modelbase.get_attribute_sql_name(attrRefId)}", rows, Strings.nameVariable(group.substring(group.lastIndexOf(".") + 1)) + "Id", "${java.nameVariable(implicitReferenceName)}");
+    }
+  }
+    </#list>
+  </#if>
+  <#-- 多对多聚合查询函数 -->
+  <#list constant.attributes as attr>
+    <#assign conjObjName = attr.getLabelledOptions('persistence')['conjunction']!>
+    <#if conjObjName == ''><#continue></#if>
+    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions('persistence')['conjunction'])>
+    <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+  if (params.get("aggregate${java.nameType(refObj.name)}") == 'true' || params.get("_aggregate_${refObj.name?lower_case}") == 'true') {
+    List<ObjectMap> rows = ${java.nameVariable(constant.name)}Repository.aggregate${java.nameType(refObj.plural)}(params)
+    ${java.nameVariable(modelbase.get_object_plural(constant))} = Datasets.conjunct(${java.nameVariable(modelbase.get_object_plural(constant))}, "${modelbase.get_attribute_sql_name(attrId)}", rows, "${modelbase.get_attribute_sql_name(attrId)}");
+  }  
+  </#list>
+  return ${java.nameVariable(modelbase.get_object_plural(constant))}
+}
+
+List<ObjectMap> handle(ApplicationContext spring, ObjectMap params) {
+  return find(spring, params);
+}
+
+def spring = binding.getVariable("spring")
+def params = binding.getVariable("params")
+GroovyService groovyService = spring.getBean(GroovyService.class)
+GroovyShell shell = new GroovyShell()
+
+String scriptRoot = groovyService.getRoot()
+Script common = shell.parse(new File(scriptRoot + "/common.groovy"))
+
+List<ObjectMap> data = find(spring, params)
+
+data = common.conjunct(spring, shell, scriptRoot, params, data)
+
+def retVal = new JsonData()
+retVal.set("data", data)
+return retVal

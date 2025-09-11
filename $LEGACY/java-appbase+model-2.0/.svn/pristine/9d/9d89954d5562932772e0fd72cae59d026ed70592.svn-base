@@ -1,0 +1,437 @@
+<#import '/$/appbase.ftl' as appbase>
+<#import '/$/modelbase.ftl' as modelbase>
+<#if license??>
+${java.license(license)}
+</#if>
+package <#if namespace??>${namespace}.</#if>${app.name}.model.assembler;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.math.BigDecimal;
+import java.io.Serializable;
+import java.sql.Date;
+import java.sql.Timestamp;
+
+import com.alibaba.fastjson.*;
+
+import net.doublegsoft.appbase.ddd.DomainException;
+import net.doublegsoft.appbase.ObjectMap;
+import net.doublegsoft.appbase.SqlParams;
+import net.doublegsoft.appbase.service.CommonService;
+import net.doublegsoft.appbase.service.ServiceException;
+import net.doublegsoft.appbase.util.Safe;
+import net.doublegsoft.appbase.util.Strings;
+
+<#list imports as imp>
+import ${imp}.model.entity.*;
+import ${imp}.model.assembler.*;
+</#list>
+
+import <#if namespace??>${namespace}.</#if>${app.name}.model.*;
+<#if modelbase.has_entity_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.entity.*;
+</#if>
+<#if modelbase.has_value_object(app.name, model)>
+import <#if namespace??>${namespace}.</#if>${app.name}.model.value.*;
+</#if>
+<#-- 实体类名 -->
+<#assign typename = java.nameType(entity.name)>
+<#-- 实体变量名 -->
+<#assign varname = java.nameVariable(entity.name)>
+<#assign label = modelbase.get_object_label(entity)>
+<#-- 名称的单数和复数形式 -->
+<#assign singular = modelbase.get_attribute_labelled_option(entity, 'name', 'singular')>
+<#assign plural   = modelbase.get_attribute_labelled_option(entity, 'name', 'plural')>
+
+<#-- 实体访问库集合 -->
+<#-- 实体的标识属性 -->
+<#assign idAttrs  = modelbase.get_id_attributes(entity)>
+<#-- 所有关联对象根据业务关系的分组 -->
+<#assign groups   = modelbase.group_object_references(entity, model)>
+
+<#-- 实体访问库集合 -->
+<#assign anyRefObjs = groups.anyRefObjs>
+<#-- 引用一个 -->
+<#assign o2oRefAttrs = groups.o2oRefAttrs>
+<#assign o2oRefObjs  = groups.o2oRefObjs>
+<#-- 引用多个 -->
+<#assign o2mRefAttrs = groups.o2mRefAttrs>
+<#assign o2mRefObjs  = groups.o2mRefObjs>
+<#assign o2mConjObjs = groups.o2mConjObjs>
+/**
+ * 【${modelbase.get_object_label(entity)}】实体各层对象的装配器。
+ *
+ * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
+ *
+ * @since ${version}
+ */
+public final class ${typename}Assembler implements Constants {
+
+  /**
+   * 从数据库存储的数据对象中装配【${modelbase.get_object_label(entity)}】实体对象。
+   *
+   * @param params
+   *        普通数据对象
+   *
+   * @return 装配后的【${modelbase.get_object_label(entity)}】实体对象
+   */
+  public static ${typename} assemble${typename}(ObjectMap params) {
+    ${typename} retVal = assemble${typename}WithoutReferences(null, params);
+<#list o2oRefAttrs as o2oRefAttr>
+  <#assign o2oRefObj = o2oRefObjs[o2oRefAttr?index]>
+  <#assign o2oRefObjIdAttrs = modelbase.get_id_attributes(o2oRefObj)>
+    if (params.get("${modelbase.get_attribute_sql_name(o2oRefAttr)}") != null) {
+      // 扩展对象可以从参数中直接获得关联标识
+      ${java.nameType(o2oRefObj.name)} ${java.nameVariable(o2oRefObj.name)} = ${java.nameType(o2oRefObj.name)}Assembler.assemble${java.nameType(o2oRefObj.name)}WithoutReferences(<#if o2oRefAttr.constraint.identifiable>"${java.nameVariable(o2oRefAttr.type.name)}"<#else>"${java.nameVariable(o2oRefAttr.name)}"</#if>, params);
+      ${java.nameVariable(o2oRefObj.name)}.set${java.nameType(o2oRefObjIdAttrs[0].name)}((${modelbase.type_attribute_primitive(o2oRefObjIdAttrs[0])})params.get("${modelbase.get_attribute_sql_name(o2oRefAttr)}"));
+      retVal.set${java.nameType(o2oRefAttr.name)}(${java.nameVariable(o2oRefObj.name)});
+    }
+</#list>
+    return retVal;
+  }
+
+  public static ${typename} assemble${typename}WithoutReferences(String prefix, ObjectMap params) {
+    ${typename} retVal = new ${typename}();
+<#list entity.attributes as attr>
+  <#if !attr.persistenceName?? || attr.type.custom><#continue></#if>
+  <#if attr.type.name == 'bool'>
+    retVal.set${java.nameType(attr.name)}(TRUE.equals(params.get(prefixedAttributeName(prefix, "${varname}", "${modelbase.get_attribute_sql_name(attr)}"))));
+  <#elseif attr.type.name == 'json'>
+    if (!Strings.isBlank(params.get(prefixedAttributeName(prefix, "${varname}", "${modelbase.get_attribute_sql_name(attr)}")))) {
+      retVal.get${java.nameType(attr.name)}().putAll((Map<String, Object>)JSON.parse(params.get(prefixedAttributeName(prefix, "${varname}", "${modelbase.get_attribute_sql_name(attr)}"))));
+    }
+  <#else>
+    retVal.set${java.nameType(attr.name)}(Safe.safe((Object)params.get(prefixedAttributeName(prefix, "${modelbase.get_attribute_sql_name(attr)}")), ${modelbase.type_attribute(attr)}.class));
+  </#if>
+</#list>
+<#list o2oRefAttrs as o2oRefAttr>
+  <#assign o2oRefObj = o2oRefObjs[o2oRefAttr?index]>
+  <#assign o2oRefObjIdAttrs = modelbase.get_id_attributes(o2oRefObj)>
+    if (params.containsKey("${modelbase.get_attribute_sql_name(o2oRefAttr)}")) {
+      // 扩展对象可以从参数中直接获得关联标识
+      ${java.nameType(o2oRefObj.name)} ${java.nameVariable(o2oRefObj.name)} = new ${java.nameType(o2oRefObj.name)}();
+      ${java.nameVariable(o2oRefObj.name)}.set${java.nameType(o2oRefObjIdAttrs[0].name)}((${modelbase.type_attribute_primitive(o2oRefObjIdAttrs[0])})params.get("${modelbase.get_attribute_sql_name(o2oRefAttr)}"));
+      retVal.set${java.nameType(o2oRefAttr.name)}(${java.nameVariable(o2oRefObj.name)});
+    }
+</#list>
+    return retVal;
+  }
+
+  /**
+   * 从网页应用的数据对象中装配【${modelbase.get_object_label(entity)}】实体对象。
+   *
+   * @param params
+   *        普通数据对象
+   *
+   * @return 装配后的【${modelbase.get_object_label(entity)}】实体对象
+   */
+  public static ${typename} assemble${typename}FromFrontend(ObjectMap params) {
+    ${typename} retVal = new ${typename}();
+<#list entity.attributes as attr>
+  <#if attr.type.primitive>
+    <#-- 基本类型 -->
+    <#if attr.type.name == 'bool'>
+    retVal.set${java.nameType(attr.name)}(TRUE.equals(params.get("${modelbase.get_attribute_sql_name(attr)}")));
+    <#else>
+    retVal.set${java.nameType(attr.name)}(Safe.safe((Object)params.get("${modelbase.get_attribute_sql_name(attr)}"), ${modelbase.type_attribute(attr)}.class));
+    </#if>
+  <#elseif attr.type.name == 'json'>
+    Object ${modelbase.get_attribute_sql_name(attr)} = params.get("${modelbase.get_attribute_sql_name(attr)}");
+    if (${modelbase.get_attribute_sql_name(attr)} != null) {
+      if (${modelbase.get_attribute_sql_name(attr)}.getClass() == String.class && !Strings.isBlank((String)${modelbase.get_attribute_sql_name(attr)})) {
+        retVal.get${java.nameType(attr.name)}().putAll((Map<String, Object>)JSON.parse((String)${modelbase.get_attribute_sql_name(attr)}));
+      } else {
+        retVal.get${java.nameType(attr.name)}().putAll((Map<String, Object>)${modelbase.get_attribute_sql_name(attr)});
+      }
+    }
+  <#elseif attr.type.collection>
+    <#if attr.type.componentType.custom>
+      <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+      <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+
+    List<Object> ${java.nameVariable(attr.name)}Array = params.get("${java.nameVariable(attr.name)}");
+    if (${java.nameVariable(attr.name)}Array != null) {
+      for (int i = 0; i < ${java.nameVariable(attr.name)}Array.size(); i++) {
+        Object objItem = ${java.nameVariable(attr.name)}Array.get(i);
+        ObjectMap item = null;
+        if (objItem instanceof ObjectMap) {
+          item = (ObjectMap) objItem;
+        } else {
+          item = new ObjectMap();
+          item.set("${modelbase.get_attribute_sql_name(refObjIdAttr)}", objItem.toString());
+      <#if !attr.getLabelledOptions('persistence')['conjunction']??>
+          item = new ObjectMap().set("${java.nameVariable(modelbase.get_attribute_singular(attr))}", item);
+          item.putAll(params);
+      </#if>
+        }
+        ${java.nameType(attr.type.componentType.name)} ${java.nameVariable(attr.type.componentType.name)} = ${java.nameType(attr.type.componentType.name)}Assembler.assemble${java.nameType(attr.type.componentType.name)}FromFrontend(item);
+        retVal.get${java.nameType(attr.name)}().add(${java.nameVariable(attr.type.componentType.name)});
+      }
+    }
+    </#if>
+  <#elseif attr.type.custom>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
+    <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+    <#assign setterCallerName = java.nameVariable(attr.type.name)>
+    <#if attr.constraint.identifiable>
+    {
+      ${java.nameType(attr.type.name)} ${java.nameVariable(attr.type.name)} = ${java.nameType(attr.type.name)}Assembler.assemble${java.nameType(attr.type.name)}FromFrontend(params);
+      retVal.set${java.nameType(attr.name)}(${java.nameVariable(attr.type.name)});
+      <#list 0..10 as index>
+        <#if refObjIdAttr.type.custom>
+          <#assign refObj = model.findObjectByName(refObjIdAttr.type.name)>
+          <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+      ${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+      ${setterCallerName}.set${java.nameType(refObjIdAttr.name)}(${java.nameVariable(refObj.name)});
+          <#assign setterCallerName = java.nameVariable(refObj.name)>
+        <#else>
+      ${setterCallerName}.set${java.nameType(refObjIdAttr.name)}(params.get("${modelbase.get_attribute_sql_name(attr)}"));
+          <#break>
+        </#if>
+      </#list>
+    }
+    <#else>
+    if (!Strings.isBlank(params.get("${modelbase.get_attribute_sql_name(attr)}"))) {
+      ${java.nameType(attr.type.name)} ${java.nameVariable(attr.type.name)} = new ${java.nameType(attr.type.name)}();
+      retVal.set${java.nameType(attr.name)}(${java.nameVariable(attr.type.name)});
+      <#list 0..10 as index>
+        <#if refObjIdAttr.type.custom>
+          <#assign refObj = model.findObjectByName(refObjIdAttr.type.name)>
+          <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
+      ${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+      ${setterCallerName}.set${java.nameType(refObjIdAttr.name)}(${java.nameVariable(refObj.name)});
+          <#assign setterCallerName = java.nameVariable(refObj.name)>
+        <#else>
+      ${setterCallerName}.set${java.nameType(refObjIdAttr.name)}(params.get("${modelbase.get_attribute_sql_name(attr)}"));
+          <#break>
+        </#if>
+      </#list>
+    } else if (params.get("${java.nameVariable(attr.name)}") != null) {
+      retVal.set${java.nameType(attr.name)}(${java.nameType(attr.type.name)}Assembler.assemble${java.nameType(attr.type.name)}FromFrontend(params.get("${java.nameVariable(attr.name)}")));
+    }
+    </#if>
+  <#else>
+    <#-- could be domain type -->
+    retVal.set${java.nameType(attr.name)}(Safe.safe((Object)params.get("${modelbase.get_attribute_sql_name(attr)}"), ${modelbase.type_attribute(attr)}.class));
+  </#if>
+</#list>
+    return retVal;
+  }
+
+  /**
+   * 从网页应用的数据对象中装配【${modelbase.get_object_label(entity)}】实体对象。
+   *
+   * @param params
+   *        普通数据对象
+   *
+   * @return 装配后的【${modelbase.get_object_label(entity)}】实体对象
+   */
+  public static void assemble${typename}From${typename}(${typename} source, ${typename} target) {
+<#list entity.attributes as attr>
+  <#if attr.type.collection>
+    if (source.get${java.nameType(attr.name)}().size() > 0) {
+      target.get${java.nameType(attr.name)}().clear();
+      target.get${java.nameType(attr.name)}().addAll(source.get${java.nameType(attr.name)}());
+    }
+  <#elseif attr.type.name == 'json'>
+    target.get${java.nameType(attr.name)}().clear();
+    target.get${java.nameType(attr.name)}().putAll(source.get${java.nameType(attr.name)}());
+  <#else>
+    if (source.get${java.nameType(attr.name)}() != null) {
+      target.set${java.nameType(attr.name)}(source.get${java.nameType(attr.name)}());
+    }
+  </#if>
+</#list>
+  }
+
+  /**
+   * 从【${modelbase.get_object_label(entity)}】实体对象中装配SQL参数对象。
+   *
+   * @param ${varname}
+   *        【${modelbase.get_object_label(entity)}】实体对象
+   *
+   * @return 装配后的SQL参数对象
+   */
+  public static SqlParams assembleSqlParams(${typename} ${varname}) {
+    SqlParams retVal = new SqlParams();
+<@appbase.print_assemble_sqlparams obj=entity indent=4/>
+    return retVal;
+  }
+
+  /**
+   * 从【${modelbase.get_object_label(entity)}】实体对象中装配参数对象。
+   *
+   * @param ${varname}
+   *        【${modelbase.get_object_label(entity)}】实体对象
+   *
+   * @return 装配后的SQL参数对象
+   */
+  public static ObjectMap assembleObjectMap(${typename} ${varname}) {
+    ObjectMap retVal = new ObjectMap();
+<@appbase.print_assemble_sqlparams obj=entity indent=4/>
+  <#list entity.attributes as attr>
+    <#if attr.type.collection>
+      <#assign componentTypeObj = model.findObjectByName(attr.type.componentType.name)>
+    for (${java.nameType(attr.type.componentType.name)} item : ${varname}.get${java.nameType(attr.name)}()) {
+      <#if componentTypeObj.isLabelled('entity')>
+      retVal.add("${java.nameVariable(attr.name)}", ${java.nameType(attr.type.componentType.name)}Assembler.assembleObjectMap(item));
+      <#elseif componentTypeObj.isLabelled('value')>
+      retVal.add("${java.nameVariable(attr.name)}", ${java.nameType(attr.type.componentType.name)}Assembler.assembleObjectMap(item));
+      </#if>
+    }
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+  public static ObjectMap assembleObjectMapToFrontend(${typename} ${varname}) {
+    ObjectMap retVal = new ObjectMap();
+  <#list entity.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
+    <#if attr.type.custom>
+      <#assign valObj = model.findObjectByName(attr.type.name)>
+      <#assign valObjIdAttrs = modelbase.get_id_attributes(valObj)>
+    if (${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}() != null) {
+      retVal.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}().get${java.nameType(valObjIdAttrs[0].name)}());
+      retVal.set("${java.nameVariable(attr.name)}", ${java.nameType(valObj.name)}Assembler.assembleObjectMapToFrontend(${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}()));
+    }
+  <#elseif attr.type.name == 'bool'>
+    retVal.set("${modelbase.get_attribute_sql_name(attr)}", (${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}() == null || !${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}()) ? FALSE : TRUE);
+  <#elseif attr.type.name == 'json'>
+    retVal.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}());
+  <#else>
+    retVal.set("${modelbase.get_attribute_sql_name(attr)}", ${java.nameVariable(entity.name)}.get${java.nameType(attr.name)}());
+  </#if>
+  </#list>
+  <#list entity.attributes as attr>
+    <#if attr.type.collection>
+      <#assign componentTypeObj = model.findObjectByName(attr.type.componentType.name)>
+    for (${java.nameType(attr.type.componentType.name)} item : ${varname}.get${java.nameType(attr.name)}()) {
+      <#if componentTypeObj.isLabelled('entity')>
+      retVal.add("${java.nameVariable(attr.name)}", ${java.nameType(attr.type.componentType.name)}Assembler.assembleObjectMapToFrontend(item));
+      <#elseif componentTypeObj.isLabelled('value')>
+      retVal.add("${java.nameVariable(attr.name)}", ${java.nameType(attr.type.componentType.name)}Assembler.assembleObjectMapToFrontend(item));
+      </#if>
+    }
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+<#assign valObjs = {}>
+<#list o2oRefAttrs as o2oRefAttr>
+  <#assign o2oRefObj = o2oRefAttrs[o2oRefAttr?index]>
+  <#if o2oRefObj.isLabelled('value')>
+    <#assign valObjs = valObjs + {o2oRefObj.name : o2oRefObj}>
+  </#if>
+</#list>
+<#list o2mRefAttrs as o2mRefAttr>
+  <#assign o2mRefObj = o2mRefObjs[o2mRefAttr?index]>
+  <#if o2mRefObj.isLabelled('value')>
+    <#assign valObjs = valObjs + {o2mRefObj.name : o2mRefObj}>
+  </#if>
+</#list>
+<#list valObjs?values as valObj>
+  public static ${java.nameType(valObj.singular)} assemble${java.nameType(valObj.singular)}(ObjectMap params) {
+    ${java.nameType(valObj.singular)} retVal = new ${java.nameType(valObj.singular)} ();
+  <#list valObj.attributes as valObjAttr>
+    <#if valObjAttr.type.primitive>
+    retVal.set${java.nameType(valObjAttr.name)}(params.get("${modelbase.get_attribute_sql_name(valObjAttr)}"));
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+  public static SqlParams assembleSqlParams(${java.nameType(valObj.singular)} ${java.nameVariable(valObj.singular)}) {
+    SqlParams retVal = new SqlParams();
+  <#list valObj.attributes as valObjAttr>
+    <#if valObjAttr.type.primitive>
+      <#if valObjAttr.type.name == 'bool'>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", (${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}() == null || !${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()) ? FALSE : TRUE);
+      <#else>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}());
+      </#if>
+    <#elseif valObjAttr.type.name == 'json'>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", JSON.toJSONString(${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()));
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+  public static ObjectMap assembleObjectMap(${java.nameType(valObj.singular)} ${java.nameVariable(valObj.singular)}) {
+    ObjectMap retVal = new ObjectMap();
+  <#list valObj.attributes as valObjAttr>
+    <#if valObjAttr.type.primitive>
+      <#if valObjAttr.type.name == 'bool'>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", (${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}() == null || !${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()) ? FALSE : TRUE);
+      <#else>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}());
+      </#if>
+    <#elseif valObjAttr.type.name == 'json'>
+    // retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}());
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", JSON.toJSONString(${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()));
+    <#elseif valObjAttr.type.collection>
+      <#assign componentTypeObj = model.findObjectByName(valObjAttr.type.componentType.name)>
+    for (${java.nameType(valObjAttr.type.componentType.name)} item : ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()) {
+      <#if componentTypeObj.isLabelled('entity')>
+      retVal.add("${java.nameVariable(valObjAttr.name)}", ${java.nameType(valObjAttr.type.componentType.name)}Assembler.assembleObjectMap(item));
+      <#elseif componentTypeObj.isLabelled('value')>
+      retVal.add("${java.nameVariable(valObjAttr.name)}", ${java.nameType(valObjAttr.type.componentType.name)}Assembler.assembleObjectMap(item));
+      </#if>
+    }
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+  public static ObjectMap assembleObjectMapToFrontend(${java.nameType(valObj.singular)} ${java.nameVariable(valObj.singular)}) {
+    ObjectMap retVal = new ObjectMap();
+  <#list valObj.attributes as valObjAttr>
+    <#if valObjAttr.type.primitive>
+      <#if valObjAttr.type.name == 'bool'>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", (${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}() == null || !${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()) ? FALSE : TRUE);
+      <#else>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}());
+      </#if>
+    <#elseif valObjAttr.type.name == 'json'>
+    retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}());
+    // retVal.set("${modelbase.get_attribute_sql_name(valObjAttr)}", JSON.toJSONString(${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()));
+    <#elseif valObjAttr.type.collection>
+      <#assign componentTypeObj = model.findObjectByName(valObjAttr.type.componentType.name)>
+    for (${java.nameType(valObjAttr.type.componentType.name)} item : ${java.nameVariable(valObj.singular)}.get${java.nameType(valObjAttr.name)}()) {
+      <#if componentTypeObj.isLabelled('entity')>
+      retVal.add("${java.nameVariable(valObjAttr.name)}", ${java.nameType(valObjAttr.type.componentType.name)}Assembler.assembleObjectMapToFrontend(item));
+      <#elseif componentTypeObj.isLabelled('value')>
+      retVal.add("${java.nameVariable(valObjAttr.name)}", ${java.nameType(valObjAttr.type.componentType.name)}Assembler.assembleObjectMapToFrontend(item));
+      </#if>
+    }
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+</#list>
+  private static String prefixedAttributeName(String prefix, String objectName, String attributeName) {
+    if (prefix == null) {
+      return attributeName;
+    }
+    if (attributeName.endsWith(objectName + "Id")) {
+      return prefix + attributeName.substring(0, 1).toUpperCase() + attributeName.substring(1);
+    }
+    if (attributeName.equals(objectName + "Name")) {
+      return prefix + "Name";
+    }
+    return attributeName;
+  }
+
+  private static String prefixedAttributeName(String prefix, String attributeName) {
+    if (Strings.isBlank(prefix)) {
+      return attributeName;
+    }
+    return prefix + attributeName.substring(0, 1).toUpperCase() + attributeName.substring(1);
+  }
+
+  private ${typename}Assembler() {}
+}

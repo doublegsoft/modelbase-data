@@ -1,0 +1,8 @@
+<div class="col-form-label">
+<#list opts as opt>
+  <div class="form-check form-check-inline">
+    <input id="${bind}_${opt.value}" name="${bind}" value="${opt.value}" type="radio" class="form-check-input" checked  label="${title}" <#if required??>required</#if>>
+    <label class="form-check-label" for="${bind}_${opt.value}">${opt.text}</label>
+  </div>
+</#list>
+</div>

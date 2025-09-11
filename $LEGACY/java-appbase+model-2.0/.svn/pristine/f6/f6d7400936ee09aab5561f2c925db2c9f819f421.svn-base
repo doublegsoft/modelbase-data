@@ -1,0 +1,761 @@
+<#import '/$/modelbase.ftl' as modelbase>
+<#import '/$/appbase.ftl' as appbase>
+<#--  -->
+<#function get_table_type obj>
+  <#if obj.isLabelled('entity')>
+    <#return "'N'">
+  <#elseif obj.isLabelled('value')>
+    <#return "'V'">
+  <#elseif obj.isLabelled('conjunction')>
+    <#return "'X'">
+  <#elseif obj.isLabelled('series')>
+    <#return "'S'">
+  <#elseif obj.getLabelledOptions('entity')['revision']??>
+    <#return "'R'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#--  -->
+<#function get_bool flag>
+  <#if flag?? && flag>
+    <#return 'T'>
+  </#if>
+  <#return 'F'>
+</#function>
+<#function get_ref attr>
+  <#if attr.constraint.domainType.toString()?index_of('&') == 0>
+    <#return "'" + attr.constraint.domainType.toString() + "'">
+  </#if>
+  <#return 'null'>
+</#function>
+<#list model.objects as obj>
+  <#if !obj.persistenceName?? || obj.isLabelled('generated')><#continue></#if>
+  <#if !obj.isLabelled('entity') && !obj.isLabelled('value')><#continue></#if>
+  <#assign tabId = statics["java.util.UUID"].randomUUID()?string?upper_case>
+  <#assign labelObj = modelbase.get_object_label(obj)!''>
+  <#assign attrIds = modelbase.get_id_attributes(obj)>
+  <#assign attrWhos = []> <#-- 什么人 -->
+  <#assign attrWhoms = []> <#-- 什么人 -->
+  <#assign attrWhoses = []> <#-- 什么东西 -->
+  <#assign attrWhens = []> <#-- 什么时候 -->
+  <#assign attrWheres = []> <#-- 什么地方 -->
+  <#assign attrWhats = []> <#-- 什么东西 -->
+  <#assign attrWhiches = []>
+  <#assign attrNumerics = []>
+  <#assign primary = ''>
+  <#assign secondary = ''>
+  <#assign tertiary = ''>
+  <#list obj.attributes as attr>
+    <#if attr.isLabelled('who')>
+      <#assign attrWhos = attrWhos + [attr]>
+    </#if>
+    <#if attr.isLabelled('whom')>
+      <#assign attrWhoms = attrWhoms + [attr]>
+    </#if>
+    <#if attr.isLabelled('whose')>
+      <#assign attrWhoses = attrWhoses + [attr]>
+    </#if>
+    <#if attr.isLabelled('when')>
+      <#assign attrWhens = attrWhens + [attr]>
+    </#if>
+    <#if attr.isLabelled('where')>
+      <#assign attrWheres = attrWheres + [attr]>
+    </#if>
+    <#if attr.isLabelled('what')>
+      <#assign attrWhats = attrWhats + [attr]>
+    </#if>
+    <#if attr.isLabelled('which')>
+      <#assign attrWhiches = attrWhiches + [attr]>
+    </#if>
+    <#if attr.isLabelled('numeric')>
+      <#assign attrNumerics = attrNumerics + [attr]>
+    </#if>
+    <#if attr.isLabelled('primary')>
+      <#assign primary = attr>
+    </#if>
+    <#if attr.isLabelled('secondary')>
+      <#assign secondary = attr>
+    </#if>
+    <#if attr.isLabelled('tertiary')>
+      <#assign tertiary = attr>
+    </#if>
+  </#list>
+<#----------------------------------------------------------------------------->
+<#-- 页面
+<#----------------------------------------------------------------------------->
+<#-------------------------------->
+<#-- 【集合展示】页面
+<#-------------------------------->
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('LIST.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '${labelObj}集合展示', 'LIST', 'html/stdbiz/${app.name}/${obj.name}/list.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(obj.name)}List" class="card">
+  <div class="card-header pl-3 pr-3">
+    <i class="fa fa-list"></i>
+    <strong>${labelObj}列表</strong>
+    <div class="card-header-actions">
+      <a class="card-header-action" data-toggle="dropdown" href="#" role="button">
+        <i class="fas fa-ellipsis-v"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-right">
+        <a widget-id="buttonNew" class="dropdown-item text-light pointer font-14 bg-primary p-1"
+           widget-model-url=":EDIT.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}"
+           widget-model-view="sidebar">
+          <i class="fas fa-plus-square text-white ml-0"></i>新  建
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="card-body pb-0">
+    <div widget-id="widget${js.nameType(obj.name)}List"
+         widget-model-id="PAGINATION_TABLE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}"
+         widget-model-name="table${js.nameType(obj.name)}"
+         class="col-md-12 pl-0 pr-0">
+    </div>
+  </div>
+</div>
+<script>
+function Page${js.nameType(obj.name)}List() {
+  this.page = dom.find(''#page${js.nameType(obj.name)}List'');
+}
+
+Page${js.nameType(obj.name)}List.prototype.show = function(params) {
+  this.initialize(params);
+};
+
+Page${js.nameType(obj.name)}List.prototype.initialize = async function(params) {
+  let self = this;
+  await stdbiz.init(this, params);
+
+  PubSub(''${parentApplication}/${app.name}/${obj.name}/saved'').subscribe(data => {
+    page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}.request();
+  });
+  PubSub(''${parentApplication}/${app.name}/${obj.name}/disabled'').subscribe(data => {
+    page${js.nameType(obj.name)}List.table${js.nameType(obj.name)}.request();
+  });
+};
+
+delete page${js.nameType(obj.name)}List;
+page${js.nameType(obj.name)}List = new Page${js.nameType(obj.name)}List();
+page${js.nameType(obj.name)}List.show();
+</script>
+');
+
+<#-------------------------------->
+<#-- 【信息编辑】页面
+<#-------------------------------->
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('EDIT.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '${labelObj}信息编辑', 'EDIT', 'html/stdbiz/${app.name}/${obj.name}/edit.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(obj.name)}Edit" class="card ml-2 mr-2">
+  <div widget-id="widget${js.nameType(obj.name)}Edit"
+       widget-model-id="FORM_LAYOUT.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}"
+       widget-model-name="form${js.nameType(obj.name)}Edit"
+       class="card-body mb-3">
+  </div>
+</div>
+
+<script>
+function Page${js.nameType(obj.name)}Edit () {
+  this.page = dom.find(''#page${js.nameType(obj.name)}Edit'');
+}
+
+Page${js.nameType(obj.name)}Edit.prototype.show = function (params) {
+  this.initialize(params);
+};
+
+Page${js.nameType(obj.name)}Edit.prototype.initialize = async function (params) {
+  await stdbiz.init(this, params);
+};
+
+delete page${js.nameType(obj.name)}Edit;
+page${js.nameType(obj.name)}Edit = new Page${js.nameType(obj.name)}Edit();
+</script>
+');
+
+<#-------------------------------->
+<#-- 【只读展示】页面
+<#-------------------------------->
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('READ.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '${labelObj}只读展示', 'VIEW', 'html/stdbiz/${app.name}/${obj.name}/view.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(obj.name)}Read" class="card ml-2 mr-2">
+  <div widget-id="widget${js.nameType(obj.name)}Read"
+       widget-model-id="READ.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}"
+       widget-model-name="form${js.nameType(obj.name)}Read"
+       class="card-body mb-3">
+  </div>
+</div>
+
+<script>
+function Page${js.nameType(obj.name)}Read () {
+  this.page = dom.find(''#page${js.nameType(obj.name)}Edit'');
+}
+
+Page${js.nameType(obj.name)}Read.prototype.show = function (params) {
+  this.initialize(params);
+};
+
+Page${js.nameType(obj.name)}Read.prototype.initialize = async function (params) {
+  await stdbiz.init(this, params);
+};
+
+delete page${js.nameType(obj.name)}Read;
+page${js.nameType(obj.name)}Read = new Page${js.nameType(obj.name)}Read();
+</script>
+');
+
+<#-------------------------------->
+<#-- 【概览视图】页面
+<#-------------------------------->
+  <#if obj.isLabelled('aggregate')>
+    <#assign aggregate = obj>
+    <#list aggregate.attributes as attr>
+      <#if attr.isLabelled('root')>
+        <#assign rootAttr = attr>
+        <#break>
+      </#if>
+    </#list>
+    <#if rootAttr.type.custom>
+      <#assign rootObj = model.findObjectByName(rootAttr.type.name)>
+      <#assign rootObjIds = modelbase.get_id_attributes(rootObj)>
+    </#if>
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('PROFILE.${parentApplication?upper_case}.${app.name?upper_case}.${aggregate.name?upper_case}', '${modelbase.get_object_label(aggregate)}详情页面', 'PROFILE', 'html/stdbiz/${app.name}/${aggregate.name}/profile.html', 'DESKTOP', 'E', '
+<div id="page${java.nameType(aggregate.name)}Profile" class="page">
+    <#if rootObj??>
+      <#list rootObjIds as attrId>
+  <input type="hidden" name="${modelbase.get_attribute_sql_name(attrId)}">
+      </#list>
+    </#if>
+  <div class="card">
+    <div class="card-header">
+      <strong>基本信息</strong>
+    </div>
+    <#if rootObj??>
+    <div class="card-body"
+         widget-id="widget${js.nameType(rootObj.name)}"
+         widget-model-id="READONLY_FORM.${parentApplication?upper_case}.${app.name?upper_case}.${rootObj.name?upper_case}"
+         widget-model-name="form${js.nameType(rootObj.name)}">
+    </div>
+    <#else>
+    <div class="card-body">
+    </div>
+    </#if>
+  </div>
+    <#list aggregate.attributes as attr>
+      <#if attr.isLabelled('root')><#continue></#if>
+      <#if !attr.type.custom><#continue></#if>
+      <#assign refObj = model.findObjectByName(attr.type.name)>
+  <div class="card">
+    <div class="card-header">
+      <strong>${modelbase.get_object_label(refObj)}</strong>
+    </div>
+    <div class="card-body"
+         widget-id="widget${js.nameType(attr.name)}"
+         widget-model-id="READONLY_FORM.${parentApplication?upper_case}.${app.name?upper_case}.${refObj.name?upper_case}"
+         widget-model-name="form${js.nameType(attr.name)}">
+    </div>
+  </div>
+    </#list>
+    <#list aggregate.attributes as attr>
+      <#if attr.isLabelled('root')><#continue></#if>
+      <#if !attr.type.collection><#continue></#if>
+      <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+  <div class="card">
+    <div class="card-header">
+      <strong>${modelbase.get_object_label(refObj)}</strong>
+    </div>
+    <div class="card-body"
+         widget-id="widget${js.nameType(attr.name)}"
+         widget-model-id="PAGINATION_TABLE.${parentApplication?upper_case}.${app.name?upper_case}.${refObj.name?upper_case}"
+         widget-model-name="table${js.nameType(attr.name)}">
+    </div>
+  </div>
+    </#list>
+</div>
+<script>
+function Page${js.nameType(rootAttr.name)}Profile () {
+  this.page = dom.find(''#page${java.nameType(rootAttr.name)}Profile'');
+}
+
+Page${js.nameType(rootAttr.name)}Profile.prototype.initialize = async function (params) {
+  await stdbiz.init(this, params);
+};
+
+Page${js.nameType(rootAttr.name)}Profile.prototype.show = function (params) {
+  this.initialize(params);
+};
+
+page${js.nameType(rootAttr.name)}Profile = new Page${js.nameType(rootAttr.name)}Profile();
+</script>
+');
+  </#if>
+
+  <#if obj.getLabelledOptions('entity')['revision']??>
+<#-------------------------------->
+<#-- 【修订版本】页面
+<#-------------------------------->
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('REVISION.${app.name?upper_case}.${obj.name?upper_case}', '${labelObj}修订版本', 'REVISION', '/html/stdbiz/${app.name}/${obj.name}/revision.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(obj.name)}Revision"  class="card ml-2 mr-2">
+  <div widget-id="widget${js.nameType(obj.name)}" 
+       widget-model-id="TIMELINE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}.REVISION"
+       widget-model-name="timeline${js.nameType(obj.name)}Revision"
+       class="card-body mb-3">
+  </div>
+</div>
+');
+
+  </#if>
+  <#if obj.isLabelled('journal')>
+<#-------------------------------->
+<#-- 【状态日志】页面
+<#-------------------------------->
+insert into tn_uxd_custwin (custwinid, custwinnm, custwintyp, pth, dev, sta, srp)
+values ('JOURNAL.${app.name?upper_case}.${obj.name?upper_case}', '${labelObj}状态日志', 'STATUS', '/html/stdbiz/${app.name}/${obj.name}/journal.html', 'DESKTOP', 'E', '
+<div id="page${js.nameType(obj.name)}Journal" class="card ml-2 mr-2">
+  <div widget-id="widget${js.nameType(obj.name)}" 
+       widget-model-id="TIMELINE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}.JOURNAL"
+       widget-model-name="timeline${js.nameType(obj.name)}Journal"
+       class="card-body mb-3">
+  </div>
+</div>
+');
+
+  </#if>
+<#----------------------------------------------------------------------------->
+<#-- 组件
+<#----------------------------------------------------------------------------->
+
+<#-------------------------------->
+<#-- 分页表格
+<#-------------------------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('PAGINATION_TABLE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'table${js.nameType(obj.name)}List', '${labelObj}分页列表', 'PaginationTable', 'E', '
+{
+  url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/paginate'',
+  limit: 15,
+  params: {
+    state: ''E'',
+  },
+  columns: [{
+    title: ''#'',
+    style: ''text-align: center;'',
+    display: function(row, td, colidx, rowidx, start) {
+      td.innerText = start + rowidx + 1;
+    }
+  },{
+  <#if primary != ''>
+    title: ''${modelbase.get_attribute_label(primary)}'',
+    style: ''text-align: left;'',
+    display: function(row, td, rowidx, colidx) {
+      let el = dom.templatize(`
+        <div>
+          <strong>{{${modelbase.get_attribute_sql_name(primary)}}}</strong>
+          <div class="small text-muted"></div>
+        </div>
+      `, row);
+      td.appendChild(el);
+    }
+  },{
+  </#if>
+  <#if secondary != ''>
+    title: ''${modelbase.get_attribute_label(secondary)}'',
+    style: ''text-align: left;'',
+    display: function(row, td, rowidx, colidx) {
+      let el = dom.templatize(`
+        <div>
+          <strong>{{${modelbase.get_attribute_sql_name(secondary)}}}</strong>
+          <div class="small text-muted"></div>
+        </div>
+      `, row);
+      td.appendChild(el);
+    }
+  },{
+  </#if>
+  <#if tertiary != ''>
+    title: ''${modelbase.get_attribute_label(tertiary)}'',
+    style: ''text-align: left;'',
+    display: function(row, td, rowidx, colidx) {
+      let el = dom.templatize(`
+        <div>
+          <strong>{{${modelbase.get_attribute_sql_name(tertiary)}}}</strong>
+          <div class="small text-muted"></div>
+        </div>
+      `, row);
+      td.appendChild(el);
+    }
+  },{
+  </#if>
+    title: ''操作'',
+    style: ''text-align: center;'',
+    display: function(row, td, rowidx, colidx) {
+      // 编辑
+      let edit = stdbiz.action(self.page, `
+        <a class="btn text-primary"
+      <#list attrIds as attrId>
+           data-model-${modelbase.get_attribute_html_name(attrId)}="{{${modelbase.get_attribute_sql_name(attrId)}}}"
+      </#list>
+           widget-model-url="html/${parentApplication}/${app.name}/${obj.name}/edit.html"
+           widget-model-view="sidebar">
+          <i class="fa fa-edit"></i>
+        </a>
+      `, row);
+      td.appendChild(edit);
+
+      // 详情
+      let detail = stdbiz.action(self.page, `
+        <a class="btn text-primary"
+      <#list attrIds as attrId>
+           data-model-${modelbase.get_attribute_html_name(attrId)}="{{${modelbase.get_attribute_sql_name(attrId)}}}"
+      </#list>
+           widget-model-url="html/${parentApplication}/${app.name}/${obj.name}/detail.html"
+           widget-model-view="switch">
+          <i class="fa fa-info-circle"></i>
+        </a>
+      `, row);
+      td.appendChild(detail);
+
+      // 删除
+      let remove = stdbiz.action(self.page, `
+        <a class="btn text-danger"
+      <#list attrIds as attrId>
+           data-model-${modelbase.get_attribute_html_name(attrId)}="{{${modelbase.get_attribute_sql_name(attrId)}}}"
+      </#list>
+					 widget-model-message="确定要删除【{{customElementText}}】部件设置？"
+					 widget-model-topic="stdbiz/uxd/custom_element/disabled"
+           widget-model-url="/api/v3/common/script/stdbiz/uxd/custom_element/disable">
+          <i class="fas fa-trash-alt"></i>
+        </a>
+      `, row);
+      td.appendChild(remove);
+    }
+  }],
+  // 查询条件
+  filter2: {
+    fields: [{
+      title: ''名称'',
+      name: ''${js.nameVariable(obj.name)}Name'',
+      input: ''text''
+    }]
+  },
+  // 排序
+  sort: {
+    fields: [{
+      title: ''名称'',
+      name: ''${js.nameVariable(obj.name)}Name''
+    }]
+  }
+}
+');
+
+<#-------------------------------->
+<#-- 编辑表单
+<#-------------------------------->
+  <#assign displayAttrs = []>
+  <#list obj.attributes as attr>
+    <#if attr.type.collection><#continue></#if>
+    <#if modelbase.is_attribute_system(attr)><#continue></#if>
+    <#if attr.constraint.identifiable && attr.type.custom>
+      <#assign refObj = model.findObjectByName(attr.type.name)>
+      <#list refObj.attributes as refObjAttr>
+        <#if refObjAttr.constraint.identifiable><#continue></#if>
+        <#if refObjAttr.type.collection><#continue></#if>
+        <#if refObjAttr.type.custom><#continue></#if>
+        <#if refObjAttr.name == 'state'><#continue></#if>
+        <#if refObjAttr.name == 'last_modified_time'><#continue></#if>
+        <#assign displayAttrs = displayAttrs + [refObjAttr]>
+      </#list>
+      <#continue>
+    </#if>
+    <#assign displayAttrs = displayAttrs + [attr]>
+  </#list>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('FORM_LAYOUT.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'form${js.nameType(obj.name)}Edit', '${labelObj}编辑表单', 'FormLayout', 'E', '
+{
+  columnCount: 1,
+  save: {
+    url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/save'',
+    success: function() {
+      PubSub.publish(''${parentApplication}/${app.name}/${obj.name}/saved'', data);
+    },
+    convert: function(data) {
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled('reference')><#continue></#if>
+      data.${modelbase.get_attribute_sql_name(attr)} = ''TODO'';
+    </#list>
+      data.state = ''E'';
+      data.lastModifiedTime = ''now'';
+      return data;
+    }
+  },
+  read: {
+    url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/read'',
+    convert: function(data) {
+      return data;
+    }
+  },
+  fields: [{
+    <#list displayAttrs as attr>
+      <#if attr?index != 0>
+  }, {
+      </#if>
+    name: ''${modelbase.get_attribute_sql_name(attr)}'',
+    title: ''${modelbase.get_attribute_label(attr)}'',
+      <#if attr.constraint.identifiable>
+    required: false,
+      <#else>
+    required: <#if attr.constraint.nullable>false<#else>true</#if>,  
+      </#if>
+      <#if attr.type.custom>
+        <#assign refObj = model.findObjectByName(attr.type.name)>
+    input: ''select'',
+    options: {
+      url: ''/api/v3/common/script/stdbiz/${app.name}/${refObj.name}/find'',
+      placeholder: ''请选择...'',
+      searchable: true,
+      fields: {value: ''${java.nameVariable(refObj.name)}Id'', text: ''${java.nameVariable(refObj.name)}Name''}
+    }
+      <#elseif attr.constraint.domainType.name?index_of('enum') == 0>
+        <#assign pairs = typebase.enumtype(attr.constraint.domainType.name)>
+    input: ''select'',
+    options: {
+      placeholder: ''请选择...'',
+      searchable: false,
+      values: [
+          <#list pairs as pair>
+        {value: "${pair.key}", text: "${pair.value}"}<#if pair?index != pairs?size - 1>,</#if>
+          </#list>
+      ]
+    }
+      <#elseif attr.constraint.identifiable>
+    input: ''hidden''
+      <#elseif attr.getLabelledOptions('reference')['value']! == 'type'>
+    value: ''TODO'',
+    input: ''hidden''
+      <#elseif attr.getLabelledOptions('reference')['value']! == 'id'>
+    input: ''select'',
+    options: {
+      url: ''/api/v3/common/script/stdbiz/${app.name}/TODO/find'',
+      placeholder: ''请选择...'',
+      searchable: true,
+      fields: {value: ''TODO_ID'', text: ''TODO_NAME''}
+    }
+      <#elseif attr.type.name == 'date' || attr.type.name == 'datetime'>
+    input: ''date''
+      <#elseif attr.type.name == 'text' || (attr.type.length?? && (attr.type.length >= 400))>
+    input: ''longtext''
+      <#else>
+    input: ''text''
+      </#if>
+    </#list>    
+  }]
+}
+');
+
+<#-------------------------------->
+<#-- 只读展示
+<#-------------------------------->
+  <#assign readonlyAttrs = []>
+  <#list displayAttrs as attr>
+    <#if attr.constraint.identifiable><#continue></#if>
+    <#assign readonlyAttrs = readonlyAttrs + [attr]>
+  </#list>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('READONLY_FORM.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'GROUPINGBOX.${obj.name?upper_case}.VIEW', '${labelObj}只读展示', 'ReadonlyForm', 'E', '
+{
+  url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/read'',
+  columnCount: 3,
+  fields: [{
+    <#list readonlyAttrs as attr>
+      <#if attr?index != 0>
+  }, {
+      </#if>
+    name: ''${modelbase.get_attribute_sql_name(attr)}'',
+    title: ''${modelbase.get_attribute_label(attr)}'',
+    </#list>    
+  }]
+}
+');
+
+<#------------------>
+<#--    分页格子   -->
+<#------------------>
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('PAGINATION_GRID.${obj.name?upper_case}.LIST', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'box${js.nameType(obj.name)}List', '${labelObj}分页卡片', 'PaginationGrid', 'E', '
+{
+  url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/paginate'',
+  limit: 15,
+  colspan: 3,
+  favourite: false,
+  borderless: true,
+  render: function(container, row, index) {
+    let el = dom.templatize(`
+      <div class="col-md-12">
+        <div class="card border" style="min-height: 125px;">
+          <div class="card-body">
+            <div class="d-flex">
+              <div class="pl-2">
+                <strong>{{${js.nameVariable(obj.name)}Name}}</strong>
+                <span class="small text-muted">{{TODO}}</span>
+                <div class="small text-muted">{{TODO}}</div>
+              </div>
+              <div class="ml-auto">
+                <img class="avatar avatar-36" src="{{avatar}}">
+              </div>
+            </div>
+            <div class="ml-2 mt-2">
+              <i class="fas fa-phone-alt mr-1"></i>
+              <a class="btn-link" href="tel: {{mobile}}">{{mobile}}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `, row);
+    container.appendChild(el);
+  },
+  filter: {
+    fields: [{
+      title: ''名称'',
+      input: ''text'',
+      name: ''${js.nameVariable(obj.name)}Name'',
+    <#if primary != ''>
+    },{
+      title: ''${modelbase.get_attribute_label(primary)}'',
+      name: ''${modelbase.get_attribute_sql_name(primary)}'',
+      <#if primary.type.name == 'date' || primary.type.name == 'datetime'>
+      input: ''date'',
+      <#elseif primary.type.name == 'enum'>
+      input: ''select'',
+      values: ${parentApplication?upper_case}.${app.name?upper_case}.${primary.name?upper_case}_VALUES || [],
+      <#else>
+      input: ''text'',
+      </#if>
+    </#if>
+    <#if secondary != ''>
+    },{
+      title: ''${modelbase.get_attribute_label(secondary)}'',
+      name: ''${modelbase.get_attribute_sql_name(secondary)}'',
+      <#if secondary.type.name == 'date' || secondary.type.name == 'datetime'>
+      input: ''date'',
+      <#elseif secondary.type.name == 'enum'>
+      input: ''select'',
+      values: ${parentApplication?upper_case}.${app.name?upper_case}.${secondary.name?upper_case}_VALUES || [],
+      <#else>
+      input: ''text'',
+      </#if>
+    </#if>
+    <#if tertiary != ''>
+    },{
+      title: ''${modelbase.get_attribute_label(tertiary)}'',
+      name: ''${modelbase.get_attribute_sql_name(tertiary)}'',
+      <#if tertiary.type.name == 'date' || tertiary.type.name == 'datetime'>
+      input: ''date'',
+      <#elseif tertiary.type.name == 'enum'>
+      input: ''select'',
+      values: ${parentApplication?upper_case}.${app.name?upper_case}.${tertiary.name?upper_case}_VALUES || [],
+      <#else>
+      input: ''text'',
+      </#if>
+    </#if>
+    }]
+  }
+}
+');
+
+<#-------------------------------->
+<#-- 瓦片表格
+<#-------------------------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('LIST_VIEW.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'list${js.nameType(obj.name)}', '${labelObj}瓦片列表', 'ListView', 'E', '
+{
+  url: ''/api/v3/common/script/stdbiz/${app.name}/${obj.name}/find'',
+  params: {
+    state: ''E'',
+  },
+  create: function(idx, row) {
+    let ret = dom.templatize(`
+<@appbase.print_html_tile_in_sql obj=obj indent=4 />
+    `, row);
+    return ret;
+  },
+}
+');
+
+<#-------------------------------->
+<#-- 统计图表
+<#-------------------------------->
+<@appbase.print_object_chart_sql attrDims=attrWhiches attrMetrics=attrWhos attrNumerics=attrNumerics obj=obj indent=0/>
+<@appbase.print_object_chart_sql attrDims=attrWhens attrMetrics=attrWhos attrNumerics=attrNumerics obj=obj indent=0/>
+<@appbase.print_object_chart_sql attrDims=attrWheres attrMetrics=attrWhos attrNumerics=attrNumerics obj=obj indent=0/>
+
+
+  <#if obj.getLabelledOptions('persistence')['revision']??>
+<#-------------------------------->
+<#-- 修订日志
+<#-------------------------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('TIMELINE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}.REVISION', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'timeline${js.nameType(obj.name)}Revision', '${labelObj}修改日志', 'Timeline', 'E', '
+{
+  url: ''/api/v3/common/script/${parentApplication}/${app.name}/${obj.name}/revision'',
+  params: {
+    state: ''E'',
+  },
+  title: function(row) {
+    <#if primary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=primary holder='row' indent=4/>
+    </#if>
+  },
+  subtitle: function(row) {
+    <#if secondary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=secondary holder='row' indent=4/>
+    </#if>
+  },
+  content: function(row) {
+    <#if tertiary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=tertiary holder='row' indent=4/>
+    </#if>
+  },
+}
+');
+  </#if>
+  <#if obj.isLabelled('journal')>
+<#-------------------------------->
+<#-- 变化日志
+<#-------------------------------->
+insert into tn_uxd_custelem (custelemid, parcustelemid, refid, reftyp, custelemnm, custelemtxt, custelemtyp, sta, srp)
+values ('TIMELINE.${parentApplication?upper_case}.${app.name?upper_case}.${obj.name?upper_case}.JOURNAL', '0', '${obj.name?upper_case}', 'STDBIZ.SAM.MANAGED_ENTITY', 'timeline${js.nameType(obj.name)}Journal', '${labelObj}变化日志', 'Timeline', 'E', '
+{
+  url: ''/api/v3/common/script/${parentApplication}/${app.name}/${obj.name}/find'',
+  params: {
+    state: ''E'',
+  },
+  title: function(row) {
+    <#if primary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=primary holder='row' indent=4/>
+    </#if>
+  },
+  subtitle: function(row) {
+    <#if secondary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=secondary holder='row' indent=4/>
+    </#if>
+  },
+  content: function(row) {
+    <#if tertiary == ''>
+    return '''';
+    <#else>
+<@appbase.print_attribute_html_return_value_in_sql attr=tertiary holder='row' indent=4/>
+    </#if>
+  },
+}
+');
+  </#if>
+</#list>

@@ -1,0 +1,1 @@
+<input name="${js.nameVariable(id)}" type="hidden">
