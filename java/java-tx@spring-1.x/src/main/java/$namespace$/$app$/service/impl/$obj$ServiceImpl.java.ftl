@@ -217,7 +217,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
 <#elseif idAttrs?size == 1> 
 <#-- 实体对象的创建 -->     
 <@modelbase4java.print_object_entity_update obj=obj indent=6 />
-<#else>     
+<#else>
 <#-- 值体对象的创建 -->    
 <@modelbase4java.print_object_value_update obj=obj indent=6 />    
 </#if>

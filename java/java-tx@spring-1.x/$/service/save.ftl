@@ -30,6 +30,7 @@
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
+<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />    
     try {
 <#--------------------->
 <#-- 主要对象的保存操作 -->
@@ -47,106 +48,24 @@
 <#--------------------->
 <#-- 扩展对象的保存操作 -->
 <#--------------------->    
-<#list extObjs as extObjName, extRefAttr>
-  <#assign extObj = model.findObjectByName(extObjName)>
-  <#assign extObjIdAttr = modelbase.get_id_attributes(extObj)[0]>
-      /*!
-      ** 保存【${modelbase.get_object_label(extObj)}】作为一对一显式扩展对象
-      */
-      ${java.nameType(extObj.name)}Query ${java.nameVariable(extObj.name)}Query = new ${java.nameType(extObj.name)}Query();
-      ${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjIdAttr))}(${modelbase.get_attribute_sql_name(idAttrs[0])}); 
-      ${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extRefAttr))}(Safe.safe(${modelbase.get_attribute_sql_name(idAttrs[0])}, ${modelbase4java.type_attribute_primitive(extRefAttr)}.class));
-  <#list obj.attributes as attr>
-    <#list extObj.attributes as extObjAttr>
-      <#if attr.name == extObjAttr.name && !attr.constraint.identifiable>
-      ${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());    
-        <#break>
-      </#if>
-    </#list>
-  </#list>
-  <#list extObj.attributes as extObjAttr>
-    <#-- 扩展类型本身引用主实体类型 （比较重要）-->
-    <#if extObjAttr.type.name == obj.name>
-      ${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
-      <#break>
-    </#if>
-  </#list>
-      ${java.nameType(extObj.name)} ${java.nameVariable(extObj.name)} = ${java.nameType(extObj.name)}Assembler.assemble${java.nameType(extObj.name)}FromQuery(${java.nameVariable(extObj.name)}Query);
-      if (!existing) {
-        ${java.nameVariable(extObj.name)}DataAccess.insert${java.nameType(extObj.name)}(${java.nameVariable(extObj.name)});
-      } else {
-        ${java.nameVariable(extObj.name)}DataAccess.updatePartial${java.nameType(extObj.name)}(${java.nameVariable(extObj.name)});
-      }
-</#list>
+<@modelbase4java.print_object_extension_save obj=obj indent=6 />     
 <#-------------------------->
 <#--       元型扩展        -->
 <#-------------------------->
 <#if obj.isLabelled("meta")>
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
-      if (query.${modelbase4java.name_getter(attr)}() != null) {
-        ${java.nameType(obj.name)}MetaQuery ${java.nameVariable(attr.name)}Query = new ${java.nameType(obj.name)}MetaQuery();
-        ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
-        ${java.nameVariable(attr.name)}Query.setPropertyName("${java.nameVariable(attr.name)}");
-        if (${java.nameVariable(obj.name)}MetaDataAccess.select${java.nameType(obj.name)}Meta(${java.nameVariable(attr.name)}Query).size() == 0) {
-          ${java.nameVariable(attr.name)}Query.setPropertyValue(Strings.format(query.${modelbase4java.name_getter(attr)}()));
-          ${java.nameVariable(obj.name)}MetaDataAccess.insert${java.nameType(obj.name)}Meta(${java.nameType(obj.name)}MetaAssembler.assemble${java.nameType(obj.name)}MetaFromQuery(${java.nameVariable(attr.name)}Query));
-        } else {
-          ${java.nameVariable(attr.name)}Query.setPropertyValue(Strings.format(query.${modelbase4java.name_getter(attr)}().toString()));
-          ${java.nameVariable(obj.name)}MetaDataAccess.update${java.nameType(obj.name)}Meta(${java.nameType(obj.name)}MetaAssembler.assemble${java.nameType(obj.name)}MetaFromQuery(${java.nameVariable(attr.name)}Query));
-        }
-      }
-  </#list>
+<@modelbase4java.print_object_meta_save obj=obj indent=6 />   
 </#if>
 <#-------------------------->
 <#--       行列扩展        -->
 <#-------------------------->
 <#if obj.isLabelled("pivot")>
-  <#if obj.getLabelledOptions("pivot")["master"]??>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-    <#assign idAttrs = modelbase.get_id_attributes(masterObj)>
-  </#if>  
-  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
-  <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
-  <#assign valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
-    <#-- 在没有master的情况下，属性可以和detail的属性重合 -->
-    <#assign existInDetail = false>
-    <#list detailObj.attributes as detailAttr>
-      <#if attr.name == detailAttr.name>
-        <#assign existInDetail = true>
-      </#if>
-    </#list>
-    <#if existInDetail><#continue></#if>
-      if (query.${modelbase4java.name_getter(attr)}() != null) {
-        ${java.nameType(detailObj.name)}Query ${java.nameVariable(attr.name)}Query = new ${java.nameType(detailObj.name)}Query();
-    <#if obj.getLabelledOptions("pivot")["master"]??>    
-        ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
-    <#else>
-      <#list obj.attributes as innerAttr>
-        <#list detailObj.attributes as detailAttr>
-          <#if innerAttr.name == detailAttr.name>
-        ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(innerAttr)}(query.${modelbase4java.name_getter(innerAttr)}());
-          </#if>
-        </#list>      
-      </#list>
-    </#if>   
-        ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(keyAttr)}("${java.nameVariable(attr.name)}");
-        ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(valueAttr)}(Strings.format(query.${modelbase4java.name_getter(attr)}()));
-        if (!existing) {
-          ${java.nameVariable(detailObj.name)}Service.create${java.nameType(detailObj.name)}(${java.nameVariable(attr.name)}Query);
-        } else {
-          ${java.nameVariable(detailObj.name)}Service.update${java.nameType(detailObj.name)}(${java.nameVariable(attr.name)}Query);
-        }
-      }
-  </#list>
+<@modelbase4java.print_object_pivot_save obj=obj indent=6 />   
 </#if>
 <#-------------------------->
 <#--    主键引用的基表部分   -->
 <#-------------------------->
 <#if idAttrs?size == 1> 
-<@modelbase4java.print_object_query_save obj=obj /> 
+<@modelbase4java.print_object_query_save obj=obj indent=6/> 
 </#if>
 <#-------------------------->
 <#-- 通用：集合对象类型的属性 -->
@@ -176,18 +95,7 @@
       /*!
       ** 直接关联的【${modelbase.get_object_label(collObj)}】作为一对多显式扩展对象
       */
-      List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();
-<#--     
-      ${java.nameType(attr.type.componentType.name)} ${modelbase4java.singularize_coll_attr(attr)} = new ${java.nameType(attr.type.componentType.name)}();
-  <#list obj.attributes as innerAttr>
-    <#list collObj.attributes as collObjAttr>
-      <#if innerAttr.name == collObjAttr.name>
-      ${modelbase4java.singularize_coll_attr(attr)}.set${java.nameType(innerAttr.name)}(query.get${java.nameType(modelbase.get_attribute_sql_name(innerAttr))}());    
-      </#if>
-    </#list>
-  </#list>
-      ${java.nameVariable(attr.type.componentType.name)}DataAccess.disable${java.nameType(attr.type.componentType.name)}(${modelbase4java.singularize_coll_attr(attr)});
--->      
+      List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();    
       // 查询已经存在的
       ${java.nameType(collObj.name)}Query existing${java.nameType(collObj.name)}Query = new ${java.nameType(collObj.name)}Query();
       existing${java.nameType(collObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(${modelbase.get_attribute_sql_name(idAttrs[0])});

@@ -319,6 +319,7 @@ ${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});
 </#function>
 
 <#macro print_object_default_setters obj varname indent>
+  <#local commentPrinted = false>
   <#list obj.attributes as attr>
     <#if attr.name == "state">
 ${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
@@ -354,6 +355,17 @@ ${""?left_pad(indent)}  ${varname}.set${java.nameType(modelbase.get_attribute_sq
 ${""?left_pad(indent)}}    
     <#elseif attr.name == "last_modified_time">
 ${""?left_pad(indent)}${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(new java.sql.Timestamp(System.currentTimeMillis()));
+    </#if>
+  </#list>
+</#macro>
+
+<#macro print_query_id_setters obj varname indent>
+  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
+  <#list obj.attributes as attr>
+    <#if attr.identifiable && (attr.type.name == "long" || attr.type.name == "string")>
+${""?left_pad(indent)}if (${varname}.get${java.nameType(modelbase.get_attribute_sql_name(attr))}() == null) {
+${""?left_pad(indent)}  ${varname}.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(IdGenerator.id());
+${""?left_pad(indent)}}
     </#if>
   </#list>
 </#macro>
@@ -625,16 +637,248 @@ ${""?left_pad(indent)}${varname}.set${java.nameType(modelbase.get_attribute_sql_
   </#list>
 </#macro>
 
-<#macro print_object_query_save obj>
+<#macro print_object_query_save obj indent>
   <#list obj.attributes as attr>
     <#if !attr.type.custom || !attr.constraint.identifiable><#continue></#if>
     <#assign refObj = model.findObjectByName(attr.type.name)>
-      /*!
-      ** 保存主键引用的【${modelbase.get_object_label(refObj)}】对象
-      */
-      ${java.nameType(refObj.name)}Query ${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query = query.to${java.nameType(refObj.name)}Query();
-      ${java.nameVariable(refObj.name)}Service.save${java.nameType(refObj.name)}(${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query);   
-<@print_object_query_save obj=refObj />         
+${""?left_pad(indent)}/*!
+${""?left_pad(indent)}** 保存主键引用的【${modelbase.get_object_label(refObj)}】对象
+${""?left_pad(indent)}*/
+${""?left_pad(indent)}${java.nameType(refObj.name)}Query ${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query = query.to${java.nameType(refObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(refObj.name)}Service.save${java.nameType(refObj.name)}(${java.nameVariable(attr.name)}${java.nameType(refObj.name)}Query);   
+<@print_object_query_save obj=refObj indent=indent />         
+  </#list>
+</#macro>
+
+<#macro print_object_pivot_save obj indent>
+  <#if obj.getLabelledOptions("pivot")["master"]??>
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#assign idAttrs = modelbase.get_id_attributes(masterObj)>
+  </#if>  
+  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+  <#assign valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#-- 在没有master的情况下，属性可以和detail的属性重合 -->
+    <#assign existInDetail = false>
+    <#list detailObj.attributes as detailAttr>
+      <#if attr.name == detailAttr.name>
+        <#assign existInDetail = true>
+      </#if>
+    </#list>
+    <#if existInDetail><#continue></#if>
+${""?left_pad(indent)}if (query.${modelbase4java.name_getter(attr)}() != null) {
+${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query ${java.nameVariable(attr.name)}Query = new ${java.nameType(detailObj.name)}Query();
+    <#-- detail对象的默认值设置，包含对主键的设值 -->       
+      <#assign innerVarName = java.nameVariable(attr.name) + "Query">
+<@print_query_id_setters obj=detailObj varname=innerVarName  indent=indent+2 />         
+<@print_query_default_setters obj=detailObj varname=innerVarName  indent=indent+2 />    
+    <#if obj.getLabelledOptions("pivot")["master"]??>    
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+    <#else>
+      <#list obj.attributes as innerAttr>
+        <#list detailObj.attributes as detailAttr>
+          <#if innerAttr.name == detailAttr.name>
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(innerAttr)}(query.${modelbase4java.name_getter(innerAttr)}());
+          </#if>
+        </#list>      
+      </#list>
+    </#if>   
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(keyAttr)}("${java.nameVariable(attr.name)}");
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(valueAttr)}(Strings.format(query.${modelbase4java.name_getter(attr)}()));
+${""?left_pad(indent)}  ${java.nameVariable(detailObj.name)}Service.save${java.nameType(detailObj.name)}(${java.nameVariable(attr.name)}Query);
+${""?left_pad(indent)}}
+  </#list>
+</#macro>
+
+<#macro print_object_meta_save obj indent>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+${""?left_pad(indent)}if (query.${modelbase4java.name_getter(attr)}() != null) {
+${""?left_pad(indent)}  ${java.nameType(obj.name)}MetaQuery ${java.nameVariable(attr.name)}Query = new ${java.nameType(obj.name)}MetaQuery();
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.setPropertyName("${java.nameVariable(attr.name)}");
+${""?left_pad(indent)}  if (${java.nameVariable(obj.name)}MetaDataAccess.select${java.nameType(obj.name)}Meta(${java.nameVariable(attr.name)}Query).size() == 0) {
+${""?left_pad(indent)}    ${java.nameVariable(attr.name)}Query.setPropertyValue(Strings.format(query.${modelbase4java.name_getter(attr)}()));
+${""?left_pad(indent)}    ${java.nameVariable(obj.name)}MetaDataAccess.insert${java.nameType(obj.name)}Meta(${java.nameType(obj.name)}MetaAssembler.assemble${java.nameType(obj.name)}MetaFromQuery(${java.nameVariable(attr.name)}Query));
+${""?left_pad(indent)}  } else {
+${""?left_pad(indent)}    ${java.nameVariable(attr.name)}Query.setPropertyValue(Strings.format(query.${modelbase4java.name_getter(attr)}().toString()));
+${""?left_pad(indent)}    ${java.nameVariable(obj.name)}MetaDataAccess.update${java.nameType(obj.name)}Meta(${java.nameType(obj.name)}MetaAssembler.assemble${java.nameType(obj.name)}MetaFromQuery(${java.nameVariable(attr.name)}Query));
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}}
+  </#list>
+</#macro>
+
+<#macro print_object_extension_save obj indent>
+  <#local extObjs = modelbase.get_extension_objects(obj)>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#list extObjs as extObjName, extRefAttr>
+    <#local extObj = model.findObjectByName(extObjName)>
+    <#local extObjIdAttr = modelbase.get_id_attributes(extObj)[0]>
+${""?left_pad(indent)}/*!
+${""?left_pad(indent)}** 保存【${modelbase.get_object_label(extObj)}】作为一对一显式扩展对象
+${""?left_pad(indent)}*/
+${""?left_pad(indent)}${java.nameType(extObj.name)}Query ${java.nameVariable(extObj.name)}Query = new ${java.nameType(extObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjIdAttr))}(${modelbase.get_attribute_sql_name(idAttrs[0])}); 
+${""?left_pad(indent)}${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extRefAttr))}(Safe.safe(${modelbase.get_attribute_sql_name(idAttrs[0])}, ${modelbase4java.type_attribute_primitive(extRefAttr)}.class));
+    <#list obj.attributes as attr>
+      <#list extObj.attributes as extObjAttr>
+        <#if attr.name == extObjAttr.name && !attr.constraint.identifiable>
+${""?left_pad(indent)}${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());    
+          <#break>
+        </#if>
+      </#list>
+    </#list>
+    <#list extObj.attributes as extObjAttr>
+    <#-- 扩展类型本身引用主实体类型 （比较重要）-->
+      <#if extObjAttr.type.name == obj.name>
+${""?left_pad(indent)}${java.nameVariable(extObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
+        <#break>
+      </#if>
+    </#list>
+${""?left_pad(indent)}${java.nameType(extObj.name)} ${java.nameVariable(extObj.name)} = ${java.nameType(extObj.name)}Assembler.assemble${java.nameType(extObj.name)}FromQuery(${java.nameVariable(extObj.name)}Query);
+${""?left_pad(indent)}if (!existing) {
+${""?left_pad(indent)}  ${java.nameVariable(extObj.name)}DataAccess.insert${java.nameType(extObj.name)}(${java.nameVariable(extObj.name)});
+${""?left_pad(indent)}} else {
+${""?left_pad(indent)}  ${java.nameVariable(extObj.name)}DataAccess.updatePartial${java.nameType(extObj.name)}(${java.nameVariable(extObj.name)});
+${""?left_pad(indent)}}
+  </#list>
+</#macro>
+
+<#macro print_object_one2many_save obj indent>
+  <#list obj.attributes as attr>
+    <#if !attr.type.collection><#continue></#if>
+    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#list collObjIdAttrs as idAttr> 
+      <#-- 找到本身对象以外的另一个对象的引用 -->
+      <#if idAttr.type.name != obj.name && idAttr.type.custom>
+        <#assign collObjIdAttr = idAttr>
+        <#break>
+      </#if>
+    </#list>
+    <#if !collObjIdAttr??>
+      <#assign collObjIdAttr = collObjIdAttrs[0]>
+    </#if>
+    <#assign one2many = false>
+    <#list collObj.attributes as collObjAttr>
+      <#if collObjAttr.type.name == obj.name>
+        <#assign one2many = true>
+        <#break>
+      </#if>
+    </#list>
+    <#if !one2many><#continue></#if>
+${""?left_pad(indent)}/*!
+${""?left_pad(indent)}** 直接关联的【${modelbase.get_object_label(collObj)}】作为一对多显式扩展对象
+${""?left_pad(indent)}*/
+${""?left_pad(indent)}List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();    
+${""?left_pad(indent)}// 查询已经存在的
+${""?left_pad(indent)}${java.nameType(collObj.name)}Query existing${java.nameType(collObj.name)}Query = new ${java.nameType(collObj.name)}Query();
+${""?left_pad(indent)}existing${java.nameType(collObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+    <#list collObj.attributes as collObjAttr>
+      <#if collObjAttr.name == "state">
+${""?left_pad(indent)}existing${java.nameType(collObj.name)}Query.setState("E");
+      </#if>
+    </#list>
+${""?left_pad(indent)}List<Map<String,Object>> existing${java.nameType(collObj.name)}Rows = ${java.nameVariable(collObj.name)}DataAccess.select${java.nameType(collObj.name)}(existing${java.nameType(collObj.name)}Query);
+${""?left_pad(indent)}// 去掉不存在的
+    <#if (collObjIdAttrs?size > 1)>      
+${""?left_pad(indent)}for (Map<String,Object> row : existing${java.nameType(collObj.name)}Rows) {
+${""?left_pad(indent)}  boolean found = false;
+${""?left_pad(indent)}  for (${java.nameType(collObj.name)}Query rowQuery : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}    if (rowQuery.get${java.nameType(modelbase.get_attribute_sql_name(collObjIdAttr))}().equals(row.get("${modelbase.get_attribute_sql_name(collObjIdAttr)}"))) {
+${""?left_pad(indent)}      found = true;
+${""?left_pad(indent)}      break;
+${""?left_pad(indent)}    }
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}  if (!found) {
+      <#local noState = false>    
+      <#list collObj.attributes as collObjAttr>
+        <#if collObjAttr.name == "state">
+        ${java.nameVariable(collObj.name)}Service.disable${java.nameType(collObj.name)}(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
+          <#local noState = true>
+          <#break>
+        </#if>
+      </#list>
+      <#if !noState>
+${""?left_pad(indent)}    ${java.nameVariable(collObj.name)}Service.delete${java.nameType(collObj.name)}(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
+      </#if>
+${""?left_pad(indent)}    }
+${""?left_pad(indent)}  }
+    </#if>  
+${""?left_pad(indent)}for (${java.nameType(collObj.name)}Query row : ${java.nameVariable(attr.name)}) {  
+${""?left_pad(indent)}  row.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+    <#list collObj.attributes as collObjAttr>
+      <#if collObjAttr.name == "state">
+${""?left_pad(indent)}  row.setState("E");
+      </#if>
+    </#list>          
+    <#if collObj.name == obj.name><#-- 树结构定义的对象，含有children属性的情况 -->
+${""?left_pad(indent)}  save${java.nameType(collObj.name)}(row);
+    <#else>
+${""?left_pad(indent)}  ${java.nameVariable(collObj.name)}Service.save${java.nameType(collObj.name)}(row);
+    </#if>    
+${""?left_pad(indent)}}
+    <#-- TODO: 当集合对象是值域对象时，它所关联的其他引用对象，也存在【新增】的可能性 -->
+  </#list>
+</#macro>
+
+<#macro print_object_many2many_save obj indent>
+  <#list obj.attributes as attr>
+    <#if !attr.type.collection><#continue></#if>
+    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#list collObjIdAttrs as idAttr> 
+      <#-- 找到本身对象以外的另一个对象的引用 -->
+      <#if idAttr.type.name != obj.name && idAttr.type.custom>
+        <#assign collObjIdAttr = idAttr>
+        <#break>
+      </#if>
+    </#list>
+    <#if !collObjIdAttr??>
+      <#assign collObjIdAttr = collObjIdAttrs[0]>
+    </#if>
+    <#assign one2many = false>
+    <#list collObj.attributes as collObjAttr>
+      <#if collObjAttr.type.name == obj.name>
+        <#assign one2many = true>
+        <#break>
+      </#if>
+    </#list>
+    <#if one2many><#continue></#if>
+    <#-- FIXME: 间接关联 暂时全面废止 --> 
+    <#local conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
+${""?left_pad(indent)}/*!
+${""?left_pad(indent)}** 间接关联的【${modelbase.get_object_label(conjObj)}】作为一对多显式扩展对象
+${""?left_pad(indent)}*/
+${""?left_pad(indent)}List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();
+${""?left_pad(indent)}// 删除已有的【${modelbase.get_object_label(conjObj)}】数据
+${""?left_pad(indent)}${java.nameType(conjObj.name)} ${java.nameVariable(conjObj.name)} = new ${java.nameType(conjObj.name)}();
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == obj.name>
+${""?left_pad(indent)}${java.nameVariable(conjObj.name)}.set${java.nameType(conjObjAttr.name)}(${varname});  
+        <#break>
+      </#if>
+    </#list>
+${""?left_pad(indent)}// ${java.nameVariable(attr.getLabelledOptions("conjunction")["name"])}DataAccess.disable${java.nameType(conjObj.name)}(${java.nameVariable(conjObj.name)});
+${""?left_pad(indent)}// 创建新的【${modelbase.get_object_label(conjObj)}】数据
+${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}  ${java.nameType(conjObj.name)} conj = new ${java.nameType(conjObj.name)}();
+    <#list conjObj.attributes as conjObjAttr>
+      <#if conjObjAttr.type.name == obj.name>
+${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(${varname});
+      <#elseif conjObjAttr.type.name == collObj.name>
+        <#local collObjIdAttr = modelbase.get_id_attributes(collObj)[0]>
+${""?left_pad(indent)}  ${java.nameType(collObj.name)} conj${java.nameType(collObj.name)} = new ${java.nameType(collObj.name)}();
+${""?left_pad(indent)}  conj${java.nameType(collObj.name)}.setId(row.${modelbase4java.name_getter(collObjIdAttr)}());
+${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(conj${java.nameType(collObj.name)});
+<@modelbase4java.print_object_default_setters obj=conjObj varname="conj" indent=8 />     
+${""?left_pad(indent)}  ${java.nameVariable(conjObj.name)}DataAccess.insert${java.nameType(conjObj.name)}(conj); 
+      </#if>
+    </#list>  
+${""?left_pad(indent)}}
   </#list>
 </#macro>
 

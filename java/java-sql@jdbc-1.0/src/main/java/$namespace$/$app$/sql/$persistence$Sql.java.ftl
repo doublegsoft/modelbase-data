@@ -150,4 +150,14 @@ public class ${java.nameType(obj.name)}Sql {
     }
     return retVal.toString();
   }
+
+  public static directSelectSql(${java.nameType(obj.name)}Query query) {
+    StringBuilder retVal = new StringBuilder();
+    return retVal.toString();
+  }
+
+  public static String prepareSelectSql(${java.nameType(obj.name)}Query query) {
+    StringBuilder retVal = new StringBuilder();
+    return retVal.toString();
+  }
 }
