@@ -38,7 +38,14 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   public void testSaveFromJson() throws Exception {
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query query = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
-    // service.save${java.nameType(obj.name)}(query);
+    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(query);
+    Assert.assertNotNull(savedQuery);
+  <#if idAttrs?size != 0>
+    Assert.assertFalse(Strings.isBlank(savedQuery.${modelbase4java.name_getter(idAttrs[0])}()));
+  </#if>
+  <#list idAttrs as idAttr>
+    Assert.assertEquals(query.${modelbase4java.name_getter(idAttr)}(), savedQuery.${modelbase4java.name_getter(idAttr)}());
+  </#list>
   }
   
   @Test

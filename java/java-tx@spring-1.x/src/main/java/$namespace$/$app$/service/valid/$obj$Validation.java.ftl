@@ -52,7 +52,7 @@ public class ${typename}Validation {
 </#if>    
 <#list extObjs?keys as extObjName>
   <#assign extObj = model.findObjectByName(extObjName)>
-  <#if !existingDaos[objObjName.name]??>
+  <#if !existingDaos[extObj.name]??>
     <#assign existingDaos += {extObjName: extObj}>
     
   @Autowired

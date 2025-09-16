@@ -7,9 +7,7 @@
   <#if attr.name == "state">
   "state":"E",
   <#else>
-  <#-- 
   "${modelbase.get_attribute_sql_name(attr)}":${modelbase4java.test_json_value(attr)},
-  -->
   </#if>
 </#list>
 <#--
