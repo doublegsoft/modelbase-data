@@ -1145,9 +1145,39 @@ ${""?left_pad(indent)}}
 </#macro>
 
 <#--------------------->
+<#-- 灵活扩展的读取操作 -->
+<#--------------------->
+<#macro print_object_extension_read obj indent>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#local extObjs = modelbase.get_extension_objects(obj)>
+  <#list extObjs as extObjName, extRefAttr>
+    <#assign extObj = extRefAttr.parent>
+${""?left_pad(indent)}${java.nameType(extObjName)}Query ${java.nameVariable(extObjName)}Query = new ${java.nameType(extObjName)}Query();
+${""?left_pad(indent)}${java.nameVariable(extObjName)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extRefAttr))}(Safe.safe(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(), ${modelbase4java.type_attribute_primitive(extRefAttr)}.class));
+${""?left_pad(indent)}try {
+${""?left_pad(indent)}  results = ${java.nameVariable(extObjName)}DataAccess.select${java.nameType(extObjName)}(${java.nameVariable(extObjName)}Query);
+${""?left_pad(indent)}  if (results.size() == 1) {
+${""?left_pad(indent)}    result = results.get(0);
+${""?left_pad(indent)}    ${java.nameVariable(extObjName)}Query = ${java.nameType(extObjName)}QueryAssembler.assemble${java.nameType(extObjName)}Query(result);
+    <#list obj.attributes as attr>
+      <#list extObj.attributes as extObjAttr>
+        <#if modelbase.get_attribute_sql_name(attr) == modelbase.get_attribute_sql_name(extObjAttr) && !attr.identifiable>
+${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${java.nameVariable(extObjName)}Query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());   
+        <#break>
+      </#if>
+    </#list>
+  </#list>    
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}} catch (Throwable cause) {
+${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}}
+  </#list> 
+</#macro>
+
+<#--------------------->
 <#-- 主键引用的读取操作 -->
 <#--------------------->
-<#macro print_object_o2o_read obj root indent>
+<#macro print_object_one2one_read obj root indent>
   <#local rootObjIdAttr = modelbase.get_id_attributes(root)[0]>
   <#local idAttr = modelbase.get_id_attributes(obj)[0]>
   <#local refObj = model.findObjectByName(idAttr.type.name)>
@@ -1181,38 +1211,83 @@ ${""?left_pad(indent)}} catch (Throwable cause) {
 ${""?left_pad(indent)}  throw new ServiceException(500, cause);
 ${""?left_pad(indent)}}
   <#if refObjIdAttr.type.custom>
-<@print_object_o2o_read obj=refObj root=root indent=indent />  
+<@print_object_one2one_read obj=refObj root=root indent=indent />  
   </#if>
 </#macro>
 
-<#--------------------->
-<#-- 灵活扩展的读取操作 -->
-<#--------------------->
-<#macro print_object_extension_read obj indent>
+<#---------------------------->
+<#-- 含有集合对象属性的读取操作 -->    
+<#---------------------------->
+<#macro print_object_one2many_read obj indent>
   <#local idAttrs = modelbase.get_id_attributes(obj)>
-  <#local extObjs = modelbase.get_extension_objects(obj)>
-  <#list extObjs as extObjName, extRefAttr>
-    <#assign extObj = extRefAttr.parent>
-${""?left_pad(indent)}${java.nameType(extObjName)}Query ${java.nameVariable(extObjName)}Query = new ${java.nameType(extObjName)}Query();
-${""?left_pad(indent)}${java.nameVariable(extObjName)}Query.set${java.nameType(modelbase.get_attribute_sql_name(extRefAttr))}(Safe.safe(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(), ${modelbase4java.type_attribute_primitive(extRefAttr)}.class));
-${""?left_pad(indent)}try {
-${""?left_pad(indent)}  results = ${java.nameVariable(extObjName)}DataAccess.select${java.nameType(extObjName)}(${java.nameVariable(extObjName)}Query);
-${""?left_pad(indent)}  if (results.size() == 1) {
-${""?left_pad(indent)}    result = results.get(0);
-${""?left_pad(indent)}    ${java.nameVariable(extObjName)}Query = ${java.nameType(extObjName)}QueryAssembler.assemble${java.nameType(extObjName)}Query(result);
-    <#list obj.attributes as attr>
-      <#list extObj.attributes as extObjAttr>
-        <#if modelbase.get_attribute_sql_name(attr) == modelbase.get_attribute_sql_name(extObjAttr) && !attr.identifiable>
-${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${java.nameVariable(extObjName)}Query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());   
-        <#break>
+  <#list obj.attributes as attr>
+    <#if !attr.type.collection><#continue></#if>
+    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#if collObjIdAttrs?size == 1><#continue></#if>
+${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
+    <#list collObj.attributes as collObjAttr>
+      <#if obj.name == collObjAttr.type.name>
+${""?left_pad(indent)}${modelbase4java.singularize_coll_attr(attr)}Query.set${java.nameType(modelbase.get_attribute_sql_name(collObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
       </#if>
     </#list>
-  </#list>    
-${""?left_pad(indent)}  }
-${""?left_pad(indent)}} catch (Throwable cause) {
-${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据  
+${""?left_pad(indent)}List<Map<String,Object>> ${java.nameVariable(attr.name)} = ${java.nameVariable(attr.type.componentType.name)}DataAccess.select${java.nameType(attr.type.componentType.name)}(${modelbase4java.singularize_coll_attr(attr)}Query);
+${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
 ${""?left_pad(indent)}}
-  </#list> 
+    <#-- TODO:  -->  
+    <#-- 规则1：如果集合对象是值域对象，则需要查找下一级的非父对象的引用对象的集合 -->
+    <#-- 规则2（可能有BUG）：如果集合对象是实体对象，则需要通过属性中conjunction的定义，查找关联的实体对象集合 -->
+    <#list collObj.attributes as collObjAttr>
+      <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
+      <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
+      <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
+${""?left_pad(indent)}// 封装关联中明细的【${modelbase.get_object_label(collObjAttrRefObj)}】数据  
+${""?left_pad(indent)}Set<${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)}> ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids = new HashSet<>();
+${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids.add((${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)})row.get("${modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)}"));
+${""?left_pad(indent)}}
+${""?left_pad(indent)}${java.nameType(collObjAttrRefObj.name)}Query ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query = new ${java.nameType(collObjAttrRefObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query.setLimit(-1);
+${""?left_pad(indent)}${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query.get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)))}().addAll(${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids);
+${""?left_pad(indent)}Pagination<${java.nameType(collObjAttrRefObj.name)}Query> ${java.nameVariable(attr.name)}${java.nameType(modelbase.get_object_plural(obj))} = ${java.nameVariable(collObjAttrRefObj.name)}Service.find${java.nameType(modelbase.get_object_plural(collObjAttrRefObj))}(${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query);
+${""?left_pad(indent)}for (${java.nameType(collObjAttrRefObj.name)}Query row : ${java.nameVariable(attr.name)}${java.nameType(modelbase.get_object_plural(obj))}.getData()) {
+${""?left_pad(indent)}  for (${java.nameType(collObj.name)}Query innerRow : retVal.get${java.nameType(attr.name)}()) {
+${""?left_pad(indent)}    if (innerRow.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr))}().equals(row.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr))}())) {
+${""?left_pad(indent)}      innerRow.set${java.nameType(collObjAttr.name)}(row);
+${""?left_pad(indent)}      break;
+${""?left_pad(indent)}    }
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}}
+    </#list>
+  </#list>
+</#macro>
+
+<#macro print_object_many2many_read obj indent>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
+  <#list obj.attributes as attr>
+    <#if !attr.type.collection><#continue></#if>
+    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#if (collObjIdAttrs?size != 1)><#continue></#if>
+${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
+    <#list collObj.attributes as collObjAttr>
+      <#if obj.name == collObjAttr.type.name>
+${""?left_pad(indent)}${modelbase4java.singularize_coll_attr(attr)}Query.set${java.nameType(modelbase.get_attribute_sql_name(collObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
+      </#if>
+    </#list>
+${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据  
+${""?left_pad(indent)}List<Map<String,Object>> ${java.nameVariable(attr.name)} = ${java.nameVariable(attr.type.componentType.name)}DataAccess.select${java.nameType(attr.type.componentType.name)}(${modelbase4java.singularize_coll_attr(attr)}Query);
+${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
+${""?left_pad(indent)}}
+    <#-- TODO:  -->  
+    <#-- 规则1：如果集合对象是值域对象，则需要查找下一级的非父对象的引用对象的集合 -->
+    <#-- 规则2（可能有BUG）：如果集合对象是实体对象，则需要通过属性中conjunction的定义，查找关联的实体对象集合 -->
+    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
+    <#assign conjObjIdAttrs = modelbase.get_id_attributes(conjObj)>
+  </#list>
 </#macro>
 
 <#--------------------------------------->

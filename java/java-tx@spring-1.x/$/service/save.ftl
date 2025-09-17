@@ -36,7 +36,7 @@
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
-<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />    
+    ${typename}Query.setDefaultValues(query);
     boolean existing = true;
     try {
 <#--------------------->

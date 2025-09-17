@@ -37,14 +37,24 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   @Test
   public void testSaveFromJson() throws Exception {
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
-    ${java.nameType(obj.name)}Query query = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
-    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(query);
+    ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
+    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
     Assert.assertNotNull(savedQuery);
   <#if idAttrs?size != 0>
     Assert.assertFalse(Strings.isBlank(savedQuery.${modelbase4java.name_getter(idAttrs[0])}()));
   </#if>
   <#list idAttrs as idAttr>
-    Assert.assertEquals(query.${modelbase4java.name_getter(idAttr)}(), savedQuery.${modelbase4java.name_getter(idAttr)}());
+    Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(idAttr)}(), savedQuery.${modelbase4java.name_getter(idAttr)}());
+  </#list>
+    ${java.nameType(obj.name)}Query toReadQuery = new ${java.nameType(obj.name)}Query();
+  <#list idAttrs as idAttr>
+    toReadQuery.${modelbase4java.name_setter(idAttr)}(savedQuery.${modelbase4java.name_getter(idAttr)}());
+  </#list>
+    ${java.nameType(obj.name)}Query readQuery = service.read${java.nameType(obj.name)}(toReadQuery);
+    Assert.assertNotNull(readQuery);
+  <#list obj.attributes as attr>
+    <#if modelbase.is_attribute_system(attr) || attr.identifiable><#continue></#if>  
+    Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), readQuery.${modelbase4java.name_getter(attr)}());
   </#list>
   }
   
