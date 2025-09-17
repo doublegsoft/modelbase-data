@@ -8,17 +8,16 @@
    */
   @Override
   public ${typename}Query read${typename}(${typename}Query query) throws ServiceException {
-<#if obj.persistenceName??>
-<@modelbase4java.print_object_persistence_read obj=obj indent=4 />
-<#elseif obj.isLabelled("pivot")>  
+<#if obj.isLabelled("pivot")>  
 <@modelbase4java.print_object_pivot_read obj=obj indent=4 />    
+<#elseif obj.isLabelled("meta")>
+<@modelbase4java.print_object_meta_read obj=obj indent=4 />  
+<#elseif obj.persistenceName??>
+<@modelbase4java.print_object_persistence_read obj=obj indent=4 />
 </#if>
 <#if obj.isLabelled("extension")>
 <@modelbase4java.print_object_extension_read obj=obj indent=4 />
 </#if> 
-<#if obj.isLabelled("meta")>
-<@modelbase4java.print_object_meta_read obj=obj indent=4 />  
-</#if>
 <#if idAttrs?size == 1 && idAttrs[0].type.custom>
 <@modelbase4java.print_object_o2o_read obj=obj root=obj indent=4 />   
 </#if> 

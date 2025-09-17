@@ -672,8 +672,8 @@ ${""?left_pad(indent)}if (query.${modelbase4java.name_getter(attr)}() != null) {
 ${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query ${java.nameVariable(attr.name)}Query = new ${java.nameType(detailObj.name)}Query();
     <#-- detail对象的默认值设置，包含对主键的设值 -->       
       <#assign innerVarName = java.nameVariable(attr.name) + "Query">
-<@print_query_id_setters obj=detailObj varname=innerVarName  indent=indent+2 />         
-<@print_query_default_setters obj=detailObj varname=innerVarName  indent=indent+2 />    
+<@print_query_id_setters obj=detailObj varname=innerVarName  indent=indent+2 />     
+${""?left_pad(indent)}${java.nameType(detailObj.name)}Query.setDefaultValues(${java.nameVariable(attr.name)}Query);  
     <#if obj.getLabelledOptions("pivot")["master"]??>    
 ${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
     <#else>
@@ -748,6 +748,7 @@ ${""?left_pad(indent)}}
 </#macro>
 
 <#macro print_object_one2many_save obj indent>
+  <#local idAttrs = modelbase.get_id_attributes(obj)>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
     <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
@@ -858,7 +859,7 @@ ${""?left_pad(indent)}// 删除已有的【${modelbase.get_object_label(conjObj)
 ${""?left_pad(indent)}${java.nameType(conjObj.name)} ${java.nameVariable(conjObj.name)} = new ${java.nameType(conjObj.name)}();
     <#list conjObj.attributes as conjObjAttr>
       <#if conjObjAttr.type.name == obj.name>
-${""?left_pad(indent)}${java.nameVariable(conjObj.name)}.set${java.nameType(conjObjAttr.name)}(${varname});  
+${""?left_pad(indent)}${java.nameVariable(conjObj.name)}.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(obj.name)});  
         <#break>
       </#if>
     </#list>
@@ -868,7 +869,7 @@ ${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query r
 ${""?left_pad(indent)}  ${java.nameType(conjObj.name)} conj = new ${java.nameType(conjObj.name)}();
     <#list conjObj.attributes as conjObjAttr>
       <#if conjObjAttr.type.name == obj.name>
-${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(${varname});
+${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(obj.name)});
       <#elseif conjObjAttr.type.name == collObj.name>
         <#local collObjIdAttr = modelbase.get_id_attributes(collObj)[0]>
 ${""?left_pad(indent)}  ${java.nameType(collObj.name)} conj${java.nameType(collObj.name)} = new ${java.nameType(collObj.name)}();
@@ -882,7 +883,7 @@ ${""?left_pad(indent)}}
   </#list>
 </#macro>
 
-<#macro print_object_o2o_members obj existings>
+<#macro print_object_one2one_members obj existings>
   <#local existingDaos = {}>
   <#local existingServices = {}>
   <#list obj.attributes as attr>
@@ -896,15 +897,15 @@ ${""?left_pad(indent)}}
   @Autowired  
   ${java.nameType(refObj.name)}Service ${java.nameVariable(refObj.name)}Service;
     </#if>
-<@print_object_o2o_members obj=refObj existings=existings/>         
+<@print_object_one2one_members obj=refObj existings=existings/>         
   </#list>
 </#macro>
 
-<#macro print_object_o2m_members obj existings>
+<#macro print_object_one2many_members obj existings>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
     <#if !existings[attr.type.componentType.name]??>
-      <#assign existings += {attr.type.componentType.name:""}>
+      <#assign existings = existings + {attr.type.componentType.name:""}>
       
   @Autowired
   ${java.nameType(attr.type.componentType.name)}DataAccess ${java.nameVariable(attr.type.componentType.name)}DataAccess;
@@ -1125,6 +1126,25 @@ ${""?left_pad(indent)}}
 </#macro>
 
 <#--------------------->
+<#-- 元型扩展的读取操作 -->
+<#--------------------->
+<#macro print_object_meta_read obj indent>
+<@print_object_persistence_read obj=obj indent=indent />
+  <#local idAttr = modelbase.get_id_attributes(obj)[0]>
+${""?left_pad(indent)}${java.nameType(obj.name)}MetaQuery metaQuery = new ${java.nameType(obj.name)}MetaQuery();
+${""?left_pad(indent)}metaQuery.${name_setter(idAttr)}(query.${name_getter(idAttr)}());
+${""?left_pad(indent)}List<Map<String,Object>> metas = ${java.nameVariable(obj.name)}MetaDataAccess.select${java.nameType(obj.name)}Meta(metaQuery);
+${""?left_pad(indent)}for (Map<String,Object> meta : metas) {
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(meta.get("propertyName"))) {
+${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(meta.get("propertyValue"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+${""?left_pad(indent)}  }
+  </#list>
+${""?left_pad(indent)}}
+</#macro>
+
+<#--------------------->
 <#-- 主键引用的读取操作 -->
 <#--------------------->
 <#macro print_object_o2o_read obj root indent>
@@ -1163,24 +1183,6 @@ ${""?left_pad(indent)}}
   <#if refObjIdAttr.type.custom>
 <@print_object_o2o_read obj=refObj root=root indent=indent />  
   </#if>
-</#macro>
-
-<#--------------------->
-<#-- 元型扩展的读取操作 -->
-<#--------------------->
-<#macro print_object_meta_read obj indent>
-  <#local idAttr = modelbase.get_id_attributes(obj)[0]>
-${""?left_pad(indent)}${java.nameType(obj.name)}MetaQuery metaQuery = new ${java.nameType(obj.name)}MetaQuery();
-${""?left_pad(indent)}metaQuery.${name_setter(idAttr)}(query.${name_getter(idAttr)}());
-${""?left_pad(indent)}List<Map<String,Object>> metas = ${java.nameVariable(obj.name)}MetaDataAccess.select${java.nameType(obj.name)}Meta(metaQuery);
-${""?left_pad(indent)}for (Map<String,Object> meta : metas) {
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
-${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(meta.get("propertyName"))) {
-${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(meta.get("propertyValue"), ${modelbase4java.type_attribute_primitive(attr)}.class));
-${""?left_pad(indent)}  }
-  </#list>
-${""?left_pad(indent)}}
 </#macro>
 
 <#--------------------->

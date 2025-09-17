@@ -99,8 +99,8 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
   @Autowired
   ${java.nameType(obj.name)}MetaDataAccess ${java.nameVariable(obj.name)}MetaDataAccess;
 </#if>
-<@modelbase4java.print_object_o2m_members obj=obj existings=existingObjs/> 
-<@modelbase4java.print_object_o2o_members obj=obj existings=existingObjs/>    
+<@modelbase4java.print_object_one2many_members obj=obj existings=existingObjs/> 
+<@modelbase4java.print_object_one2one_members obj=obj existings=existingObjs/>    
   
   @Autowired
   ${typename}Validation ${varname}Validation;    
@@ -663,13 +663,14 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
       ${java.nameVariable(collObj.name)}DataAccess.updatePartial${java.nameType(collObj.name)}(${java.nameVariable(collObj.name)}Item);
     }
   <#else>
+    <#--  <#assign conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
     ${java.nameType(conjObj.name)} conj = new ${java.nameType(conjObj.name)}();
     <#list conjObj.attributes as conjObjAttr>
       <#if conjObjAttr.type.name == obj.name>
     conj.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(obj.name)});
       </#if>
     </#list>
-    ${java.nameVariable(conjObj.name)}DataAccess.disable${java.nameType(conjObj.name)}(conj);
+    ${java.nameVariable(conjObj.name)}DataAccess.disable${java.nameType(conjObj.name)}(conj);  -->
   </#if>
   }
   
@@ -695,7 +696,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
       retVal.add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
     }
   <#else>
-    ${java.nameType(conjObj.name)}Query ${java.nameVariable(conjObj.name)}Query = new ${java.nameType(conjObj.name)}Query();
+    <#--  ${java.nameType(conjObj.name)}Query ${java.nameVariable(conjObj.name)}Query = new ${java.nameType(conjObj.name)}Query();
     <#list conjObj.attributes as conjObjAttr>
       <#if conjObjAttr.type.name == obj.name>
     ${java.nameVariable(conjObj.name)}Query.${modelbase4java.name_setter(conjObjAttr)}(${java.nameVariable(obj.name)}.toId());
@@ -705,7 +706,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
     List<Map<String,Object>> rows = ${java.nameVariable(conjObj.name)}DataAccess.select${java.nameType(conjObj.name)}(${java.nameVariable(conjObj.name)}Query);
     for (Map<String,Object> row : rows) {
       retVal.add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
-    }
+    }  -->
   </#if>  
     return retVal;
   }

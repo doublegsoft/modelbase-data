@@ -10,7 +10,8 @@
 <#if collAttrs?size == 0> 
   "queryHandlers":[]
 <#else>
-  "queryHandlers":[{
+  "queryHandlers":[]
+  <#--  "queryHandlers":[{  -->
 <#list collAttrs as attr>
   <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
   <#list collObj.attributes as collObjAttr>
@@ -21,16 +22,16 @@
   <#if !refAttrInCollObj??>
     <#assign refAttrInCollObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
   </#if>
-  <#-- if !refAttrInCollObj??><#continue></#if-->
+  <#if !refAttrInCollObj??><#continue></#if>
   <#if attr?index != 0>
   },{
   </#if>
-    "handler": "//${collObj.name}/find",
+    <#--  "handler": "//${collObj.name}/find",
     "sourceField": "${modelbase.get_attribute_sql_name(idAttrs[0])}",
     "targetField": "${modelbase.get_attribute_sql_name(refAttrInCollObj)}",
     "resultName": "${java.nameVariable(attr.name)}",
-    "query": {}
+    "query": {}  -->
 </#list>    
-  }]
+  <#--  }]  -->
 </#if>  
 }

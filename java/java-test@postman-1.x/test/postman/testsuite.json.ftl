@@ -174,6 +174,7 @@
     },
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
+    <#-- 直接引用的情况 -->
     <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
     <#list collObj.attributes as collObjAttr>
       <#if collObjAttr.type.name == obj.name>
@@ -183,6 +184,17 @@
         <#assign otherRefAttrInCollObj = collObjAttr>
       </#if>
     </#list>
+    <#if !refAttrInCollObj??>
+      <#assign collObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
+      <#list collObj.attributes as collObjAttr>
+        <#if collObjAttr.type.name == obj.name>
+          <#assign refAttrInCollObj = collObjAttr>
+      <#elseif collObjAttr.type.custom>
+          <#-- 另外的引用对象 -->
+          <#assign otherRefAttrInCollObj = collObjAttr>
+        </#if>
+      </#list>
+    </#if>
     {
       "name": "【${modelbase.get_object_label(obj)}】查询（同时返回【${modelbase.get_object_label(collObj)}】子集}）",
       "event": [{

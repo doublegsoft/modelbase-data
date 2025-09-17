@@ -77,7 +77,7 @@ public class ${java.nameType(obj.name)}Query implements Serializable {
   
   public static void setDefaultValues(${java.nameType(obj.name)}Query query) {
 <#list obj.attributes as attr>
-<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=8 />   
+<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />   
 </#list>  
   }
   
