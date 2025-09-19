@@ -167,6 +167,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
   <#-- 【保存】部分 -->
 <#include "/$/service/save.ftl">
 <#include "/$/service/read.ftl">
+<#include "/$/service/find.ftl">
 <#if obj.persistenceName??>
   
   @Override
@@ -260,63 +261,6 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
     }    
   }
       
-  /**
-   * 查找多个【${modelbase.get_object_label(obj)}】对象。
-   */
-  @Override
-  public Pagination<${typename}Query> find${inflector.pluralize(typename)}(${typename}Query query) throws ServiceException {
-    Pagination<${typename}Query> retVal = new Pagination<>();
-<#if obj.isLabelled("pivot")>  
-  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
-  <#assign existingObjs += {detailObj.name:detailObj}> 
-  <#if obj.getLabelledOptions("pivot")["master"]??>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-    <#assign existingObjs += {masterObj.name:masterObj}>
-    ${js.nameType(masterObj.name)}Query ${js.nameVariable(masterObj.name)}Query = new ${js.nameType(masterObj.name)}Query();
-    try {    
-      List<Map<String,Object>> results;
-      if (query.getLimit() == -1) {
-        results = ${js.nameVariable(masterObj.name)}DataAccess.select${js.nameType(masterObj.name)}(${js.nameVariable(masterObj.name)}Query);
-      } else {
-        RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit());
-        results = ${js.nameVariable(masterObj.name)}DataAccess.select${js.nameType(masterObj.name)}(${js.nameVariable(masterObj.name)}Query, rowBounds);
-      }
-      long total = ${js.nameVariable(masterObj.name)}DataAccess.selectCountOf${js.nameType(masterObj.name)}(${js.nameVariable(masterObj.name)}Query);
-      retVal.setTotal(total);
-      for (Map<String,Object> res : results) {
-        retVal.getData().add(${typename}QueryAssembler.assemble${typename}Query(res));
-      }
-      hierarchize(retVal.getData(), query);
-    } catch (Throwable cause) {
-      throw new ServiceException(500, cause);
-    }
-  <#else>
-    <#-- TODO: 是否支持对不拥有master的pivot对象 -->
-  </#if> 
-<#else> 
-    try {    
-      List<Map<String,Object>> results;
-      if (query.getLimit() == -1) {
-        results = ${varname}DataAccess.select${typename}(query);
-      } else {
-        RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit());
-        results = ${varname}DataAccess.select${typename}(query, rowBounds);
-      }
-      long total = ${varname}DataAccess.selectCountOf${typename}(query);
-      retVal.setTotal(total);
-      for (Map<String,Object> res : results) {
-        retVal.getData().add(${typename}QueryAssembler.assemble${typename}Query(res));
-      }
-      hierarchize(retVal.getData(), query);
-    } catch (Throwable cause) {
-      throw new ServiceException(500, cause);
-    }
-</#if> 
-    return retVal;
-  }
-  
-
-  
   /**
    * 聚合统计【${modelbase.get_object_label(obj)}】对象。
    */

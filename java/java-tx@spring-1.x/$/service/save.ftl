@@ -54,7 +54,7 @@
   <#if obj.getLabelledOptions("pivot")["master"]??>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
     <#-- 行列对象的保存 -->
-<@modelbase4java.print_object_entity_save obj=masterObj indent=6 query=('query.to' + java.nameType(masterObj.name) + 'Query()') />  
+<@modelbase4java.print_object_entity_save obj=masterObj indent=6 proxy=obj />  
   </#if> 
 </#if>        
 <#--------------------->

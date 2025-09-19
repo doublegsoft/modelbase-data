@@ -965,7 +965,7 @@ ${""?left_pad(indent)}</dependency>
 <#--------------------->
 <#-- 实体对象的保存操作 -->
 <#--------------------->
-<#macro print_object_entity_save obj indent query=''>
+<#macro print_object_entity_save obj indent proxy="">
   <#local idAttrs = modelbase.get_id_attributes(obj)>
 ${""?left_pad(indent)}${modelbase4java.type_attribute_primitive(idAttrs[0])} ${modelbase.get_attribute_sql_name(idAttrs[0])} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}();
 ${""?left_pad(indent)}if (Strings.isBlank(${modelbase.get_attribute_sql_name(idAttrs[0])})) {
@@ -977,8 +977,8 @@ ${""?left_pad(indent)}if (existing) {
 ${""?left_pad(indent)}  // 在传入了主键的情况下，也需要检查传入主键的有效性
 ${""?left_pad(indent)}  existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(${modelbase.get_attribute_sql_name(idAttrs[0])});
 ${""?left_pad(indent)}}
-  <#if query != ''>
-${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(${query});  
+  <#if proxy?string != "" && proxy.name != obj.name>
+${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query.to${java.nameType(obj.name)}Query());  
   <#else>
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
   </#if>
@@ -1061,11 +1061,11 @@ ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${ja
 <#--------------------->
 <#-- 实体对象的读取操作 -->
 <#--------------------->
-<#macro print_object_persistence_read obj indent query=''>
+<#macro print_object_persistence_read obj indent proxy="">
   <#local idAttrs = modelbase.get_id_attributes(obj)>
 ${""?left_pad(indent)}try {
-  <#if query != ''>
-${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(${query});
+  <#if proxy?string != "" && proxy.name != obj.name>
+${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query.to${java.nameType(obj.name)}Query());
   <#else>
 ${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
   </#if>
@@ -1079,7 +1079,7 @@ ${""?left_pad(indent)}if (results.size() > 1) {
 ${""?left_pad(indent)}  throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
 ${""?left_pad(indent)}}
 ${""?left_pad(indent)}result = results.get(0);
-  <#if query == ''>
+  <#if proxy?string == "">
   <#-- 说明不是衍生对象，采用原始的可持久化的对象 -->  
 ${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
   </#if>
@@ -1103,7 +1103,7 @@ ${""?left_pad(indent)}${java.nameType(masterObj.name)}Query ${java.nameVariable(
 ${""?left_pad(indent)}${java.nameVariable(masterObj.name)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
     </#list>
     <#-- 原始对象的读取操作 -->    
-<@print_object_persistence_read obj=masterObj indent=indent query=(java.nameVariable(masterObj.name) + "Query") />
+<@print_object_persistence_read obj=masterObj indent=indent proxy=obj />
 ${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
   <#else>
 ${""?left_pad(indent)}retVal = new ${java.nameType(obj.name)}Query();
@@ -1302,12 +1302,36 @@ ${""?left_pad(indent)}List<Map<String,Object>> ${java.nameVariable(attr.name)} =
 ${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
 ${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
 ${""?left_pad(indent)}}
-    <#-- TODO:  -->  
-    <#-- 规则1：如果集合对象是值域对象，则需要查找下一级的非父对象的引用对象的集合 -->
-    <#-- 规则2（可能有BUG）：如果集合对象是实体对象，则需要通过属性中conjunction的定义，查找关联的实体对象集合 -->
-    <#--  <#assign conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
-    <#assign conjObjIdAttrs = modelbase.get_id_attributes(conjObj)>  -->
   </#list>
+</#macro>
+
+<#macro print_object_persistence_find obj indent proxy="">
+  <#local varname = java.nameVariable(obj.name)>
+  <#local typename = java.nameType(obj.name)>
+  <#if proxy?string == "">
+    <#local queryname = "query">
+  <#else>  
+    <#local queryname = java.nameVariable(obj.name) + "Query">
+  </#if>
+${""?left_pad(indent)}try {    
+${""?left_pad(indent)}  if (${queryname}.getLimit() == -1) {
+${""?left_pad(indent)}    results = ${varname}DataAccess.select${typename}(${queryname});
+${""?left_pad(indent)}  } else {
+${""?left_pad(indent)}    RowBounds rowBounds = new RowBounds(${queryname}.getStart(), ${queryname}.getLimit());
+${""?left_pad(indent)}    results = ${varname}DataAccess.select${typename}(${queryname}, rowBounds);
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}  total = ${varname}DataAccess.selectCountOf${typename}(${queryname});
+${""?left_pad(indent)}} catch (Throwable cause) {
+${""?left_pad(indent)}  throw new ServiceException(500, cause);
+${""?left_pad(indent)}}
+${""?left_pad(indent)}retVal.setTotal(total);
+${""?left_pad(indent)}for (Map<String,Object> res : results) {
+  <#if proxy?string == "">
+${""?left_pad(indent)}  retVal.getData().add(${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(res));
+  <#else>
+${""?left_pad(indent)}  retVal.getData().add(${java.nameType(proxy.name)}QueryAssembler.assemble${java.nameType(proxy.name)}Query(res));
+  </#if>
+${""?left_pad(indent)}}
 </#macro>
 
 <#--------------------------------------->
