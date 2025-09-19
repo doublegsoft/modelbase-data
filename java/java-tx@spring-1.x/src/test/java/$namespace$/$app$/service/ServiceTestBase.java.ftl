@@ -30,10 +30,11 @@ public class ServiceTestBase {
   protected static ApplicationContext context;
   
   public ApplicationContext getContext() {
-    if (context == null) {
+    <#--  if (context == null) {
       context = new ClassPathXmlApplicationContext("spring-test.xml");
     }
-    return context;
+    return context;  -->
+    return new ClassPathXmlApplicationContext("spring-test.xml");
   }
 
   public Map<String,Object> fromJson(String filename) throws Exception {

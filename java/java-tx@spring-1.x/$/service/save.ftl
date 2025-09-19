@@ -1,5 +1,5 @@
   /**
-   * 保存多个【modelbase.get_object_label(obj)】数据。
+   * 保存多个【${modelbase.get_object_label(obj)}】数据。
    */
   @Override
   @Transactional(rollbackFor = Throwable.class)

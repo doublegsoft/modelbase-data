@@ -108,9 +108,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   }
   
   public static void setDefaultValues(${java.nameType(obj.name)}Query query) {
-<#list obj.attributes as attr>
-<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />   
-</#list>  
+<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 /> 
   }
   
 }

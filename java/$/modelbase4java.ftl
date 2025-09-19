@@ -673,7 +673,7 @@ ${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query ${java.nameVariabl
     <#-- detail对象的默认值设置，包含对主键的设值 -->       
       <#assign innerVarName = java.nameVariable(attr.name) + "Query">
 <@print_query_id_setters obj=detailObj varname=innerVarName  indent=indent+2 />     
-${""?left_pad(indent)}${java.nameType(detailObj.name)}Query.setDefaultValues(${java.nameVariable(attr.name)}Query);  
+${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query.setDefaultValues(${java.nameVariable(attr.name)}Query);  
     <#if obj.getLabelledOptions("pivot")["master"]??>    
 ${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
     <#else>
@@ -1063,7 +1063,6 @@ ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${ja
 <#--------------------->
 <#macro print_object_persistence_read obj indent query=''>
   <#local idAttrs = modelbase.get_id_attributes(obj)>
-${""?left_pad(indent)}List<Map<String,Object>> results = null;
 ${""?left_pad(indent)}try {
   <#if query != ''>
 ${""?left_pad(indent)}  results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(${query});
@@ -1079,10 +1078,10 @@ ${""?left_pad(indent)}}
 ${""?left_pad(indent)}if (results.size() > 1) {
 ${""?left_pad(indent)}  throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
 ${""?left_pad(indent)}}
-${""?left_pad(indent)}Map<String,Object> result = results.get(0);
+${""?left_pad(indent)}result = results.get(0);
   <#if query == ''>
   <#-- 说明不是衍生对象，采用原始的可持久化的对象 -->  
-${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
+${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
   </#if>
 </#macro>
 
@@ -1098,26 +1097,47 @@ ${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = ${java.nameType(o
   <#local valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
   <#-- master -->
   <#if masterObj??>
-    <#local idAttrs = modelbase.get_id_attributes(obj)>
+    <#local idAttrs = modelbase.get_id_attributes(masterObj)>
 ${""?left_pad(indent)}${java.nameType(masterObj.name)}Query ${java.nameVariable(masterObj.name)}Query = new ${java.nameType(masterObj.name)}Query();
     <#list idAttrs as idAttr>
 ${""?left_pad(indent)}${java.nameVariable(masterObj.name)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
     </#list>
     <#-- 原始对象的读取操作 -->    
 <@print_object_persistence_read obj=masterObj indent=indent query=(java.nameVariable(masterObj.name) + "Query") />
-${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
+${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
   <#else>
-${""?left_pad(indent)}${java.nameType(obj.name)}Query retVal = new ${java.nameType(obj.name)}Query();
+${""?left_pad(indent)}retVal = new ${java.nameType(obj.name)}Query();
   </#if>  
   <#-- detail -->
 ${""?left_pad(indent)}${java.nameType(detailObj.name)}Query ${java.nameVariable(detailObj.name)}Query = new ${java.nameType(detailObj.name)}Query();
   <#if masterObj??>
 ${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${name_setter(idAttrs[0])}(query.${name_getter(idAttrs[0])}());
+  <#else>
+    <#list detailObj.attributes as detailObjAttr>
+      <#list obj.attributes as attr>
+        <#if detailObjAttr.name == attr.name>
+${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${modelbase4java.name_setter(detailObjAttr)}(query.${modelbase4java.name_getter(detailObjAttr)}());
+        </#if>
+      </#list>
+    </#list>
   </#if>
 ${""?left_pad(indent)}List<Map<String,Object>> items = ${java.nameVariable(detailObj.name)}DataAccess.select${java.nameType(detailObj.name)}(${java.nameVariable(detailObj.name)}Query);
 ${""?left_pad(indent)}for (Map<String,Object> item : items) {
   <#list obj.attributes as attr>
     <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#local isOrigAttr = false>
+    <#list detailObj.attributes as detailAttr>
+      <#if detailAttr.name == attr.name>
+        <#if attr.type.name == "datetime">
+${""?left_pad(indent)}  retVal.${modelbase4java.name_setter(attr)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(attr)}"), Timestamp.class));        
+        <#else>
+${""?left_pad(indent)}  retVal.${modelbase4java.name_setter(attr)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(attr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+        </#if>
+        <#local isOrigAttr = true>
+        <#break>
+      </#if>
+    </#list>  
+    <#if isOrigAttr><#continue></#if>
 ${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(item.get("${modelbase.get_attribute_sql_name(keyAttr)}"))) {
 ${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(valueAttr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
 ${""?left_pad(indent)}  }
@@ -1222,8 +1242,8 @@ ${""?left_pad(indent)}}
   <#local idAttrs = modelbase.get_id_attributes(obj)>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
-    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
-    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#local collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#local collObjIdAttrs = modelbase.get_id_attributes(collObj)>
     <#if collObjIdAttrs?size == 1><#continue></#if>
 ${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
     <#list collObj.attributes as collObjAttr>
@@ -1268,8 +1288,8 @@ ${""?left_pad(indent)}}
   <#local idAttrs = modelbase.get_id_attributes(obj)>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
-    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
-    <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
+    <#local collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#local collObjIdAttrs = modelbase.get_id_attributes(collObj)>
     <#if (collObjIdAttrs?size != 1)><#continue></#if>
 ${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
     <#list collObj.attributes as collObjAttr>
@@ -1285,8 +1305,8 @@ ${""?left_pad(indent)}}
     <#-- TODO:  -->  
     <#-- 规则1：如果集合对象是值域对象，则需要查找下一级的非父对象的引用对象的集合 -->
     <#-- 规则2（可能有BUG）：如果集合对象是实体对象，则需要通过属性中conjunction的定义，查找关联的实体对象集合 -->
-    <#assign conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
-    <#assign conjObjIdAttrs = modelbase.get_id_attributes(conjObj)>
+    <#--  <#assign conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
+    <#assign conjObjIdAttrs = modelbase.get_id_attributes(conjObj)>  -->
   </#list>
 </#macro>
 

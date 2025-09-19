@@ -15,6 +15,7 @@ import java.sql.Date;
 import java.sql.Timestamp;
 
 import org.junit.*;
+import org.junit.runners.MethodSorters;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.poco.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
@@ -32,14 +33,16 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
  *
  * @since ${version}
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   
   @Test
-  public void testSaveFromJson() throws Exception {
+  public void test_11_save_and_read() throws Exception {
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
     Assert.assertNotNull(savedQuery);
+
   <#if idAttrs?size != 0>
     Assert.assertFalse(Strings.isBlank(savedQuery.${modelbase4java.name_getter(idAttrs[0])}()));
   </#if>
@@ -53,26 +56,49 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(obj.name)}Query readQuery = service.read${java.nameType(obj.name)}(toReadQuery);
     Assert.assertNotNull(readQuery);
   <#list obj.attributes as attr>
-    <#if modelbase.is_attribute_system(attr) || attr.identifiable><#continue></#if>  
+    <#if modelbase.is_attribute_system(attr) || attr.identifiable || attr.type.collection><#continue></#if>  
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), readQuery.${modelbase4java.name_getter(attr)}());
   </#list>
   }
-  
+
   @Test
-  public void testReadFromJson() throws Exception {
+  public void test_12_save_more_times() throws Exception {
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
-    ${java.nameType(obj.name)}Query query = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#read.json"));
-    try {
-      service.read${java.nameType(obj.name)}(query);
-    } catch (ServiceException ex) {
-      Assert.assertEquals(404, ex.getCode());
-    }
+    ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
+    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
+    Assert.assertNotNull(savedQuery);
+    service.save${java.nameType(obj.name)}(toSaveQuery);
+    service.save${java.nameType(obj.name)}(toSaveQuery);
+    service.save${java.nameType(obj.name)}(toSaveQuery);
+
+  <#if idAttrs?size == 1>
+    ${java.nameType(obj.name)}Query findQuery = new ${java.nameType(obj.name)}Query();
+    <#list obj.attributes as attr>
+      <#if attr.type.name == "string" && !modelbase.is_attribute_system(attr) && !attr.identifiable>
+    findQuery.${modelbase4java.name_setter(attr)}2(toSaveQuery.${modelbase4java.name_getter(attr)}());
+      </#if>
+    </#list>  
+    Pagination<${java.nameType(obj.name)}Query> result = service.find${inflector.pluralize(java.nameType(obj.name))}(findQuery);
+    Assert.assertEquals(1L, result.getTotal());
+  </#if>
   }
   
   @Test
-  public void testFindFromJson() throws Exception {
+  public void test_13_save_and_find() throws Exception {
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
-    ${java.nameType(obj.name)}Query query = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#find.json"));
-    service.find${inflector.pluralize(java.nameType(obj.name))}(query);
+    ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
+    service.save${java.nameType(obj.name)}(toSaveQuery);
+
+    <#if idAttrs?size == 1>
+      <#list idAttrs as idAttr>
+    toSaveQuery.${modelbase4java.name_setter(idAttr)}(null);
+      </#list>
+    </#if>
+    <#list 1..10 as idx>
+    service.save${java.nameType(obj.name)}(toSaveQuery);
+    </#list>
+
+    ${java.nameType(obj.name)}Query findQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#find.json"));
+    service.find${inflector.pluralize(java.nameType(obj.name))}(findQuery);
   }
 }

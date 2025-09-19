@@ -1,5 +1,6 @@
 <#--
  ### 完整对象的读取：
+ ###
  ###    包括一对一扩展的读取，集合子属性的读取 
  -->
 
@@ -8,10 +9,14 @@
    */
   @Override
   public ${typename}Query read${typename}(${typename}Query query) throws ServiceException {
-<#if obj.persistenceName?? && !obj.isLabelled("meta") && !obj.isLabelled("extension")>
+    List<Map<String,Object>> results = null;
+    Map<String,Object> result = null;
+    ${java.nameType(obj.name)}Query retVal = new ${java.nameType(obj.name)}Query(); 
+<#if obj.persistenceName??>
   <#-- 因为meta和extension是继承了原始对象的所有标签 -->
 <@modelbase4java.print_object_persistence_read obj=obj indent=4 />    
-<#elseif obj.isLabelled("pivot")>  
+</#if>
+<#if obj.isLabelled("pivot")>  
 <@modelbase4java.print_object_pivot_read obj=obj indent=4 />    
 <#elseif obj.isLabelled("meta")>
 <@modelbase4java.print_object_meta_read obj=obj indent=4 />  
