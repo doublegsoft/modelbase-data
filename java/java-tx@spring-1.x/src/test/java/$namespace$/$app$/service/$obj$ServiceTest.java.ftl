@@ -38,6 +38,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   
   @Test
   public void test_11_save_and_read() throws Exception {
+    clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
@@ -63,6 +64,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
 
   @Test
   public void test_12_save_more_times() throws Exception {
+    clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
@@ -79,22 +81,23 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
       </#if>
     </#list>  
     Pagination<${java.nameType(obj.name)}Query> result = service.find${inflector.pluralize(java.nameType(obj.name))}(findQuery);
-    Assert.assertEquals(1L, result.getTotal());
+    Assert.assertEquals(1L, result.getData().size());
   </#if>
   }
   
   @Test
   public void test_13_save_and_find() throws Exception {
+    clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     service.save${java.nameType(obj.name)}(toSaveQuery);
 
-    <#if idAttrs?size == 1>
-      <#list idAttrs as idAttr>
-    toSaveQuery.${modelbase4java.name_setter(idAttr)}(null);
-      </#list>
-    </#if>
     <#list 1..10 as idx>
+      <#if idAttrs?size == 1>
+        <#list idAttrs as idAttr>
+    toSaveQuery.${modelbase4java.name_setter(idAttr)}(null);
+        </#list>
+      </#if>
     service.save${java.nameType(obj.name)}(toSaveQuery);
     </#list>
 

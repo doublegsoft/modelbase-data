@@ -1128,6 +1128,19 @@
       <#local ret = ret + [attr]>
     </#if>
   </#list>
+  <#if obj.isLabelled("pivot")>
+    <#if !obj.getLabelledOptions("pivot")["master"]??>   
+      <#local detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+      <#list obj.attributes as attr>
+        <#list detailObj.attributes as detailAttr>
+          <#if attr.name == detailAttr.name>
+            <#local ret += [attr]>
+            <#break>
+          </#if>
+        </#list>
+      </#list>
+    </#if>
+  </#if>
   <#return ret>
 </#function>
 
@@ -1490,6 +1503,44 @@
     </#if>
   </#list>
   <#return false>
+</#function>
+
+<#function is_masterless_detail_reference_attribute attr>
+  <#local obj = attr.parent>
+  <#list model.objects as o>
+    <#if o.isLabelled("pivot") && 
+         !o.getLabelledOptions("pivot")["master"]?? &&
+         o.getLabelledOptions("pivot")["detail"] == obj.name>
+      <#list o.attributes as oattr>
+        <#if oattr.name == attr.name && !is_attribute_system(oattr)>
+          <#return true>
+        </#if>  
+      </#list>  
+    </#if>  
+  </#list>
+  <#return false>
+</#function>
+
+<#function get_masterless_detail_reference obj>
+  <#list model.objects as o>
+    <#if o.isLabelled("pivot") && 
+         !o.getLabelledOptions("pivot")["master"]?? &&
+         o.getLabelledOptions("pivot")["detail"] == obj.name>
+      <#return o>
+    </#if>  
+  </#list>
+</#function>
+
+<#function get_masterless_detail_id_attributes obj refObj>
+  <#local ret = []>
+  <#list refObj.attributes as attr>
+    <#list obj.attributes as oattr>
+      <#if attr.name == oattr.name>
+        <#local ret += [attr]>
+      </#if>
+    </#list>
+  </#list>
+  <#return ret>
 </#function>
 
 <#function is_attribute_reference_id attr owner>
@@ -2450,3 +2501,5 @@ ${""?left_pad(indent)}${line}
   <#return "https://raw.githubusercontent.com/doublegsoft/tatabase-image/refs/heads/main/1024x768/" + val?number?string["0000"] + ".jpg">
   <#--return "https://gitee.com/christiangann/tatabase-image/raw/main/1024x768/" + val?number?string["0000"] + ".jpg"-->
 </#function>
+
+

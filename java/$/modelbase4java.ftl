@@ -339,6 +339,15 @@ ${""?left_pad(indent)}${varname}.set${java.nameType(attr.name)}(new java.sql.Tim
   </#list>
 </#macro>
 
+<#macro print_object_update_setters obj varname indent>
+  <#local commentPrinted = false>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.domainType.name == "now">
+${""?left_pad(indent)}${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));  
+    </#if>
+  </#list>
+</#macro>
+
 <#macro print_query_default_setters obj varname indent>
   <#list obj.attributes as attr>
     <#if attr.name == "state">
@@ -396,7 +405,8 @@ ${""?left_pad(indent)}}
     <#-- 需要集合属性作为查询条件的 -->
     <#if attr.constraint.identifiable ||
          attr.type.custom ||
-         attr.constraint.domainType.name?starts_with("enum")> 
+         attr.constraint.domainType.name?starts_with("enum") ||
+         modelbase.is_masterless_detail_reference_attribute(attr)> 
        
   protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} = new ArrayList<>();
     </#if>
@@ -473,7 +483,8 @@ ${""?left_pad(indent)}}
     </#if>
     <#if attr.constraint.identifiable ||
          attr.type.custom ||
-         attr.constraint.domainType.name?starts_with("enum")>
+         attr.constraint.domainType.name?starts_with("enum") ||
+         modelbase.is_masterless_detail_reference_attribute(attr)>
        
   public List<${modelbase4java.type_attribute_primitive(attr)}> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
     return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))};
@@ -650,6 +661,10 @@ ${""?left_pad(indent)}${java.nameVariable(refObj.name)}Service.save${java.nameTy
   </#list>
 </#macro>
 
+<#----------------------------------------------------------------------------->
+<#--                                   PIVOT                                 -->
+<#----------------------------------------------------------------------------->
+
 <#macro print_object_pivot_save obj indent>
   <#if obj.getLabelledOptions("pivot")["master"]??>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
@@ -691,6 +706,122 @@ ${""?left_pad(indent)}  ${java.nameVariable(detailObj.name)}Service.save${java.n
 ${""?left_pad(indent)}}
   </#list>
 </#macro>
+
+<#macro print_object_pivot_create obj indent>
+</#macro>
+
+<#macro print_object_pivot_modify obj indent>
+</#macro>
+
+<#macro print_object_pivot_read obj indent>
+  <#if obj.getLabelledOptions("pivot")["master"]??>
+    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+  </#if>
+  <#local detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#local keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+  <#local valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+  <#-- master -->
+  <#if masterObj??>
+    <#local idAttrs = modelbase.get_id_attributes(masterObj)>
+${""?left_pad(indent)}${java.nameType(masterObj.name)}Query ${java.nameVariable(masterObj.name)}Query = new ${java.nameType(masterObj.name)}Query();
+    <#list idAttrs as idAttr>
+${""?left_pad(indent)}${java.nameVariable(masterObj.name)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
+    </#list>
+    <#-- 原始对象的读取操作 -->    
+<@print_object_persistence_read obj=masterObj indent=indent proxy=obj />
+${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
+  <#else>
+${""?left_pad(indent)}retVal = new ${java.nameType(obj.name)}Query();
+  </#if>  
+  <#-- detail -->
+${""?left_pad(indent)}${java.nameType(detailObj.name)}Query ${java.nameVariable(detailObj.name)}Query = new ${java.nameType(detailObj.name)}Query();
+  <#if masterObj??>
+${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${name_setter(idAttrs[0])}(query.${name_getter(idAttrs[0])}());
+  <#else>
+    <#list detailObj.attributes as detailObjAttr>
+      <#list obj.attributes as attr>
+        <#if detailObjAttr.name == attr.name>
+${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${modelbase4java.name_setter(detailObjAttr)}(query.${modelbase4java.name_getter(detailObjAttr)}());
+        </#if>
+      </#list>
+    </#list>
+  </#if>
+${""?left_pad(indent)}List<Map<String,Object>> items = ${java.nameVariable(detailObj.name)}DataAccess.select${java.nameType(detailObj.name)}(${java.nameVariable(detailObj.name)}Query);
+${""?left_pad(indent)}assemble${java.nameType(obj.name)}Query(retVal, items);
+</#macro>
+
+<#macro print_object_pivot_delete obj indent>
+  <#if obj.getLabelledOptions("pivot")["master"]??>
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#assign idAttrs = modelbase.get_id_attributes(masterObj)>
+  </#if>  
+  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+  <#assign valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#-- 在没有master的情况下，属性可以和detail的属性重合 -->
+    <#assign existInDetail = false>
+    <#list detailObj.attributes as detailAttr>
+      <#if attr.name == detailAttr.name>
+        <#assign existInDetail = true>
+      </#if>
+    </#list>
+    <#if existInDetail><#continue></#if>
+${""?left_pad(indent)}if (query.${modelbase4java.name_getter(attr)}() != null) {
+${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query ${java.nameVariable(attr.name)}Query = new ${java.nameType(detailObj.name)}Query();
+    <#-- detail对象的默认值设置，包含对主键的设值 -->       
+      <#assign innerVarName = java.nameVariable(attr.name) + "Query">
+<@print_query_id_setters obj=detailObj varname=innerVarName  indent=indent+2 />     
+${""?left_pad(indent)}  ${java.nameType(detailObj.name)}Query.setDefaultValues(${java.nameVariable(attr.name)}Query);  
+    <#if obj.getLabelledOptions("pivot")["master"]??>    
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+    <#else>
+      <#list obj.attributes as innerAttr>
+        <#list detailObj.attributes as detailAttr>
+          <#if innerAttr.name == detailAttr.name>
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(innerAttr)}(query.${modelbase4java.name_getter(innerAttr)}());
+          </#if>
+        </#list>      
+      </#list>
+    </#if>   
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(keyAttr)}("${java.nameVariable(attr.name)}");
+${""?left_pad(indent)}  ${java.nameVariable(attr.name)}Query.${modelbase4java.name_setter(valueAttr)}(Strings.format(query.${modelbase4java.name_getter(attr)}()));
+${""?left_pad(indent)}  ${java.nameVariable(detailObj.name)}Service.save${java.nameType(detailObj.name)}(${java.nameVariable(attr.name)}Query);
+${""?left_pad(indent)}}
+  </#list>
+</#macro>
+
+<#macro print_object_pivot_disable obj indent>
+</#macro>
+
+<#macro print_object_pivot_assemble obj indent>
+${""?left_pad(indent)}for (Map<String,Object> result : results) {
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#local isOrigAttr = false>
+    <#list detailObj.attributes as detailAttr>
+      <#if detailAttr.name == attr.name>
+        <#if attr.type.name == "datetime">
+${""?left_pad(indent)}  query.${modelbase4java.name_setter(attr)}(Safe.safe(result.get("${modelbase.get_attribute_sql_name(attr)}"), Timestamp.class));        
+        <#else>
+${""?left_pad(indent)}  query.${modelbase4java.name_setter(attr)}(Safe.safe(result.get("${modelbase.get_attribute_sql_name(attr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+        </#if>
+        <#local isOrigAttr = true>
+        <#break>
+      </#if>
+    </#list>  
+    <#if isOrigAttr><#continue></#if>
+${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(result.get("${modelbase.get_attribute_sql_name(keyAttr)}"))) {
+${""?left_pad(indent)}    query.set${java.nameType(attr.name)}(Safe.safe(result.get("${modelbase.get_attribute_sql_name(valueAttr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
+${""?left_pad(indent)}  }
+  </#list>
+${""?left_pad(indent)}}
+</#macro>
+
+<#----------------------------------------------------------------------------->
+<#--                                    META                                 -->
+<#----------------------------------------------------------------------------->
 
 <#macro print_object_meta_save obj indent>
   <#local idAttrs = modelbase.get_id_attributes(obj)>
@@ -986,6 +1117,7 @@ ${""?left_pad(indent)}if (!existing) {
 <@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=8 /> 
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
 ${""?left_pad(indent)}} else {
+<@print_object_update_setters obj=obj varname=java.nameVariable(obj.name) indent=8 /> 
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});      
 ${""?left_pad(indent)}}
 </#macro>
@@ -1038,6 +1170,7 @@ ${""?left_pad(indent)}if (!existing) {
 <@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=8 /> 
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
 ${""?left_pad(indent)}} else {
+<@print_object_update_setters obj=obj varname=java.nameVariable(obj.name) indent=8 />   
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.update${java.nameType(obj.name)}(${java.nameVariable(obj.name)});      
 ${""?left_pad(indent)}}
 </#macro>
@@ -1085,65 +1218,6 @@ ${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble
   </#if>
 </#macro>
 
-<#--------------------->
-<#-- 行列扩展的读取操作 -->
-<#--------------------->
-<#macro print_object_pivot_read obj indent>
-  <#if obj.getLabelledOptions("pivot")["master"]??>
-    <#local masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  </#if>
-  <#local detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
-  <#local keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
-  <#local valueAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
-  <#-- master -->
-  <#if masterObj??>
-    <#local idAttrs = modelbase.get_id_attributes(masterObj)>
-${""?left_pad(indent)}${java.nameType(masterObj.name)}Query ${java.nameVariable(masterObj.name)}Query = new ${java.nameType(masterObj.name)}Query();
-    <#list idAttrs as idAttr>
-${""?left_pad(indent)}${java.nameVariable(masterObj.name)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
-    </#list>
-    <#-- 原始对象的读取操作 -->    
-<@print_object_persistence_read obj=masterObj indent=indent proxy=obj />
-${""?left_pad(indent)}retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(result);  
-  <#else>
-${""?left_pad(indent)}retVal = new ${java.nameType(obj.name)}Query();
-  </#if>  
-  <#-- detail -->
-${""?left_pad(indent)}${java.nameType(detailObj.name)}Query ${java.nameVariable(detailObj.name)}Query = new ${java.nameType(detailObj.name)}Query();
-  <#if masterObj??>
-${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${name_setter(idAttrs[0])}(query.${name_getter(idAttrs[0])}());
-  <#else>
-    <#list detailObj.attributes as detailObjAttr>
-      <#list obj.attributes as attr>
-        <#if detailObjAttr.name == attr.name>
-${""?left_pad(indent)}${java.nameVariable(detailObj.name)}Query.${modelbase4java.name_setter(detailObjAttr)}(query.${modelbase4java.name_getter(detailObjAttr)}());
-        </#if>
-      </#list>
-    </#list>
-  </#if>
-${""?left_pad(indent)}List<Map<String,Object>> items = ${java.nameVariable(detailObj.name)}DataAccess.select${java.nameType(detailObj.name)}(${java.nameVariable(detailObj.name)}Query);
-${""?left_pad(indent)}for (Map<String,Object> item : items) {
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
-    <#local isOrigAttr = false>
-    <#list detailObj.attributes as detailAttr>
-      <#if detailAttr.name == attr.name>
-        <#if attr.type.name == "datetime">
-${""?left_pad(indent)}  retVal.${modelbase4java.name_setter(attr)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(attr)}"), Timestamp.class));        
-        <#else>
-${""?left_pad(indent)}  retVal.${modelbase4java.name_setter(attr)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(attr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
-        </#if>
-        <#local isOrigAttr = true>
-        <#break>
-      </#if>
-    </#list>  
-    <#if isOrigAttr><#continue></#if>
-${""?left_pad(indent)}  if ("${java.nameVariable(attr.name)}".equals(item.get("${modelbase.get_attribute_sql_name(keyAttr)}"))) {
-${""?left_pad(indent)}    retVal.set${java.nameType(attr.name)}(Safe.safe(item.get("${modelbase.get_attribute_sql_name(valueAttr)}"), ${modelbase4java.type_attribute_primitive(attr)}.class));
-${""?left_pad(indent)}  }
-  </#list>
-${""?left_pad(indent)}}
-</#macro>
 
 <#--------------------->
 <#-- 元型扩展的读取操作 -->

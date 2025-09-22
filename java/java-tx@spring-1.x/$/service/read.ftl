@@ -9,6 +9,14 @@
    */
   @Override
   public ${typename}Query read${typename}(${typename}Query query) throws ServiceException {
+    if (query == null) {
+      return null;
+    }
+    <#list idAttrs as idAttr>
+    if (query.${modelbase4java.name_getter(idAttr)}() == null) {
+      return null;
+    }
+    </#list>
     List<Map<String,Object>> results = null;
     Map<String,Object> result = null;
     ${java.nameType(obj.name)}Query retVal = new ${java.nameType(obj.name)}Query(); 
@@ -45,9 +53,13 @@
   } 
 
   public ${typename}Query read${typename}(<@modelbase4java.print_find_by_unique_parameters attrs=idAttrs />) throws ServiceException {
+<#if idAttrs?size == 0>
+    throw new UnsupportedOperationException("No primary key defined for ${modelbase.get_object_label(obj)}");
+<#else>    
     ${typename}Query query = new ${typename}Query();
     <#list idAttrs as idAttr>
     query.${modelbase4java.name_setter(idAttr)}(${modelbase.get_attribute_sql_name(idAttr)});
     </#list>
     return read${typename}(query);
+</#if>    
   }

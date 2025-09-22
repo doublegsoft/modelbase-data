@@ -57,6 +57,8 @@ public interface ${typename}DataAccess {
   
   Long selectCountOf${typename}(${typename}Query query);
   
+  List<Map<String,Object>> selectDistinctOf${typename}(${typename}Query query);
+
   List<Map<String,Object>> selectAggregateOf${typename}(${typename}Query query);
   
   List<Map<String,Object>> select${typename}(${typename}Query query, RowBounds rowBounds);

@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import javax.sql.DataSource;
 
 /**
  * 服务测试基类。
@@ -30,11 +31,22 @@ public class ServiceTestBase {
   protected static ApplicationContext context;
   
   public ApplicationContext getContext() {
-    <#--  if (context == null) {
+    if (context == null) {
       context = new ClassPathXmlApplicationContext("spring-test.xml");
     }
-    return context;  -->
-    return new ClassPathXmlApplicationContext("spring-test.xml");
+    return context;
+  }
+
+  public void clearData() throws Exception{
+    DataSource ds = (DataSource)getContext().getBean("dataSource");
+    try (java.sql.Connection conn = ds.getConnection();
+         java.sql.Statement stmt = conn.createStatement()) {
+<#list model.objects as obj>
+  <#if obj.persistenceName??>
+      stmt.execute("DELETE FROM ${obj.persistenceName}");
+  </#if>
+</#list>
+    }
   }
 
   public Map<String,Object> fromJson(String filename) throws Exception {

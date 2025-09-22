@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.math.BigDecimal;
 import java.io.Serializable;
-import java.sql.Date;
+import java.util.Date;
 import java.sql.Timestamp;
 
 import org.apache.ibatis.session.RowBounds;
@@ -164,9 +164,13 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
     }
   }
   
-  <#-- 【保存】部分 -->
+<#-- 保存 -->
 <#include "/$/service/save.ftl">
+
+<#-- 读取 -->
 <#include "/$/service/read.ftl">
+
+<#-- 查找 -->
 <#include "/$/service/find.ftl">
 <#if obj.persistenceName??>
   
@@ -653,6 +657,15 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
     }  -->
   </#if>  
     return retVal;
-  }
+  }  
 </#list>
+<#if obj.isLabelled("pivot")>
+
+  /**
+   * 装配【${modelbase.get_object_label(obj)}】对象。
+   */
+  private void assemble${typename}Query(${typename}Query query, List<Map<String,Object>> results) {
+<@modelbase4java.print_object_pivot_assemble obj=obj indent=4 />
+  }
+</#if>
 }

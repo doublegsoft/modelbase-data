@@ -103,22 +103,22 @@
 <#list obj.attributes as attr>   
   <#if !attr.isLabelled("persistence")><#continue></#if>
       <if test="column == '${modelbase.get_attribute_sql_name(attr)}'"> 
-      "${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}
+      "${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName} as "${modelbase.get_attribute_sql_name(attr)}"
       </if>
       <if test="column == 'count${java.nameType(modelbase.get_attribute_sql_name(attr))}'"> 
-      count("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) count${java.nameType(modelbase.get_attribute_sql_name(attr))}
+      count("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as "count${java.nameType(modelbase.get_attribute_sql_name(attr))}"
       </if>
       <if test="column == 'max${java.nameType(modelbase.get_attribute_sql_name(attr))}'"> 
-      max("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as max${java.nameType(modelbase.get_attribute_sql_name(attr))}
+      max("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as "max${java.nameType(modelbase.get_attribute_sql_name(attr))}"
       </if>
       <if test="column == 'min${java.nameType(modelbase.get_attribute_sql_name(attr))}'"> 
-      min("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as min${java.nameType(modelbase.get_attribute_sql_name(attr))}
+      min("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as "min${java.nameType(modelbase.get_attribute_sql_name(attr))}"
       </if>
       <if test="column == 'avg${java.nameType(modelbase.get_attribute_sql_name(attr))}'"> 
-      avg("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as avg${java.nameType(modelbase.get_attribute_sql_name(attr))}
+      avg("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as "avg${java.nameType(modelbase.get_attribute_sql_name(attr))}"
       </if>
       <if test="column == 'sum${java.nameType(modelbase.get_attribute_sql_name(attr))}'"> 
-      sum("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as sum${java.nameType(modelbase.get_attribute_sql_name(attr))}
+      sum("${modelbase.get_object_sql_alias(obj)}".${attr.persistenceName}) as "sum${java.nameType(modelbase.get_attribute_sql_name(attr))}"
       </if>
 </#list>        
     </foreach>
@@ -213,7 +213,8 @@
     and "${modelbase.get_object_sql_alias(attr.parent)}".${attr.persistenceName} like concat('%', ${r"#{"}${modelbase.get_attribute_sql_name(attr)}2}, '%')
     </if>
   </#if> 
-  <#if attr.identifiable || attr.type.custom>
+  <#if attr.identifiable || attr.type.custom ||
+       attr.getLabelledOptions("persistence")["collection"]??>
     <if test = "${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} != null and ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.size() > 0">
     and "${modelbase.get_object_sql_alias(attr.parent)}".${attr.persistenceName} in
     <foreach collection="${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}" item="${attr.persistenceName}" open="(" separator="," close=")">
@@ -345,6 +346,16 @@
   </#list>
 </#list>
       0
+    from <#if databaseName??>${databaseName}.</#if>${obj.persistenceName} "${modelbase.get_object_sql_alias(obj)}"
+    <include refid="join${java.nameType(obj.name)}"/>
+    where 1 = 1
+    <include refid="where${java.nameType(obj.name)}"/>
+    <include refid="orderBy${java.nameType(obj.name)}"/>
+  </select>
+
+  <select id="selectDistinctOf${java.nameType(obj.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(obj.name)}Query" resultType="java.util.HashMap">
+    select distinct
+    <include refid="column${java.nameType(obj.name)}"/>
     from <#if databaseName??>${databaseName}.</#if>${obj.persistenceName} "${modelbase.get_object_sql_alias(obj)}"
     <include refid="join${java.nameType(obj.name)}"/>
     where 1 = 1

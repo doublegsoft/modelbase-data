@@ -38,7 +38,7 @@ public class ReferenceServiceImpl implements ReferenceService {
     }
     switch(type) {
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.persistenceName??><#continue></#if>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
   <#if (idAttrs?size > 1 || idAttrs?size == 0)><#continue></#if>
       case REF_${obj.name?upper_case}: {
@@ -56,7 +56,7 @@ public class ReferenceServiceImpl implements ReferenceService {
   public <T> List<T> findReferences(List<${pktype}> ids, String type) throws ServiceException {
     switch(type) {
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.persistenceName??><#continue></#if>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
   <#if (idAttrs?size > 1 || idAttrs?size == 0)><#continue></#if>
       case REF_${obj.name?upper_case}: {
