@@ -10,6 +10,7 @@ ${c.license(license)}
 
 #include "${app.name}-poco.h"
 <#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
 
 ${namespace}_${obj.name}_p
 ${namespace}_${obj.name}_init(void)

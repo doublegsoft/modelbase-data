@@ -12,7 +12,8 @@ extern "C"
 {
 #endif
 <#list model.objects as obj>
-
+  <#if obj.isLabelled("generated")><#continue></#if>
+  
 /*!
 ** 【${modelbase.get_object_label(obj)}】对象。
 */
@@ -20,6 +21,7 @@ typedef struct ${namespace}_${obj.name}_s      ${namespace}_${obj.name}_t;
 typedef        ${namespace}_${obj.name}_t*     ${namespace}_${obj.name}_p;
 </#list>
 <#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
 
 /*!
 ** 【${modelbase.get_object_label(obj)}】数据结构定义。
