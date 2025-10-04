@@ -29,12 +29,18 @@ typedef enum ${namespace}_sql_match_e
 }
 ${namespace}_sql_match_e;
 <#list model.objects as obj>
-
+  <#if obj.isLabelled("generated")><#continue></#if>
+  
+  <#assign persistAttrs = []>
+  <#list obj.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
+    <#assign persistAttrs += [attr]>
+  </#list>
 /*!
 ** 【${modelbase.get_object_label(obj)}】的语句。
 */
 #define ${namespace?upper_case}_SQL_${obj.name?upper_case}_INSERT     "" \
-    "insert into ${obj.persistenceName} (<#list obj.attributes as attr><#if attr?index != 0>,</#if>${attr.persistenceName}</#list>)" \
+    "insert into ${obj.persistenceName} (<#list persistAttrs as attr><#if attr?index != 0>,</#if>${attr.persistenceName}</#list>)" \
     "values (<#list obj.attributes as attr><#if attr?index != 0>,</#if>?</#list>);"
 
 #define ${namespace?upper_case}_SQL_${obj.name?upper_case}_DELETE     "" \
@@ -106,6 +112,7 @@ ${namespace}_table_result_set_value(${namespace}_table_result_p, int row, int co
 void
 ${namespace}_table_result_free(${namespace}_table_result_p);
 <#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
 
 /*!
 ** 【${modelbase.get_object_label(obj)}】查询对象。
