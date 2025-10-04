@@ -144,6 +144,7 @@ ${namespace}_sql_str2like_g(const char* str)
   return ret;
 }
 <#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
 
 /*!
 ** 获得【${modelbase.get_object_label(obj)}】的SELECT SQL语句。
@@ -153,6 +154,8 @@ ${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p ${obj.name}
 {
   strcpy(sql_select, "select "
 <#list obj.attributes as attr> 
+  <#if !attr.persistenceName??><#continue></#if>
+  
     "${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} ${modelbase.get_attribute_sql_name(attr)},"
 </#list>    
     "0 "
@@ -160,6 +163,7 @@ ${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p ${obj.name}
     "where 1 = 1 "
   );
 <#list obj.attributes as attr>
+  <#if !attr.persistenceName??><#continue></#if>
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
     <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
@@ -286,7 +290,8 @@ ${namespace}_${obj.name}_query_p
 ${namespace}_sql_${obj.name}_query_init(void)
 {
   ${namespace}_${obj.name}_query_p ret = (${namespace}_${obj.name}_query_p)malloc(sizeof(${namespace}_${obj.name}_query_t));
-   <#list obj.attributes as attr>
+  <#list obj.attributes as attr>
+    <#if !attr.persistenceName??><#continue></#if>
     <#if attr.type.custom>
       <#assign refObj = model.findObjectByName(attr.type.name)>
       <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>  
@@ -400,11 +405,13 @@ ${namespace}_sql_persistence_name(const char* objname, const char* attrname, cha
     return ${namespace?upper_case}_SQL_ERROR_NO_OBJECT_SPECIFIED;
   if (1 == 0) {}
   <#list model.objects as obj>
+    <#if obj.isLabelled("generated")><#continue></#if>
   else if (strcmp(objname, "${obj.name}") == 0)
   {
     if (attrname == NULL) 
       strcpy(persistence_name, "${obj.persistenceName}");
     <#list obj.attributes as attr>
+      <#if !attr.persistenceName??><#continue></#if>
     else if (strcmp(attrname, "${attr.name}") == 0)
       strcpy(persistence_name, "${attr.persistenceName}");
     </#list>
