@@ -14,8 +14,8 @@
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
     <#return java.nameType(refObj.name)>
-  <#elseif attr.constraint.domainType.name == "id">
-    <#return "Long">    
+  <#elseif attr.constraint?? && attr.constraint.domainType?? && attr.constraint.domainType.name == "id">
+    <#return "Long">
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
     <#return "Integer">  
   <#elseif attr.type.name == "number">

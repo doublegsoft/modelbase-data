@@ -214,12 +214,12 @@
     </if>
   </#if> 
   <#if attr.identifiable || attr.type.custom ||
-       attr.getLabelledOptions("persistence")["collection"]??>
+       modelbase.is_masterless_detail_reference_attribute(attr)>
     <if test = "${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} != null and ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.size() > 0">
     and "${modelbase.get_object_sql_alias(attr.parent)}".${attr.persistenceName} in
-    <foreach collection="${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}" item="${attr.persistenceName}" open="(" separator="," close=")">
+      <foreach collection="${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}" item="${attr.persistenceName}" open="(" separator="," close=")">
       ${r"#{"}${attr.persistenceName}}
-    </foreach>
+      </foreach>
     </if>
   </#if>
 </#list>
