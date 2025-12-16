@@ -46,3 +46,13 @@
     hierarchize(retVal.getData(), query);
     return retVal;
   }
+  
+  @Override
+  public ${typename}Query get${typename}(${typename}Query query) throws ServiceException {
+    Pagination<${typename}Query> page = find${inflector.pluralize(typename)}(query);
+    if (page.getTotal() == 0) {
+      return null;
+    }
+    return page.getData().get(0);
+  }
+  

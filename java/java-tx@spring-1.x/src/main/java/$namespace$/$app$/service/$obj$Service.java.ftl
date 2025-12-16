@@ -118,12 +118,25 @@ public interface ${typename}Service {
    * @param query
    *        【${modelbase.get_object_label(obj)}】查询对象
    *
-   * @return 查询到的唯一【${modelbase.get_object_label(obj)}】对象集合
+   * @return 查询满足条件【${modelbase.get_object_label(obj)}】对象集合
    *
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常  
    */
   Pagination<${typename}Query> find${inflector.pluralize(typename)}(${typename}Query query) throws ServiceException;
+  
+  /**
+   * 查询【${modelbase.get_object_label(obj)}】列表对象，但只取第一个，也就是唯一
+   *
+   * @param query
+   *        【${modelbase.get_object_label(obj)}】查询对象
+   *
+   * @return 查询满足条件且唯一【${modelbase.get_object_label(obj)}】对象集合
+   *
+   * @throws ServiceException
+   *        发生任何错误，都抛出此类型异常  
+   */
+  ${typename}Query get${typename}(${typename}Query query) throws ServiceException;
   
   /**
    * 读取【${modelbase.get_object_label(obj)}】详细对象。
