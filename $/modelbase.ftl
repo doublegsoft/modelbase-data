@@ -2503,3 +2503,70 @@ ${""?left_pad(indent)}${line}
 </#function>
 
 
+<#-- 
+ ### Counts the number of attributes in a given object that match a specific custom type name.
+ ### 
+ ### This is useful for determining if a specific import or dependency needs to be 
+ ### generated multiple times or referenced in a specific way.
+ ###
+ ### @param obj      The source object (e.g., a Class or Entity) containing an 'attributes' list.
+ ### @param typename The specific custom type name to search for (e.g., "UserAddress").
+ ### @return         The total count of attributes matching the criteria.
+ -->
+<#function count_custom_occurrences obj typename>
+  <#local count = 0>
+  <#list obj.attributes as attr>
+    <#if attr.type.custom && attr.type.name == typename>
+      <#local count = count + 1>
+    </#if>
+  </#list>
+  <#return count>
+</#function>
+
+<#--
+ ### Checks if an attribute with the specified name exists in the given list of attributes.
+ ###
+ ### @param proxyAttrs
+ ###        the list of attributes to check
+ ###
+ ### @param attrname
+ ###        the name of the attribute to look for
+ ###
+ ### @return true if the attribute exists, false otherwise
+ -->
+<#function is_attribute_existing consolAttrs attr>
+  <#list consolAttrs as consolAttr>
+    <#if consolAttr.name == attr.name>
+      <#return true>
+    </#if>
+  </#list>
+  <#return false>
+</#function>
+
+<#function consolidate_info_attributes consolAttrs attrname obj>
+  <#local selfAttrs = []>
+  <#local customAttrs = []>
+  <#list obj.attributes as attr>
+    <#if attr.type.collection><#continue></#if>
+    <#if is_attribute_system(attr)><#continue></#if>
+    <#if is_attribute_existing(consolAttrs, attr)><#continue></#if>
+    <#if attr.type.custom>
+      <#local customAttrs += [{"name": modelbase.get_attribute_sql_name(attr), "attr": attr, "ref": attr.parent}]>
+    <#else>
+      <#local selfAttrs += [{"name": modelbase.get_attribute_sql_name(attr), "attr": attr}]>
+    </#if>
+  </#list>
+  <#local consolAttrs += selfAttrs>
+  <#list customAttrs as proxy>
+    <#local attr = proxy.attr>
+    <#if attr.type.custom>
+      <#local typeCount = count_custom_occurrences(consolAttrs, attr.type.name)>
+      <#local ret = consolidate_info_attributes(consolAttrs, proxy.name, refObj)>
+      <#if typeCount != 0>
+      <#else>
+      </#if>
+    <#else>
+    </#if>
+  </#list>
+  <#return consolAttrs>
+</#function>
