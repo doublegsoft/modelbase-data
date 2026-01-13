@@ -4,7 +4,7 @@
 ${java.license(license)}
 </#if>
 <#assign idAttrs = modelbase.get_id_attributes(obj)>
-package ${namespace}.${app.name}.dto.payload;
+package ${namespace}.${app.name}.dto.info;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -15,7 +15,7 @@ import ${imp};
 /*!
 ** 【${modelbase.get_object_label(obj)}】
 */
-public class ${java.nameType(obj.name)}Result implements Serializable {
+public class ${java.nameType(obj.name)} implements Serializable {
 
   private static long serialVersionNumber = -1L;
 <#list obj.attributes as attr>  
