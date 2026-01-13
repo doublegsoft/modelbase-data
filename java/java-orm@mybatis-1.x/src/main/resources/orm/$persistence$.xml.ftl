@@ -91,6 +91,7 @@
 <#------------->
 <#list refObjs?keys as key>
   <#assign selfAttr = refObjs[key]['attr']>
+  <#if !selfAttr.persistenceName??><#continue></#if>
   <#assign refObj = refObjs[key]['obj']>
   <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
     left join <#if databaseName??>${databaseName}.</#if>${refObj.persistenceName} ${java.nameVariable(selfAttr.name)}_${modelbase.get_object_sql_alias(refObj)} on ${java.nameVariable(selfAttr.name)}_${modelbase.get_object_sql_alias(refObj)}.${refObjIdAttr.persistenceName} = "${modelbase.get_object_sql_alias(obj)}".${selfAttr.persistenceName}
@@ -234,14 +235,16 @@
     </#if>
   </#list>
   <#if !refAttrInCollObj??><#continue></#if>
+  <#if !refAttrInCollObj.persistenceName??><#continue></#if>
     <if test = "!${inMap}.isEmpty()">
     and ${modelbase.get_object_sql_alias(idAttr.parent)}.${idAttr.persistenceName} in (
       select ${refAttrInCollObj.persistenceName} from ${collObj.persistenceName} ${modelbase.get_object_sql_alias(collObj)} 
   <#-- LEFT JOIN IN SUB-QUERY -->
   <#list collObj.attributes as collObjAttr>  
     <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if> 
-      <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)> 
-      <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
+    <#if !collObjAttr.persistenceName??><#continue></#if>
+    <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)> 
+    <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
       left join ${collObjAttrRefObj.persistenceName} ${modelbase.get_object_sql_alias(collObjAttrRefObj)} on ${modelbase.get_object_sql_alias(collObjAttrRefObj)}.${collObjAttrRefObjIdAttr.persistenceName} = ${modelbase.get_object_sql_alias(collObj)}.${collObjAttr.persistenceName}
   </#list>
   <#-- WHERE IN SUB-QUERY -->
