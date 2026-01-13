@@ -17,46 +17,24 @@ import ${imp};
 */
 public class ${java.nameType(obj.name)} implements Serializable {
 
-  private static long serialVersionNumber = -1L;
+  private static final long serialVersionUID = -1L;
 <#list obj.attributes as attr>  
   <#if attr.type.collection><#continue></#if>
 
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${java.nameVariable(modelbase.get_attribute_sql_name(attr))};
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${java.nameVariable(attr.name)};
 </#list>
 <#list obj.attributes as attr>  
   <#if attr.type.collection><#continue></#if>
 
-  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}() {
-    return ${java.nameVariable(modelbase.get_attribute_sql_name(attr))};
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(attr.name)}() {
+    return ${java.nameVariable(attr.name)};
   }
 
-  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${modelbase4java.type_attribute_primitive(attr)} ${java.nameVariable(modelbase.get_attribute_sql_name(attr))}) {
-    this.${java.nameVariable(modelbase.get_attribute_sql_name(attr))} = ${java.nameVariable(modelbase.get_attribute_sql_name(attr))};
+  public void set${java.nameType(attr.name)}(${modelbase4java.type_attribute_primitive(attr)} ${java.nameVariable(attr.name)}) {
+    this.${java.nameVariable(attr.name)} = ${java.nameVariable(attr.name)};
   }
 </#list>
-<#if idAttrs?size == 1>
-  <#assign idAttr = modelbase.get_id_attributes(obj)[0]>
-  
-  @Override
-  public String toString() {
-    if (get${java.nameType(idAttr.name)}() != null) {
-      return get${java.nameType(idAttr.name)}().toString();
-    }
-    return null; 
-  }
-  
-  public ${modelbase4java.type_attribute_primitive(idAttr)} toId() {
-    if (get${java.nameType(idAttr.name)}() != null) {
-  <#if idAttr.type.custom>
-      return get${java.nameType(idAttr.name)}().toId();
-  <#else>  
-      return get${java.nameType(idAttr.name)}();
-  </#if>    
-    }
-    return null; 
-  }
-</#if>
 }
