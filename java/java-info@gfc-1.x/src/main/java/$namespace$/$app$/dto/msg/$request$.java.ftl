@@ -3,14 +3,16 @@
 <#if license??>
 ${java.license(license)}
 </#if>
+<#assign obj = request>
 <#assign idAttrs = modelbase.get_id_attributes(obj)>
-package ${namespace}.${app.name}.dto.info;
+package ${namespace}.${app.name}.dto.msg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 <#list modelbase4java.get_imports(obj)?sort as imp>
 import ${imp};
 </#list>
+import ${namespace}.${app.name}.dto.info.*;
 
 /*!
 ** 【${modelbase.get_object_label(obj)}】
