@@ -29,7 +29,7 @@ public class Objects {
       return true;
     }
     if (str instanceof String) {
-      if (str == null || trim((String)str).isEmpty()) {
+      if (str == null || Strings.trim((String)str).isEmpty()) {
         return true;
       }
     }
