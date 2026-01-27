@@ -69,9 +69,21 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
     Assert.assertNotNull(savedQuery);
+
+  <#if uniqueGroups?size != 0>
+    <#assign uniqueGroup = uniqueGroups[0]>
+    // 特殊处理唯一组的属性，确保保存的数据是唯一的
+    try {
+      service.save${java.nameType(obj.name)}(toSaveQuery);  
+      Assert.fail("Expected ServiceException not thrown.");
+    } catch (Throwable e) {
+      // nothing to do
+    }
+  <#else>
     service.save${java.nameType(obj.name)}(toSaveQuery);
     service.save${java.nameType(obj.name)}(toSaveQuery);
-    service.save${java.nameType(obj.name)}(toSaveQuery);
+    service.save${java.nameType(obj.name)}(toSaveQuery);  
+  </#if>    
 
   <#if idAttrs?size == 1>
     ${java.nameType(obj.name)}Query findQuery = new ${java.nameType(obj.name)}Query();
@@ -92,6 +104,16 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
     service.save${java.nameType(obj.name)}(toSaveQuery);
 
+<#if uniqueGroups?size != 0>
+    <#assign uniqueGroup = uniqueGroups[0]>
+    // 特殊处理唯一组的属性，确保保存的数据是唯一的
+    try {
+      service.save${java.nameType(obj.name)}(toSaveQuery);  
+      Assert.fail("Expected ServiceException not thrown.");
+    } catch (Throwable e) {
+      // nothing to do
+    }
+  <#else>
     <#list 1..10 as idx>
       <#if idAttrs?size == 1>
         <#list idAttrs as idAttr>
@@ -100,6 +122,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
       </#if>
     service.save${java.nameType(obj.name)}(toSaveQuery);
     </#list>
+  </#if>  
 
     ${java.nameType(obj.name)}Query findQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#find.json"));
     service.find${inflector.pluralize(java.nameType(obj.name))}(findQuery);

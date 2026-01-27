@@ -957,7 +957,9 @@ ${""?left_pad(indent)}}
   </#list>
 </#macro>
 
+<#-- TODO: 从数据库查出集合后比较，再决定哪些删除，哪些添加，同时还存在重新关联对象的保存操作 -->
 <#macro print_object_many2many_save obj indent>
+  <#local idAttr = modelbase.get_id_attributes(obj)?first>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
     <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
@@ -980,23 +982,90 @@ ${""?left_pad(indent)}}
       </#if>
     </#list>
     <#if one2many><#continue></#if>
-    <#-- FIXME: 间接关联 暂时全面废止 --> 
+    <#-- 关联对象 -->
     <#local conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
+    <#-- 关联对象引用目标对象 -->
+    <#local conjRefObj = model.findObjectByName(attr.type.componentType.name)>
+    <#-- 关联对象引用目标对象的主键属性 -->
+    <#local conjRefObjIdAttr = modelbase.get_id_attributes(conjRefObj)?first>
+    <#-- 关联对象中引用本体的属性 -->
+    <#if attr.getLabelledOptions("conjunction")["attribute"]??>
+      <#assign conjObjRefAttr = model.findAttributeByNames(conjRefObj.name, attr.getLabelledOptions("conjunction")["attribute"])>
+    <#else>
+      <#list conjObj.attributes as conjObjAttr>
+        <#if conjObjAttr.type.name == obj.name>
+          <#assign conjObjRefAttr = conjObjAttr>
+          <#break>
+        </#if>
+      </#list>  
+    </#if>
 ${""?left_pad(indent)}/*!
+${""?left_pad(indent)}**********************************************************************************
 ${""?left_pad(indent)}** 间接关联的【${modelbase.get_object_label(conjObj)}】作为一对多显式扩展对象
+${""?left_pad(indent)}**********************************************************************************
 ${""?left_pad(indent)}*/
+${""?left_pad(indent)}// 查询已经存在的【${modelbase.get_object_label(conjObj)}】数据
+${""?left_pad(indent)}${java.nameType(conjObj.name)}Query existing${java.nameType(conjObj.name)}Query = new ${java.nameType(conjObj.name)}Query();
+${""?left_pad(indent)}existing${java.nameType(conjObj.name)}Query.${name_setter(idAttr)}(${modelbase.get_attribute_sql_name(idAttr)});
+${""?left_pad(indent)}List<Map<String,Object>> existing${java.nameType(conjObj.name)}Rows = ${java.nameVariable(conjObj.name)}DataAccess.select${java.nameType(conjObj.name)}(existing${java.nameType(conjObj.name)}Query);
+${""?left_pad(indent)}List<${java.nameType(collObj.name)}Query> creating${java.nameType(collObj.name)}List = new ArrayList<>();
+${""?left_pad(indent)}List<${java.nameType(collObj.name)}Query> inserting${java.nameType(collObj.name)}List = new ArrayList<>();
+${""?left_pad(indent)}List<${java.nameType(collObj.name)}Query> deleting${java.nameType(collObj.name)}List = new ArrayList<>();
 ${""?left_pad(indent)}List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();
-${""?left_pad(indent)}// 删除已有的【${modelbase.get_object_label(conjObj)}】数据
-${""?left_pad(indent)}${java.nameType(conjObj.name)} ${java.nameVariable(conjObj.name)} = new ${java.nameType(conjObj.name)}();
+${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}  if (row.${name_getter(conjRefObjIdAttr)}() == null) {
+${""?left_pad(indent)}    creating${java.nameType(collObj.name)}List.add(row);
+${""?left_pad(indent)}    continue;
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}  boolean found = false;
+${""?left_pad(indent)}  for (Map<String,Object> existingRow : existing${java.nameType(conjObj.name)}Rows) {
+${""?left_pad(indent)}    if (row.${name_getter(conjRefObjIdAttr)}().equals(existingRow.get("${modelbase.get_attribute_sql_name(conjObjRefAttr)}"))) {
+${""?left_pad(indent)}      found = true;
+${""?left_pad(indent)}      break;
+${""?left_pad(indent)}    }
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}  if (!found) {
+${""?left_pad(indent)}    inserting${java.nameType(collObj.name)}List.add(row);
+${""?left_pad(indent)}  } 
+${""?left_pad(indent)}}
+${""?left_pad(indent)}for (Map<String,Object> existingRow : existing${java.nameType(conjObj.name)}Rows) {
+${""?left_pad(indent)}  boolean found = false;
+${""?left_pad(indent)}  for (${java.nameType(attr.type.componentType.name)}Query row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}    if (row.${name_getter(conjRefObjIdAttr)}() == null ||
+${""?left_pad(indent)}        row.${name_getter(conjRefObjIdAttr)}().equals(existingRow.get("${modelbase.get_attribute_sql_name(conjObjRefAttr)}"))) {
+${""?left_pad(indent)}      found = true;
+${""?left_pad(indent)}      break;
+${""?left_pad(indent)}    }
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}  if (!found) {
+${""?left_pad(indent)}    ${java.nameType(attr.type.componentType.name)}Query deletingRow = new ${java.nameType(attr.type.componentType.name)}Query();
+${""?left_pad(indent)}    deletingRow.${name_setter(conjRefObjIdAttr)}(Safe.safe(existingRow.get("${modelbase.get_attribute_sql_name(conjRefObjIdAttr)}"), ${modelbase4java.type_attribute_primitive(conjRefObjIdAttr)}.class));
+${""?left_pad(indent)}    deleting${java.nameType(collObj.name)}List.add(deletingRow);
+${""?left_pad(indent)}  } 
+${""?left_pad(indent)}}
+${""?left_pad(indent)}// 删除不存在的【${modelbase.get_object_label(conjObj)}】数据
+${""?left_pad(indent)}if (!deleting${java.nameType(collObj.name)}List.isEmpty()) {
+${""?left_pad(indent)}  ${java.nameType(conjObj.name)} deleting${java.nameType(conjObj.name)} = new ${java.nameType(conjObj.name)}();
+${""?left_pad(indent)}  deleting${java.nameType(conjObj.name)}.set${java.nameType(conjObjRefAttr.name)}(${java.nameVariable(obj.name)});
+${""?left_pad(indent)}  for (${java.nameType(attr.type.componentType.name)}Query row : deleting${java.nameType(collObj.name)}List) {
+${""?left_pad(indent)}    ${java.nameType(attr.type.componentType.name)} ${java.nameVariable(attr.type.componentType.name)} = new ${java.nameType(attr.type.componentType.name)}();
+${""?left_pad(indent)}    ${java.nameVariable(attr.type.componentType.name)}.set${java.nameType(conjRefObjIdAttr.name)}(row.${name_getter(conjRefObjIdAttr)}());
     <#list conjObj.attributes as conjObjAttr>
-      <#if conjObjAttr.type.name == obj.name>
-${""?left_pad(indent)}${java.nameVariable(conjObj.name)}.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(obj.name)});  
+      <#if conjObjAttr.type.name == attr.type.componentType.name>
+${""?left_pad(indent)}    deleting${java.nameType(conjObj.name)}.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(attr.type.componentType.name)});
         <#break>
       </#if>
     </#list>
-${""?left_pad(indent)}// ${java.nameVariable(attr.getLabelledOptions("conjunction")["name"])}DataAccess.disable${java.nameType(conjObj.name)}(${java.nameVariable(conjObj.name)});
-${""?left_pad(indent)}// 创建新的【${modelbase.get_object_label(conjObj)}】数据
-${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query row : ${java.nameVariable(attr.name)}) {
+${""?left_pad(indent)}    ${java.nameVariable(attr.getLabelledOptions("conjunction")["name"])}DataAccess.disable${java.nameType(conjObj.name)}(deleting${java.nameType(conjObj.name)});
+${""?left_pad(indent)}  }
+${""?left_pad(indent)}}
+${""?left_pad(indent)}// 创建新的【${modelbase.get_object_label(conjObj)}】数据并且建立关联关系
+${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query row : creating${java.nameType(collObj.name)}List) {
+${""?left_pad(indent)}  ${java.nameVariable(attr.type.componentType.name)}Service.save${java.nameType(attr.type.componentType.name)}(row);
+${""?left_pad(indent)}  inserting${java.nameType(collObj.name)}List.add(row);
+${""?left_pad(indent)}}
+${""?left_pad(indent)}// 已经存在的【${modelbase.get_object_label(conjObj)}】数据建立关联关系
+${""?left_pad(indent)}for (${java.nameType(attr.type.componentType.name)}Query row : inserting${java.nameType(collObj.name)}List) {
 ${""?left_pad(indent)}  ${java.nameType(conjObj.name)} conj = new ${java.nameType(conjObj.name)}();
     <#list conjObj.attributes as conjObjAttr>
       <#if conjObjAttr.type.name == obj.name>
@@ -1033,22 +1102,23 @@ ${""?left_pad(indent)}}
 </#macro>
 
 <#macro print_object_one2many_members obj existings>
+  <#local existingObjs = {} + existings>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
-    <#if !existings[attr.type.componentType.name]??>
-      <#assign existings = existings + {attr.type.componentType.name:""}>
+    <#if !existingObjs[attr.type.componentType.name]??>
+      <#local existingObjs += {attr.type.componentType.name:""}>
       
-  @Autowired
+  @Autowired // ${attr.type.componentType.name}
   ${java.nameType(attr.type.componentType.name)}DataAccess ${java.nameVariable(attr.type.componentType.name)}DataAccess;
 
   @Autowired
   ${java.nameType(attr.type.componentType.name)}Service ${java.nameVariable(attr.type.componentType.name)}Service;
     </#if>
-    <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+    <#local collObj = model.findObjectByName(attr.type.componentType.name)>
     <#if collObj.isLabelled("value")>
       <#list collObj.attributes as collObjAttr>
         <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
-        <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
+        <#local collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
         <#if !existings[collObjAttrRefObj.name]??>
       
   @Autowired
@@ -1057,8 +1127,8 @@ ${""?left_pad(indent)}}
       </#list>
     </#if>
     <#if attr.isLabelled("conjunction") && !existings[attr.getLabelledOptions("conjunction")["name"]]??>
-      <#assign conjname = attr.getLabelledOptions("conjunction")["name"]>
-      <#assign existings += {conjname:""}>
+      <#local conjname = attr.getLabelledOptions("conjunction")["name"]>
+      <#local existingObjs += {conjname:""}>
     
   @Autowired
   ${java.nameType(conjname)}DataAccess ${java.nameVariable(conjname)}DataAccess;
@@ -1067,6 +1137,7 @@ ${""?left_pad(indent)}}
   ${java.nameType(conjname)}Service ${java.nameVariable(conjname)}Service;
     </#if>
   </#list> 
+  <#assign existings = existingObjs>
 </#macro>
 
 <#macro print_find_by_unique_name attrs>

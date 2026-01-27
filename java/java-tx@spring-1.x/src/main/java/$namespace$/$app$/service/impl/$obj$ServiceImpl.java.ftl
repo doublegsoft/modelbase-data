@@ -98,9 +98,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
 
   @Autowired
   ${java.nameType(obj.name)}MetaDataAccess ${java.nameVariable(obj.name)}MetaDataAccess;
-</#if>
-<@modelbase4java.print_object_one2many_members obj=obj existings=existingObjs/> 
-<@modelbase4java.print_object_one2one_members obj=obj existings=existingObjs/>    
+</#if> 
   
   @Autowired
   ${typename}Validation ${varname}Validation;    
@@ -113,12 +111,15 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
          !existingObjs[innerObj.name]?? &&
          attr.type.componentType.name == obj.name>
       <#assign existingObjs += {innerObj.name:innerObj}>
+      <#assign existingDaos += {masterObj.name: masterObj}>
       
   @Autowired
   private ${java.nameType(innerObj.name)}DataAccess ${java.nameVariable(innerObj.name)}DataAccess;     
     </#if>
   </#list>
 </#list>
+<@modelbase4java.print_object_one2many_members obj=obj existings=existingObjs/> 
+<@modelbase4java.print_object_one2one_members obj=obj existings=existingObjs/>   
 
   /**
    * 批处理（插入、更新、删除）【${modelbase.get_object_label(obj)}】对象，专门针对集合数据。
