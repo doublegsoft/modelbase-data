@@ -51,7 +51,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 </#if>
 
   public Map<String,Object> toMap() {
-    Map<String,Object> retVal = new HashMap();
+    Map<String,Object> retVal = new HashMap<>();
 <#assign processedAttrs = {}>    
 <@modelbase4java.print_object_query_to_map obj=obj processedAttrs=processedAttrs />    
     if (!this.results.isEmpty()) {
@@ -107,8 +107,12 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     return retVal;
   }
   
+  public static void setDefaultValues(${java.nameType(obj.name)}Query query, boolean isCreating) {
+<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />     
+  }
+
   public static void setDefaultValues(${java.nameType(obj.name)}Query query) {
-<@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 /> 
+    setDefaultValues(query, true);
   }
   
 }

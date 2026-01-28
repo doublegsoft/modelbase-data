@@ -36,7 +36,6 @@
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
-    ${typename}Query.setDefaultValues(query);
     boolean existing = true;
     try {
 <#--------------------->
@@ -44,10 +43,24 @@
 <#--------------------->  
 <#if obj.persistenceName??>
   <#if idAttrs?size == 1>
-    <#-- 实体对象的保存 -->     
+    <#----------------------------------------------------------------------------------------------->
+    <#-- TODO: 实体对象的保存，允许实体对象中外键关联对象，在保存这个实体对象（创建关系）时也同时保存关联的实体对象 -->
+    <#----------------------------------------------------------------------------------------------->
+    <#-- 实体对象的保存 -->
 <@modelbase4java.print_object_entity_save obj=obj indent=6 />
-  <#else>     
-    <#-- 值体对象的保存 -->    
+  <#else>    
+    <#----------------------------------------------------------------------------------------->
+    <#-- 值体对象的保存，允许值域对象中主键关联对象，在保存这个值域对象（创建关系）时也同时保存关联的实体对象 -->
+    <#----------------------------------------------------------------------------------------->
+    <#list idAttrs as idAttr>
+      <#assign refObj = model.findObjectByName(idAttr.type.name)>
+      <#assign refObjIdAttr = refObj.getIdentifiableAttribute()>
+      if (query.get${java.nameType(idAttr.name)}() != null) {
+        ${java.nameVariable(refObj.name)}Service.save${java.nameType(refObj.name)}(query.get${java.nameType(idAttr.name)}());
+        query.${modelbase4java.name_setter(idAttr)}(query.get${java.nameType(idAttr.name)}().${modelbase4java.name_getter(refObjIdAttr)}());
+      }
+    </#list>  
+    <#-- 值域对象的保存 -->
 <@modelbase4java.print_object_value_save obj=obj indent=6 />    
   </#if>
 <#elseif obj.isLabelled("pivot")>  
