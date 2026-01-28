@@ -22,7 +22,7 @@ import ${imp};
 */
 public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Serializable {
 
-  private static long serialVersionNumber = -1L;
+  private static final long serialVersionUID = -1L;
 <#assign processedAttrs = {}>
 <@modelbase4java.print_object_query_members obj=obj processedAttrs=processedAttrs />    
 <#assign processedAttrs = {}>

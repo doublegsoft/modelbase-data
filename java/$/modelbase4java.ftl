@@ -974,6 +974,7 @@ ${""?left_pad(indent)}}
     <#if !collObjIdAttr??>
       <#assign collObjIdAttr = collObjIdAttrs[0]>
     </#if>
+    <#-- 排除一对多的情况，集合对象的属性中有一个是对象本身，则属于一对多 -->
     <#assign one2many = false>
     <#list collObj.attributes as collObjAttr>
       <#if collObjAttr.type.name == obj.name>
@@ -982,6 +983,7 @@ ${""?left_pad(indent)}}
       </#if>
     </#list>
     <#if one2many><#continue></#if>
+    <#-- 值域对象，也可能是多对多的关系，看@conjunction的定义 -->
     <#-- 关联对象 -->
     <#local conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
     <#-- 关联对象引用目标对象 -->
