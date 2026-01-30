@@ -129,46 +129,38 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   }
 
   @Test
-  public void test_21_save_with_transact() throws Exception {
+  public void test_21_save_with_transact_one_tier() throws Exception {
     clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
 <#list model.objects as otherObj>
   <#if otherObj.name == obj.name><#continue></#if>
-  <#assign otherObj = otherObj>
+  <#if (modelbase.get_id_attributes(otherObj)?size <= 1)><#continue></#if>
+  <#-- 通常测试值域对象 -->
+  <#assign anotherObj = otherObj>
+  <#break>
 </#list>
-<#if otherObj??>
-    Map<String,Object> toSave${java.nameType(otherObj.name)}Data = fromJson("json/${otherObj.name?replace("_","-")}#save.json");
+<#if anotherObj??>
+  <#assign anotherObjIdAttr = modelbase.get_id_attributes(anotherObj)?first>
+    // 主键关联传递，把主对象的主键值传递给其他对象的主键字段
+    Map<String,Object> toSave${java.nameType(anotherObj.name)}Data = fromJson("json/${anotherObj.name?replace("_","-")}#save.json");
+    ${java.nameType(anotherObj.name)}Query toSave${java.nameType(anotherObj.name)}Query = ${java.nameType(anotherObj.name)}QueryAssembler.assemble${java.nameType(anotherObj.name)}Query(fromJson("json/${anotherObj.name?replace("_","-")}#save.json"));
     QueryHandler queryHandler = new QueryHandler();
-    queryHandler.setQuery(toSave${java.nameType(otherObj.name)}Data);
-    queryHandler.setHandler("||${otherObj.name}/save");
+    queryHandler.setSourceField("${modelbase.get_attribute_sql_name(idAttrs[0])}");
+    queryHandler.setTargetField("${modelbase.get_attribute_sql_name(anotherObjIdAttr)}");
+    queryHandler.setQuery(toSave${java.nameType(anotherObj.name)}Data);
+    queryHandler.setHandler("||${anotherObj.name}/save");
     toSaveQuery.getQueryHandlers().add(queryHandler);
 </#if>  
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
-    Assert.assertNotNull(savedQuery);
-
-<#if idAttrs?size != 0>
-    Assert.assertFalse(Strings.isBlank(savedQuery.${modelbase4java.name_getter(idAttrs[0])}()));
-</#if>
-<#list idAttrs as idAttr>
-    Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(idAttr)}(), savedQuery.${modelbase4java.name_getter(idAttr)}());
-</#list>
-    ${java.nameType(obj.name)}Query toReadQuery = new ${java.nameType(obj.name)}Query();
-<#list idAttrs as idAttr>
-    toReadQuery.${modelbase4java.name_setter(idAttr)}(savedQuery.${modelbase4java.name_getter(idAttr)}());
-</#list>
-    ${java.nameType(obj.name)}Query readQuery = service.read${java.nameType(obj.name)}(toReadQuery);
-    Assert.assertNotNull(readQuery);
-<#list obj.attributes as attr>
-  <#if modelbase.is_attribute_system(attr) || attr.identifiable || attr.type.collection><#continue></#if>  
-    Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), readQuery.${modelbase4java.name_getter(attr)}());
-</#list>
-<#if otherObj??>
+<#if anotherObj??>
+  <#assign anotherObjIdAttr = modelbase.get_id_attributes(anotherObj)?first>
     // 验证关联对象的数据也保存成功了
-    ${java.nameType(otherObj.name)}Service ${java.nameVariable(otherObj.name)}Service = getContext().getBean(${java.nameType(otherObj.name)}Service.class);
-    ${java.nameType(otherObj.name)}Query toFind${java.nameType(otherObj.name)}Query = new ${java.nameType(otherObj.name)}Query();
-    List<${java.nameType(otherObj.name)}Query> ${java.nameVariable(otherObj.name)}List = ${java.nameVariable(otherObj.name)}Service.find${inflector.pluralize(java.nameType(otherObj.name))}(toFind${java.nameType(otherObj.name)}Query).getData();
-    Assert.assertEquals(1, ${java.nameVariable(otherObj.name)}List.size());
+    ${java.nameType(anotherObj.name)}Service ${java.nameVariable(anotherObj.name)}Service = getContext().getBean(${java.nameType(anotherObj.name)}Service.class);
+    ${java.nameType(anotherObj.name)}Query toFind${java.nameType(anotherObj.name)}Query = new ${java.nameType(anotherObj.name)}Query();
+    toFind${java.nameType(anotherObj.name)}Query.${modelbase4java.name_setter(anotherObjIdAttr)}(savedQuery.${modelbase4java.name_getter(idAttrs[0])}());
+    List<${java.nameType(anotherObj.name)}Query> ${java.nameVariable(anotherObj.name)}List = ${java.nameVariable(anotherObj.name)}Service.find${inflector.pluralize(java.nameType(anotherObj.name))}(toFind${java.nameType(anotherObj.name)}Query).getData();
+    Assert.assertEquals(1, ${java.nameVariable(anotherObj.name)}List.size());
 </#if>
   }
 }

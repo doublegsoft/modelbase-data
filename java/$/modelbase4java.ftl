@@ -1183,10 +1183,10 @@ ${""?left_pad(indent)}if (existing) {
 ${""?left_pad(indent)}  // 在传入了主键的情况下，也需要检查传入主键的有效性
 ${""?left_pad(indent)}  existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(${modelbase.get_attribute_sql_name(idAttrs[0])});
 ${""?left_pad(indent)}} 
-${""?left_pad(indent)}if (existing) {
-${""?left_pad(indent)}  ${java.nameType(obj.name)}Query.setDefaultValues(query, false);  
-${""?left_pad(indent)}} else {
-${""?left_pad(indent)}  ${java.nameType(obj.name)}Query.setDefaultValues(query);
+${""?left_pad(indent)}${java.nameType(obj.name)}Query.setDefaultValues(query, !existing);  
+${""?left_pad(indent)}ValidationResult res = ${java.nameVariable(obj.name)}Validation.validate(query, !existing);
+${""?left_pad(indent)}if (!res.isValid()) {
+${""?left_pad(indent)}  throw new ServiceException(res.getCode(), res.getMessage());
 ${""?left_pad(indent)}}
   <#if proxy?string != "" && proxy.name != obj.name>
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query.to${java.nameType(obj.name)}Query());  
@@ -1194,10 +1194,8 @@ ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} 
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
   </#if>
 ${""?left_pad(indent)}if (!existing) {
-<#--  <@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=8 />   -->
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
 ${""?left_pad(indent)}} else {
-<#--  <@print_object_update_setters obj=obj varname=java.nameVariable(obj.name) indent=8 />   -->
 ${""?left_pad(indent)}  ${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});      
 ${""?left_pad(indent)}}
 </#macro>
@@ -1245,10 +1243,10 @@ ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${ja
 <#--------------------->
 <#macro print_object_value_save obj indent>       
 ${""?left_pad(indent)}existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(query);
-${""?left_pad(indent)}if (existing) {
-${""?left_pad(indent)}  ${java.nameType(obj.name)}Query.setDefaultValues(query, false);  
-${""?left_pad(indent)}} else {
-${""?left_pad(indent)}  ${java.nameType(obj.name)}Query.setDefaultValues(query);
+${""?left_pad(indent)}${java.nameType(obj.name)}Query.setDefaultValues(query, !existing);
+${""?left_pad(indent)}ValidationResult res = ${java.nameVariable(obj.name)}Validation.validate(query, !existing);
+${""?left_pad(indent)}if (!res.isValid()) {
+${""?left_pad(indent)}  throw new ServiceException(res.getCode(), res.getMessage());
 ${""?left_pad(indent)}}
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
 ${""?left_pad(indent)}if (!existing) {

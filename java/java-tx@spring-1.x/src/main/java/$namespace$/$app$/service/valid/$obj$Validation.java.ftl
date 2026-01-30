@@ -82,10 +82,14 @@ public class ${typename}Validation {
 </#list> 
 
   public ValidationResult validate(${typename}Query query) {
+    return validate(query, true);
+  }
+
+  public ValidationResult validate(${typename}Query query, boolean checkNull) {
 <#-- 必填 -->  
 <#list obj.attributes as attr> 
   <#if !attr.constraint.nullable>  
-    if (query.${modelbase4java.name_getter(attr)}() == null) {
+    if (query.${modelbase4java.name_getter(attr)}() == null && checkNull) {
       return new ValidationResult(false, 404, "${modelbase.get_attribute_label(attr)}为空");
     }
   </#if>

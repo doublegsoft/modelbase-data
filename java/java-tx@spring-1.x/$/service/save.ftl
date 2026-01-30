@@ -24,17 +24,13 @@
   }
   
   /**
-   * 保存单个【modelbase.get_object_label(obj)】数据。
+   * 保存单个【${modelbase.get_object_label(obj)}】数据。
    */
   @Override
   @Transactional(rollbackFor = Throwable.class)
   public ${typename}Query save${typename}(${typename}Query query) throws ServiceException {
     if (query == null) {
       return null;
-    }
-    ValidationResult res = ${varname}Validation.validate(query);
-    if (!res.isValid()) {
-      throw new ServiceException(res.getCode(), res.getMessage());
     }
     boolean existing = true;
     try {

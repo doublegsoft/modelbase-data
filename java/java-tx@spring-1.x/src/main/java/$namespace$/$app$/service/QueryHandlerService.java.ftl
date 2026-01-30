@@ -70,6 +70,10 @@ public class QueryHandlerService {
             }
             serviceBatchMethod.invoke(bean, ps);
           } else {
+            if (sourceField != null && targetField != null) {
+              Object v = getSourceMethod.invoke(query);
+              queryHandler.getQuery().put(targetField, v);
+            }
             serviceMethod.invoke(bean, assemblerMethod.invoke(null, queryHandler.getQuery()));
           }
         } catch (Throwable cause) {
