@@ -5,8 +5,10 @@ ${java.license(license)}
 </#if>
 <#list model.objects as obj>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
-  <#assign pktype = modelbase4java.type_attribute_primitive(idAttrs[0])>
-  <#break>
+  <#assign pktype = modelbase4java.type_attribute_primitive(idAttrs[0])!"">
+  <#if pktype != "">
+    <#break>
+  </#if>
 </#list>
 package <#if namespace??>${namespace}.</#if>${app.name}.service.impl;
 
@@ -24,8 +26,10 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 
 @Service("<#if namespace??>${namespace}.</#if>${app.name}.service.ReferenceService") 
 public class ReferenceServiceImpl implements ReferenceService {
+<#assign printedObjs = {}>  
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || printedObjs[obj.name]??><#continue></#if>
+  <#assign printedObjs = printedObjs + { (obj.name) : true }>
 
   @Autowired
   private ${java.nameType(obj.name)}Service ${java.nameVariable(obj.name)}Service;
@@ -37,8 +41,10 @@ public class ReferenceServiceImpl implements ReferenceService {
       return null;
     }
     switch(type) {
+<#assign printedObjs = {}>      
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated") || !obj.persistenceName??><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.persistenceName?? || printedObjs[obj.name]??><#continue></#if>
+  <#assign printedObjs = printedObjs + { (obj.name) : true }>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
   <#if (idAttrs?size > 1 || idAttrs?size == 0)><#continue></#if>
       case REF_${obj.name?upper_case}: {
@@ -55,8 +61,10 @@ public class ReferenceServiceImpl implements ReferenceService {
   @Override
   public <T> List<T> findReferences(List<${pktype}> ids, String type) throws ServiceException {
     switch(type) {
+<#assign printedObjs = {}>
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated") || !obj.persistenceName??><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.persistenceName?? || printedObjs[obj.name]??><#continue></#if>
+  <#assign printedObjs = printedObjs + { (obj.name) : true }>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
   <#if (idAttrs?size > 1 || idAttrs?size == 0)><#continue></#if>
       case REF_${obj.name?upper_case}: {

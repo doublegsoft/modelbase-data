@@ -471,9 +471,9 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
       ${modelbase4java.type_attribute_primitive(collObjIdAttrs[0])} ${modelbase.get_attribute_sql_name(collObjIdAttrs[0])} = IdGenerator.id();
       retVal.${modelbase4java.name_setter(collObjIdAttrs[0])}(${modelbase.get_attribute_sql_name(collObjIdAttrs[0])});
 <@modelbase4java.print_reference_assemble attr=collObjIdAttrs[0] objname=java.nameVariable(collObj.name) attrname=modelbase.get_attribute_sql_name(collObjIdAttrs[0]) indent=6 />  
-<@modelbase4java.print_object_default_setters obj=collObj varname=java.nameVariable(collObj.name) indent=6 />     
-      ${java.nameVariable(collObj.name)}DataAccess.insert${java.nameType(collObj.name)}(${java.nameVariable(collObj.name)});
+      ${java.nameType(collObj.name)}.setDefaultValues(${java.nameVariable(collObj.name)});
     } else {
+      ${java.nameType(collObj.name)}.setDefaultValues(${java.nameVariable(collObj.name)}, false);
       ${java.nameVariable(collObj.name)}DataAccess.updatePartial${java.nameType(collObj.name)}(${java.nameVariable(collObj.name)});
     }
   <#else>
@@ -498,7 +498,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
       return retVal;
     }
     ${java.nameType(collObj.name)} ${java.nameVariable(collObj.name)} = ${java.nameType(collObj.name)}Assembler.assemble${java.nameType(collObj.name)}FromQuery(query);
-<@modelbase4java.print_object_default_setters obj=collObj varname=java.nameVariable(collObj.name) indent=4 />  
+    ${java.nameType(collObj.name)}.setDefaultValues(${java.nameVariable(collObj.name)});
     ${java.nameVariable(collObj.name)}DataAccess.insert${java.nameType(collObj.name)}(${java.nameVariable(collObj.name)});
   </#if>
   <#if modelbase.has_observer_for_attribute(obj, attr)>

@@ -13,8 +13,10 @@ package <#if namespace??>${namespace}.</#if>${app.name}.service;
 import java.util.List;
 
 public interface ReferenceService {
+<#assign printedObjs = {}>
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || printedObjs[obj.name]??><#continue></#if>
+  <#assign printedObjs = printedObjs + { (obj.name) : true }>
 
   static String REF_${obj.name?upper_case} = "${obj.name?upper_case}";
 </#list>  

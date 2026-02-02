@@ -2570,3 +2570,61 @@ ${""?left_pad(indent)}${line}
   </#list>
   <#return consolAttrs>
 </#function>
+
+<#function is_object_entity obj>
+  <#local idAttrCount = 0>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable>
+      <#local idAttrCount = idAttrCount + 1>
+    </#if>
+  </#list>
+  <#return idAttrCount == 1>
+</#function>
+
+<#function is_object_value obj>
+  <#local idAttrCount = 0>
+  <#local nonIdAttrCount = 0>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable>
+      <#local idAttrCount = idAttrCount + 1>
+    <#else>
+      <#local nonIdAttrCount = nonIdAttrCount + 1>  
+    </#if>
+  </#list>
+  <#return (idAttrCount > 1) && (nonIdAttrCount != 0)>
+</#function>
+
+<#function is_object_conjunction obj>
+  <#local idAttrCount = 0>
+  <#local nonIdAttrCount = 0>
+  <#list obj.attributes as attr>
+    <#if attr.constraint.identifiable>
+      <#local idAttrCount = idAttrCount + 1>
+    <#else>
+      <#local nonIdAttrCount = nonIdAttrCount + 1>  
+    </#if>
+  </#list>
+  <#return (idAttrCount > 1) && (nonIdAttrCount == 0)>
+</#function>
+
+<#function is_attribute_transient attrname obj>
+  <#local objs = []>
+  <#list model.objects as o>
+    <#if o.name == obj.name>
+      <#local objs = objs + [o]>  
+    </#if>
+  </#list>
+  <#if model.findObjectByName(extObjName)??>
+    <#local extObj = model.findObjectByName(extObjName)>
+    <#local retVal = is_attribute_transient(attrname, extObj)>
+    <#if retVal><#return true></#if>
+  </#if>
+  <#list objs as o>
+    <#list o.attributes as attr>
+      <#if attr.name == attrname && !attr.isLabelled('persistence')>
+        <#return true>
+      </#if>
+    </#list>
+  </#list>
+  <#return false>
+</#function>  

@@ -77,4 +77,12 @@ public class ${java.nameType(obj.name)} implements Serializable {
     return null; 
   }
 </#if>
+
+  public static void setDefaultValues(${java.nameType(obj.name)} obj, boolean isCreating) {
+<@modelbase4java.print_object_default_setters obj=obj varname="obj" indent=4 />     
+  }
+
+  public static void setDefaultValues(${java.nameType(obj.name)} obj) {
+    setDefaultValues(obj, true);
+  }
 }

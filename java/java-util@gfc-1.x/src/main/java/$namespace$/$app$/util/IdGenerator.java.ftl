@@ -5,8 +5,10 @@ ${java.license(license)}
 </#if>
 <#list model.objects as obj>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
-  <#assign pktype = modelbase4java.type_attribute_primitive(idAttrs[0])>
-  <#break>
+  <#assign pktype = modelbase4java.type_attribute_primitive(idAttrs[0])!"">
+  <#if pktype != "">
+    <#break>
+  </#if>
 </#list>
 package ${namespace}.${app.name}.util;
 

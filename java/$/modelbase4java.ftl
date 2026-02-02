@@ -313,7 +313,7 @@ ${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});
     <#if attr.constraint.defaultValue?starts_with("'") && attr.constraint.defaultValue?ends_with("'")>
       <#return "\"" + attr.constraint.defaultValue?substring(1,attr.constraint.defaultValue?length - 1)  + "\"">  
     </#if>
-    <#return "\"" + attr.constraint.defaultValue + "\"">  
+    <#return "\"" + attr.constraint.defaultValue + "\"">
   </#if>
   <#return "null">
 </#function>
@@ -322,18 +322,18 @@ ${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});
   <#local commentPrinted = false>
   <#list obj.attributes as attr>
     <#if attr.name == "state">
-${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null && isCreating) {
 ${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}("E");
 ${""?left_pad(indent)}}
-    <#elseif attr.constraint.domainType.name == "now" || (attr.constraint.defaultValue!"") == "now">
-${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+    <#elseif (attr.constraint.defaultValue!"") == "now">
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null && isCreating) {
 ${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));
 ${""?left_pad(indent)}}    
     <#elseif attr.constraint.defaultValue??>
-${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null) {
+${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null && isCreating) {
 ${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(${get_attribute_default_value(attr)});
 ${""?left_pad(indent)}}    
-    <#elseif attr.name == "last_modified_time">
+    <#elseif attr.name == "last_modified_time" || attr.constraint.domainType.name == "now">
 ${""?left_pad(indent)}${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));
     </#if>
   </#list>
@@ -589,13 +589,13 @@ ${""?left_pad(indent)}}
       <#local attrtype = modelbase4java.type_attribute_primitive(attr)>
       <#if attrtype == "Long">
     if (${modelbase.get_attribute_sql_name(attr)} != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}", ${modelbase.get_attribute_sql_name(attr)});
     }
     if (${modelbase.get_attribute_sql_name(attr)}0 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}0));
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", ${modelbase.get_attribute_sql_name(attr)}0);
     }
     if (${modelbase.get_attribute_sql_name(attr)}1 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", Safe.safeString(${modelbase.get_attribute_sql_name(attr)}1));
+      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", ${modelbase.get_attribute_sql_name(attr)}1);
     }  
       <#else>
     if (${modelbase.get_attribute_sql_name(attr)} != null) {
@@ -1079,10 +1079,18 @@ ${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(${java.nameVa
 ${""?left_pad(indent)}  ${java.nameType(collObj.name)} conj${java.nameType(collObj.name)} = new ${java.nameType(collObj.name)}();
 ${""?left_pad(indent)}  conj${java.nameType(collObj.name)}.setId(row.${modelbase4java.name_getter(collObjIdAttr)}());
 ${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(conj${java.nameType(collObj.name)});
-<@modelbase4java.print_object_default_setters obj=conjObj varname="conj" indent=8 />     
-${""?left_pad(indent)}  ${java.nameVariable(conjObj.name)}DataAccess.insert${java.nameType(conjObj.name)}(conj); 
+      <#else>
+      <#-- 允许值域对象作为连接对象，而值域对象存在其他属性，可能被其他实体对象携带，因为存在扩展模式 -->
+        <#if modelbase.is_attribute_transient(conjObjAttr.name, obj)>
+${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(${java.nameVariable(obj.name)}.get${java.nameType(conjObjAttr.name)}());
+        </#if>
+        <#if modelbase.is_attribute_transient(conjObjAttr.name, collObj)>
+${""?left_pad(indent)}  conj.set${java.nameType(conjObjAttr.name)}(row.get${java.nameType(conjObjAttr.name)}());
+        </#if>
       </#if>
-    </#list>  
+    </#list>
+${""?left_pad(indent)}  ${java.nameType(conjObj.name)}.setDefaultValues(conj);   
+${""?left_pad(indent)}  ${java.nameVariable(conjObj.name)}DataAccess.insert${java.nameType(conjObj.name)}(conj);     
 ${""?left_pad(indent)}}
   </#list>
 </#macro>
@@ -1214,7 +1222,7 @@ ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} 
 ${""?left_pad(indent)}query.${name_setter(idAttrs[0])}(${modelbase.get_attribute_sql_name(idAttrs[0])});
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
   </#if>
-<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=indent /> 
+${""?left_pad(indent)}${java.nameType(obj.name)}.setDefaultValues(${java.nameVariable(obj.name)});
 ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
 </#macro>
 
@@ -1258,7 +1266,7 @@ ${""?left_pad(indent)}}
 
 <#macro print_object_value_create obj indent>       
 ${""?left_pad(indent)}${java.nameType(obj.name)} ${java.nameVariable(obj.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromQuery(query);
-<@print_object_default_setters obj=obj varname=java.nameVariable(obj.name) indent=indent /> 
+${""?left_pad(indent)}${java.nameType(obj.name)}.setDefaultValues(${java.nameVariable(obj.name)});
 ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.insert${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
 </#macro>
 

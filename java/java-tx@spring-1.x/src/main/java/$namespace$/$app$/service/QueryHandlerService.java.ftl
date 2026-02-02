@@ -26,7 +26,7 @@ public class QueryHandlerService {
   @Autowired
   private ApplicationContext applicationContext;
 
-  public <T> T getBean(Class<T> klass) {
+  public <T> T getService(Class<T> klass) {
     return applicationContext.getBean(klass);
   }
 
@@ -36,12 +36,17 @@ public class QueryHandlerService {
   
   @Transactional(rollbackFor = Throwable.class)
   public void transact(AbstractQuery query) throws ServiceException {
+    Map<String,Object> context = new HashMap<>();
+    context.putAll(query.toMap());
     List<QueryHandler> queryHandlers = query.getQueryHandlers();
-    for (QueryHandler queryHandler : queryHandlers) {
+    transact(queryHandlers, context);
+    <#--  for (QueryHandler queryHandler : queryHandlers) {
       String handler = queryHandler.getHandler();
       if (handler.startsWith("||")) {
         String sourceField = queryHandler.getSourceField();
         String targetField = queryHandler.getTargetField();
+        List<String> sourceFields = queryHandler.getSourceFields();
+        List<String> targetFields = queryHandler.getTargetFields();
         String[] strs = handler.substring(2).split("/");
         String methodName = strs[1] + QueryHandlerAssembler.toPascalCase(strs[0]);
         String getSourceMethodName = null;
@@ -54,27 +59,103 @@ public class QueryHandlerService {
           String objname = QueryHandlerAssembler.toPascalCase(strs[0]);
           Class serviceClass = Class.forName("<#if namespace??>${namespace}.</#if>${app.name}.service." + objname + "Service");
           Class queryClass = Class.forName("<#if namespace??>${namespace}.</#if>${app.name}.dto.payload." + objname + "Query");
-          Class assemblerClass = Class.forName("<#if namespace??>${namespace}.</#if>${app.name}.dto.assembler." + objname + "QueryAssembler");
-          Method assemblerMethod = assemblerClass.getMethod("assemble"+ objname + "Query", Map.class);
           Method serviceMethod = serviceClass.getMethod(methodName, queryClass);
           Method serviceBatchMethod = serviceClass.getMethod(Inflector.getInstance().pluralize(methodName), List.class);
-          Object bean = getBean(serviceClass);
+          Object serviceInstance = getService(serviceClass);
           if (queryHandler.getQueries() != null && queryHandler.getQueries().size() > 0) {
             List ps = new ArrayList();
-            for (Map<String,Object> q : queryHandler.getQueries()) {
+            for (AbstractQuery q : queryHandler.getQueries()) {
               if (sourceField != null && targetField != null) {
                 Object v = getSourceMethod.invoke(query);
-                q.put(targetField, v);
+                setValueInQuery(q, targetField, v);
+              } else {
+                for (int i = 0; i < sourceFields.size(); i++) {
+                  String sf = sourceFields.get(i);
+                  String tf = targetFields.get(i);
+                  getSourceMethodName = "get" + sf.substring(0,1).toUpperCase() + sf.substring(1);
+                  getSourceMethod = query.getClass().getMethod(getSourceMethodName);
+                  Object v = getSourceMethod.invoke(query);
+                  setValueInQuery(q, tf, v); 
+                }
               }
-              ps.add(assemblerMethod.invoke(null, q));
+              ps.add(q);
             }
-            serviceBatchMethod.invoke(bean, ps);
+            serviceBatchMethod.invoke(serviceInstance, ps);
           } else {
             if (sourceField != null && targetField != null) {
               Object v = getSourceMethod.invoke(query);
-              queryHandler.getQuery().put(targetField, v);
+              setValueInQuery(queryHandler.getQuery(), targetField, v);
+            } else {
+              for (int i = 0; i < sourceFields.size(); i++) {
+                String sf = sourceFields.get(i);
+                String tf = targetFields.get(i);
+                getSourceMethodName = "get" + sf.substring(0,1).toUpperCase() + sf.substring(1);
+                getSourceMethod = query.getClass().getMethod(getSourceMethodName);
+                Object v = getSourceMethod.invoke(query);
+                setValueInQuery(queryHandler.getQuery(), tf, v);
+              }
             }
-            serviceMethod.invoke(bean, assemblerMethod.invoke(null, queryHandler.getQuery()));
+            serviceMethod.invoke(serviceInstance, queryHandler.getQuery());
+          }
+        } catch (Throwable cause) {
+          throw new ServiceException(500, cause);
+        }
+      }
+    }  -->
+  }
+
+  @Transactional(rollbackFor = Throwable.class)
+  public void transact(List<QueryHandler> queryHandlers, Map<String, Object> context) throws ServiceException {
+    for (QueryHandler queryHandler : queryHandlers) {
+      String handler = queryHandler.getHandler();
+      if (handler.startsWith("||")) {
+        String sourceField = queryHandler.getSourceField();
+        String targetField = queryHandler.getTargetField();
+        List<String> sourceFields = queryHandler.getSourceFields();
+        List<String> targetFields = queryHandler.getTargetFields();
+        String[] strs = handler.substring(2).split("/");
+        String methodName = strs[1] + QueryHandlerAssembler.toPascalCase(strs[0]);
+        String getSourceMethodName = null;
+        Method getSourceMethod = null;
+        try {
+          String objname = QueryHandlerAssembler.toPascalCase(strs[0]);
+          Class serviceClass = Class.forName("<#if namespace??>${namespace}.</#if>${app.name}.service." + objname + "Service");
+          Class queryClass = Class.forName("<#if namespace??>${namespace}.</#if>${app.name}.dto.payload." + objname + "Query");
+          Method serviceMethod = serviceClass.getMethod(methodName, queryClass);
+          Method serviceBatchMethod = serviceClass.getMethod(Inflector.getInstance().pluralize(methodName), List.class);
+          Object serviceInstance = getService(serviceClass);
+          if (queryHandler.getQueries() != null && queryHandler.getQueries().size() > 0) {
+            List ps = new ArrayList();
+            for (AbstractQuery q : queryHandler.getQueries()) {
+              Map<String,Object> innerContext = newContextMap(context, q.toMap());
+              if (sourceField != null && targetField != null) {
+                Object v = innerContext.get(sourceField);
+                setValueInQuery(q, targetField, v);
+              } else {
+                for (int i = 0; i < sourceFields.size(); i++) {
+                  String sf = sourceFields.get(i);
+                  String tf = targetFields.get(i);
+                  Object v = innerContext.get(sf);
+                  setValueInQuery(q, tf, v); 
+                }
+              }
+              ps.add(q);
+            }
+            serviceBatchMethod.invoke(serviceInstance, ps);
+          } else {
+            Map<String,Object> innerContext = newContextMap(context, queryHandler.getQuery().toMap());
+            if (sourceField != null && targetField != null) {
+              Object v = innerContext.get(sourceField);
+              setValueInQuery(queryHandler.getQuery(), targetField, v);
+            } else {
+              for (int i = 0; i < sourceFields.size(); i++) {
+                String sf = sourceFields.get(i);
+                String tf = targetFields.get(i);
+                Object v = innerContext.get(sf);
+                setValueInQuery(queryHandler.getQuery(), tf, v);
+              }
+            }
+            serviceMethod.invoke(serviceInstance, queryHandler.getQuery());
           }
         } catch (Throwable cause) {
           throw new ServiceException(500, cause);
@@ -84,7 +165,7 @@ public class QueryHandlerService {
   }
   
   public void conjunct(List results, AbstractQuery query) {
-
+    // TODO: TO BE IMPLEMENTED
   }
   
   public void hierarchize(List results, AbstractQuery query) throws ServiceException {
@@ -117,8 +198,8 @@ public class QueryHandlerService {
             Object val = getSourceMethod.invoke(row);
             addMethod.invoke(q, val);
           }
-          Object bean = getBean(serviceClass);
-          Pagination page = (Pagination)serviceMethod.invoke(bean, q);
+          Object serviceInstance = getService(serviceClass);
+          Pagination page = (Pagination)serviceMethod.invoke(serviceInstance, q);
           for (Object res : results) {
             for (Object row : page.getData()) { 
               Object s1 = getSourceMethod.invoke(res);
@@ -163,8 +244,8 @@ public class QueryHandlerService {
           q.setLimit(-1);
           Object val = getSourceMethod.invoke(result);
           addMethod.invoke(q, val);
-          Object bean = getBean(serviceClass);
-          Pagination page = (Pagination)serviceMethod.invoke(bean, q);
+          Object serviceInstance = getService(serviceClass);
+          Pagination page = (Pagination)serviceMethod.invoke(serviceInstance, q);
           for (Object row : page.getData()) {
             Object s1 = getSourceMethod.invoke(result);
             Object t1 = getTargetMethod.invoke(row);
@@ -179,4 +260,16 @@ public class QueryHandlerService {
     }
   }
 
+  private void setValueInQuery(AbstractQuery query, String fieldName, Object value) throws Exception {
+    String setMethodName = "set" + fieldName.substring(0,1).toUpperCase() + fieldName.substring(1);
+    Method setMethod = query.getClass().getMethod(setMethodName, value.getClass());
+    setMethod.invoke(query, value);
+  }
+
+  private Map<String,Object> newContextMap(Map<String,Object> context, Map<String,Object> params) {
+    Map<String,Object> retVal = new HashMap<>();
+    retVal.putAll(params);
+    retVal.putAll(context);
+    return retVal;
+  } 
 }

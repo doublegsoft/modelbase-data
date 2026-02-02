@@ -19,6 +19,7 @@ package <#if namespace??>${namespace}.</#if>${app.name}.dto.assembler;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.HashMap;
 import java.math.BigDecimal;
@@ -76,7 +77,7 @@ public final class QueryHandlerAssembler {
         // nothing to do
       }
     }
-    retVal.setQuery(query.toMap());
+    retVal.setQuery(query/*.toMap()*/);
     return retVal;
   }
   
@@ -95,7 +96,7 @@ public final class QueryHandlerAssembler {
     if (queries != null) {
       for (AbstractQuery query : queries) {
         QueryHandler handlerObj = new QueryHandler();
-        handlerObj.setQuery(query.toMap());
+        handlerObj.setQuery(query/*.toMap()*/);
         handlerObj.setHandler(handler);
         retVal.add(handlerObj);
       }
@@ -110,14 +111,45 @@ public final class QueryHandlerAssembler {
       return retVal;
     }
     for (Map<String,Object> row : queryHandlers) {
+      String handlerName = (String)row.get("handler");
+      String[] strs = handlerName.substring(2).split("/");
+      String objname = strs[strs.length - 2];
       QueryHandler qh = new QueryHandler();
       qh.setHandler((String)row.get("handler"));
       qh.setSourceField((String)row.get("sourceField"));
       qh.setTargetField((String)row.get("targetField"));
       qh.setResultName((String)row.get("resultName"));
-      qh.setQuery((Map<String,Object>)row.get("query"));
-      qh.setQueries((List<Map<String,Object>>)row.get("queries"));
+      AbstractQuery anyQuery = assembleAbstractQuery(objname, (Map<String,Object>)row.get("query"));
+      List<AbstractQuery> anyQueries = assembleAbstractQueries(objname, (List<Map<String,Object>>)row.get("queries"));
+      qh.setQuery(anyQuery);
+      qh.setQueries(anyQueries);
       retVal.add(qh);
+    }
+    return retVal;
+  }
+
+  public static AbstractQuery assembleAbstractQuery(String objname, Map<String,Object> params) {
+    if (params == null || params.isEmpty()) {
+      return null;
+    }
+<#list model.objects as obj>
+    if ("${obj.name}".equals(objname)) {
+      return ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(params);
+    }
+</#list>
+    throw new IllegalArgumentException("Unknown object name: " + objname);
+  }
+
+  public static List<AbstractQuery> assembleAbstractQueries(String objname, List<Map<String,Object>> params) {
+    if (params == null || params.isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<AbstractQuery> retVal = new ArrayList<>();
+    if (params == null || params.isEmpty()) {
+      return retVal;
+    }
+    for (Map<String,Object> param : params) {
+      retVal.add(assembleAbstractQuery(objname, param));
     }
     return retVal;
   }

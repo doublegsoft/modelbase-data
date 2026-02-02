@@ -57,7 +57,8 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(obj.name)}Query readQuery = service.read${java.nameType(obj.name)}(toReadQuery);
     Assert.assertNotNull(readQuery);
 <#list obj.attributes as attr>
-  <#if modelbase.is_attribute_system(attr) || attr.identifiable || attr.type.collection><#continue></#if>  
+  <#-- 非持久化的属性，不参与read判断 -->
+  <#if modelbase.is_attribute_system(attr) || attr.identifiable || attr.type.collection || !attr.persistenceName??><#continue></#if>  
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), readQuery.${modelbase4java.name_getter(attr)}());
 </#list>
   }
@@ -148,7 +149,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     QueryHandler queryHandler = new QueryHandler();
     queryHandler.setSourceField("${modelbase.get_attribute_sql_name(idAttrs[0])}");
     queryHandler.setTargetField("${modelbase.get_attribute_sql_name(anotherObjIdAttr)}");
-    queryHandler.setQuery(toSave${java.nameType(anotherObj.name)}Data);
+    queryHandler.setQuery(toSave${java.nameType(anotherObj.name)}Query);
     queryHandler.setHandler("||${anotherObj.name}/save");
     toSaveQuery.getQueryHandlers().add(queryHandler);
 </#if>  
@@ -161,6 +162,65 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     toFind${java.nameType(anotherObj.name)}Query.${modelbase4java.name_setter(anotherObjIdAttr)}(savedQuery.${modelbase4java.name_getter(idAttrs[0])}());
     List<${java.nameType(anotherObj.name)}Query> ${java.nameVariable(anotherObj.name)}List = ${java.nameVariable(anotherObj.name)}Service.find${inflector.pluralize(java.nameType(anotherObj.name))}(toFind${java.nameType(anotherObj.name)}Query).getData();
     Assert.assertEquals(1, ${java.nameVariable(anotherObj.name)}List.size());
+</#if>
+  }
+
+  @Test
+  public void test_31_save_with_transact_two_tier() throws Exception {
+    clearData();
+    ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
+    ${java.nameType(obj.name)}Query toSaveQuery = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(fromJson("json/${obj.name?replace("_","-")}#save.json"));
+<#list model.objects as otherObj>
+  <#if otherObj.name == obj.name><#continue></#if>
+  <#if (modelbase.get_id_attributes(otherObj)?size <= 1)><#continue></#if>
+  <#-- 通常测试值域对象 -->
+  <#if !secondObj??>
+    <#assign secondObj = otherObj>
+    <#continue>
+  </#if>  
+  <#assign thirdObj = otherObj>
+  <#break>
+</#list>
+<#if secondObj??>
+  <#assign secondObjIdAttr = modelbase.get_id_attributes(secondObj)?first>
+    // 主键关联传递，把主对象的主键值传递给其他对象的主键字段
+    ${java.nameType(secondObj.name)}Query toSave${java.nameType(secondObj.name)}Query = ${java.nameType(secondObj.name)}QueryAssembler.assemble${java.nameType(secondObj.name)}Query(fromJson("json/${secondObj.name?replace("_","-")}#save.json"));
+    QueryHandler queryHandler = new QueryHandler();
+    queryHandler.setSourceField("${modelbase.get_attribute_sql_name(idAttrs[0])}");
+    queryHandler.setTargetField("${modelbase.get_attribute_sql_name(secondObjIdAttr)}");
+    queryHandler.setQuery(toSave${java.nameType(secondObj.name)}Query);
+    queryHandler.setHandler("||${secondObj.name}/save");
+    toSaveQuery.getQueryHandlers().add(queryHandler);
+  <#if thirdObj??>
+    <#assign thirdObjIdAttr = modelbase.get_id_attributes(thirdObj)?first>
+    // 主键关联传递，把第二个对象的主键值传递给第三个对象的主键字段
+    ${java.nameType(thirdObj.name)}Query toSave${java.nameType(thirdObj.name)}Query = ${java.nameType(thirdObj.name)}QueryAssembler.assemble${java.nameType(thirdObj.name)}Query(fromJson("json/${thirdObj.name?replace("_","-")}#save.json"));
+    QueryHandler queryHandler2 = new QueryHandler();
+    queryHandler2.setSourceField("${modelbase.get_attribute_sql_name(secondObjIdAttr)}");
+    queryHandler2.setTargetField("${modelbase.get_attribute_sql_name(thirdObjIdAttr)}");
+    queryHandler2.setQuery(toSave${java.nameType(thirdObj.name)}Query);
+    queryHandler2.setHandler("||${thirdObj.name}/save");
+    toSave${java.nameType(secondObj.name)}Query.getQueryHandlers().add(queryHandler2);  
+  </#if>
+</#if>  
+    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
+<#if secondObj??>
+  <#assign secondObjIdAttr = modelbase.get_id_attributes(secondObj)?first>
+    // 验证关联对象的数据也保存成功了
+    ${java.nameType(secondObj.name)}Service ${java.nameVariable(secondObj.name)}Service = getContext().getBean(${java.nameType(secondObj.name)}Service.class);
+    ${java.nameType(secondObj.name)}Query toFind${java.nameType(secondObj.name)}Query = new ${java.nameType(secondObj.name)}Query();
+    toFind${java.nameType(secondObj.name)}Query.${modelbase4java.name_setter(secondObjIdAttr)}(savedQuery.${modelbase4java.name_getter(idAttrs[0])}());
+    List<${java.nameType(secondObj.name)}Query> ${java.nameVariable(secondObj.name)}List = ${java.nameVariable(secondObj.name)}Service.find${inflector.pluralize(java.nameType(secondObj.name))}(toFind${java.nameType(secondObj.name)}Query).getData();
+    Assert.assertEquals(1, ${java.nameVariable(secondObj.name)}List.size());
+  <#if thirdObj??>
+    <#assign thirdObjIdAttr = modelbase.get_id_attributes(thirdObj)?first>
+    // 验证第三个关联对象的数据也保存成功了
+    ${java.nameType(thirdObj.name)}Service ${java.nameVariable(thirdObj.name)}Service = getContext().getBean(${java.nameType(thirdObj.name)}Service.class);
+    ${java.nameType(thirdObj.name)}Query toFind${java.nameType(thirdObj.name)}Query = new ${java.nameType(thirdObj.name)}Query();
+    toFind${java.nameType(thirdObj.name)}Query.${modelbase4java.name_setter(thirdObjIdAttr)}(${java.nameVariable(secondObj.name)}List.get(0).${modelbase4java.name_getter(secondObjIdAttr)}());
+    List<${java.nameType(thirdObj.name)}Query> ${java.nameVariable(thirdObj.name)}List = ${java.nameVariable(thirdObj.name)}Service.find${inflector.pluralize(java.nameType(thirdObj.name))}(toFind${java.nameType(thirdObj.name)}Query).getData();
+    Assert.assertEquals(1, ${java.nameVariable(thirdObj.name)}List.size());
+  </#if>  
 </#if>
   }
 }

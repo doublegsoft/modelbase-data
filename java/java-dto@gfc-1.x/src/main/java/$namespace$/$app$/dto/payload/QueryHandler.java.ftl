@@ -8,6 +8,7 @@ package ${namespace}.${app.name}.dto.payload;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /*!
 ** 
@@ -16,15 +17,19 @@ public class QueryHandler {
   
   protected String handler;
   
-  protected Map<String,Object> query;
+  protected AbstractQuery query;
   
-  protected List<Map<String,Object>> queries;
+  protected List<AbstractQuery> queries;
   
   protected String resultName;
   
   protected String sourceField;
   
   protected String targetField;
+
+  protected List<String> sourceFields;
+  
+  protected List<String> targetFields;
   
   public String getHandler() {
     return this.handler;
@@ -35,19 +40,19 @@ public class QueryHandler {
   }
   
   
-  public Map<String,Object> getQuery() {
+  public AbstractQuery getQuery() {
     return query;
   }
   
-  public void setQuery(Map<String,Object> query) {
+  public void setQuery(AbstractQuery query) {
     this.query = query;
   }
   
-  public List<Map<String,Object>> getQueries() {
+  public List<AbstractQuery> getQueries() {
     return queries;
   }
   
-  public void setQueries(List<Map<String,Object>> queries) {
+  public void setQueries(List<AbstractQuery> queries) {
     this.queries = queries;
   }
   
@@ -73,6 +78,28 @@ public class QueryHandler {
   
   public void setTargetField(String targetField) {
     this.targetField = targetField;
+  }
+
+  public List<String> getSourceFields() {
+    if (this.sourceFields == null) {
+      return Collections.emptyList();
+    } 
+    return this.sourceFields;
+  }
+  
+  public void setSourceFields(List<String> sourceFields) {
+    this.sourceFields = sourceFields;
+  }
+  
+  public List<String> getTargetFields() {
+    if (this.targetFields == null) {
+      return Collections.emptyList();
+    } 
+    return this.targetFields;
+  }
+  
+  public void setTargetFields(List<String> targetFields) {
+    this.targetFields = targetFields;
   }
   
 }
