@@ -49,6 +49,8 @@
     <#-- 值体对象的保存，允许值域对象中主键关联对象，在保存这个值域对象（创建关系）时也同时保存关联的实体对象 -->
     <#----------------------------------------------------------------------------------------->
     <#list idAttrs as idAttr>
+      <#-- 允许出现基础类型作为值体的主键 -->
+      <#if !idAttr.type.custom><#continue></#if>
       <#assign refObj = model.findObjectByName(idAttr.type.name)>
       <#assign refObjIdAttr = refObj.getIdentifiableAttribute()>
       if (query.get${java.nameType(idAttr.name)}() != null) {
