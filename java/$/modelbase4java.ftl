@@ -904,13 +904,14 @@ ${""?left_pad(indent)}}
       </#if>
     </#list>
     <#if !one2many><#continue></#if>
+    <#local collAttr = modelbase.get_attribute_collection_attribute(attr)>
 ${""?left_pad(indent)}/*!
 ${""?left_pad(indent)}** 直接关联的【${modelbase.get_object_label(collObj)}】作为一对多显式扩展对象
 ${""?left_pad(indent)}*/
-${""?left_pad(indent)}List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();    
+${""?left_pad(indent)}List<${java.nameType(attr.type.componentType.name)}Query> ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();
 ${""?left_pad(indent)}// 查询已经存在的
 ${""?left_pad(indent)}${java.nameType(collObj.name)}Query existing${java.nameType(collObj.name)}Query = new ${java.nameType(collObj.name)}Query();
-${""?left_pad(indent)}existing${java.nameType(collObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}existing${java.nameType(collObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(collAttr))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
     <#list collObj.attributes as collObjAttr>
       <#if collObjAttr.name == "state">
 ${""?left_pad(indent)}existing${java.nameType(collObj.name)}Query.setState("E");
@@ -931,7 +932,7 @@ ${""?left_pad(indent)}  if (!found) {
       <#local noState = false>    
       <#list collObj.attributes as collObjAttr>
         <#if collObjAttr.name == "state">
-        ${java.nameVariable(collObj.name)}Service.disable${java.nameType(collObj.name)}(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
+${""?left_pad(indent)}    ${java.nameVariable(collObj.name)}Service.disable${java.nameType(collObj.name)}(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
           <#local noState = true>
           <#break>
         </#if>
@@ -939,11 +940,11 @@ ${""?left_pad(indent)}  if (!found) {
       <#if !noState>
 ${""?left_pad(indent)}    ${java.nameVariable(collObj.name)}Service.delete${java.nameType(collObj.name)}(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
       </#if>
-${""?left_pad(indent)}    }
 ${""?left_pad(indent)}  }
+${""?left_pad(indent)}}
     </#if>  
 ${""?left_pad(indent)}for (${java.nameType(collObj.name)}Query row : ${java.nameVariable(attr.name)}) {  
-${""?left_pad(indent)}  row.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
+${""?left_pad(indent)}  row.set${java.nameType(modelbase.get_attribute_sql_name(collAttr))}(${modelbase.get_attribute_sql_name(idAttrs[0])});
     <#list collObj.attributes as collObjAttr>
       <#if collObjAttr.name == "state">
 ${""?left_pad(indent)}  row.setState("E");

@@ -2628,3 +2628,48 @@ ${""?left_pad(indent)}${line}
   </#list>
   <#return false>
 </#function>  
+
+<#--
+ ### 获取集合属性的关联属性                       
+ ###                                              
+ ### 功能说明：                                  
+ ### 当一个属性是集合类型时，获取该集合元素的关联属性 
+ ###                                              
+ ### 参数：                                      
+ ### @param attr - 需要分析的属性对象            
+ ###                                              
+ ### 返回值：                                    
+ ### @return 集合元素的关联属性对象              
+ ###         - 如果domainType未指定关联字段，返回引用对象的ID属性 
+ ###         - 如果domainType指定了关联字段，返回该字段属性对象
+ ###                                              
+ ### 应用场景：                                  
+ ### 1. 一对多关系：Order.orderItems (集合)     
+ ###    - 未指定：返回 OrderItem.id             
+ ###    - 指定如 "OrderItem(orderId)"：返回 OrderItem.orderId 
+ ###                                              
+ ### 2. 多对多关系：User.roles (集合)           
+ ###    - 未指定：返回 Role.id                  
+ ###    - 指定如 "Role(roleCode)"：返回 Role.roleCode 
+ ###                                              
+ ### domainType 格式说明：                       
+ ### - 简单格式："ObjectName"                   
+ ###   使用引用对象的ID作为关联字段             
+ ### - 完整格式："ObjectName(attributeName)"    
+ ###   使用指定的attributeName作为关联字段      
+ -->
+<#function get_attribute_collection_attribute attr>
+  <#if attr.type.collection>
+    <#local refObj = model.findObjectByName(attr.type.componentType.name)>
+    <#local domainType = attr.constraint.domainType?string>
+    <#if !domainType?contains("(")>
+      <#return get_id_attributes(refObj)?first>
+    </#if>
+    <#local attrname = domainType?substring(domainType?index_of("(") + 1, domainType?index_of(")"))>
+    <#list refObj.attributes as refObjAttr>
+      <#if refObjAttr.name == attrname>
+        <#return refObjAttr>
+      </#if>
+    </#list>
+  </#if>
+</#function>
