@@ -1181,6 +1181,11 @@ ${""?left_pad(indent)}</dependency>
 <#-- 实体对象的保存操作 -->
 <#--------------------->
 <#macro print_object_entity_save obj indent proxy="">
+  <#local objname = obj.name>
+  <#-------------------------------------->
+  <#-- 有可能是代理对象，类似于Pivot这种情况 -->
+  <#-------------------------------------->
+  <#if proxy != ""><#local objname = proxy.name></#if>
   <#local idAttrs = modelbase.get_id_attributes(obj)>
 ${""?left_pad(indent)}${modelbase4java.type_attribute_primitive(idAttrs[0])} ${modelbase.get_attribute_sql_name(idAttrs[0])} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}();
 ${""?left_pad(indent)}if (Strings.isBlank(${modelbase.get_attribute_sql_name(idAttrs[0])})) {
@@ -1192,8 +1197,8 @@ ${""?left_pad(indent)}if (existing) {
 ${""?left_pad(indent)}  // 在传入了主键的情况下，也需要检查传入主键的有效性
 ${""?left_pad(indent)}  existing = ${java.nameVariable(obj.name)}DataAccess.isExisting${java.nameType(obj.name)}(${modelbase.get_attribute_sql_name(idAttrs[0])});
 ${""?left_pad(indent)}} 
-${""?left_pad(indent)}${java.nameType(obj.name)}Query.setDefaultValues(query, !existing);  
-${""?left_pad(indent)}ValidationResult res = ${java.nameVariable(obj.name)}Validation.validate(query, !existing);
+${""?left_pad(indent)}${java.nameType(objname)}Query.setDefaultValues(query, !existing);  
+${""?left_pad(indent)}ValidationResult res = ${java.nameVariable(objname)}Validation.validate(query, !existing);
 ${""?left_pad(indent)}if (!res.isValid()) {
 ${""?left_pad(indent)}  throw new ServiceException(res.getCode(), res.getMessage());
 ${""?left_pad(indent)}}
@@ -1399,34 +1404,62 @@ ${""?left_pad(indent)}}
   </#if>
 </#macro>
 
-<#---------------------------->
-<#-- 含有集合对象属性的读取操作 -->    
-<#---------------------------->
+<#--
+ ### 生成一对多（One-to-Many）关联属性的读取逻辑。
+ ### <p>
+ ### 该宏负责根据父对象的 ID，查询并装配其下的子对象集合。
+ ### 它包含两种装配策略以及针对嵌套依赖的性能优化。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 过滤 (Filter): 仅处理集合属性，且跳过标记为 'conjunction' (多对多中间表) 的属性。
+ ### 2. 构建查询 (Query Setup): 创建子对象的 Query 对象，并将父对象的 ID 设置为子对象的查询条件 (外键关联)。
+ ### 3. 初步装配 (Initial Assembly):
+ ###    - 如果子对象是【单主键实体】: 循环调用子服务的 `read` 方法 (保证获取完整的领域实体，但有 N+1 风险)。
+ ###    - 如果子对象是【复合主键/值对象】: 直接使用 `Assembler` 将 SQL 结果集转换为对象 (轻量高效)。
+ ### 4. 深度抓取 (Deep Fetch - N+1 Optimization):
+ ###    - 针对子对象中引用的【孙级对象】(自定义类型且非父对象本身)。
+ ###    - 收集所有 ID 进行一次批量查询 (Batch Select)。
+ ###    - 在内存中将孙级对象回填到子对象中 (In-Memory Join)。
+ ###
+ ### @param obj
+ ###        父对象定义 (ObjectDefinition)
+ ### @param indent
+ ###        生成代码的缩进级别
+ -->
 <#macro print_object_one2many_read obj indent>
   <#local idAttrs = modelbase.get_id_attributes(obj)>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
+    <#if attr.isLabelled("conjunction")><#continue></#if>
     <#local collObj = model.findObjectByName(attr.type.componentType.name)>
     <#local collObjIdAttrs = modelbase.get_id_attributes(collObj)>
-    <#if collObjIdAttrs?size == 1><#continue></#if>
 ${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
+    <#------------------------------------------->
+    <#-- 设置外键关联：子对象.parentId = 父对象.id -->
+    <#------------------------------------------->
     <#list collObj.attributes as collObjAttr>
       <#if obj.name == collObjAttr.type.name>
 ${""?left_pad(indent)}${modelbase4java.singularize_coll_attr(attr)}Query.set${java.nameType(modelbase.get_attribute_sql_name(collObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
       </#if>
     </#list>
-${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据  
+${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据
 ${""?left_pad(indent)}List<Map<String,Object>> ${java.nameVariable(attr.name)} = ${java.nameVariable(attr.type.componentType.name)}DataAccess.select${java.nameType(attr.type.componentType.name)}(${modelbase4java.singularize_coll_attr(attr)}Query);
 ${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
+    <#if collObjIdAttrs?size == 1>
+${""?left_pad(indent)}  ${java.nameType(collObj.name)}Query readQuery = new ${java.nameType(collObj.name)}Query();
+${""?left_pad(indent)}  readQuery.${modelbase4java.name_setter(collObjIdAttrs[0])}((${modelbase4java.type_attribute_primitive(collObjIdAttrs[0])})row.get("${modelbase.get_attribute_sql_name(collObjIdAttrs[0])}"));
+${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameVariable(collObj.name)}Service.read${java.nameType(collObj.name)}(readQuery));    
+    <#elseif (collObjIdAttrs?size > 1)>
 ${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
+    </#if>
 ${""?left_pad(indent)}}
-    <#-- TODO:  -->  
-    <#-- 规则1：如果集合对象是值域对象，则需要查找下一级的非父对象的引用对象的集合 -->
-    <#-- 规则2（可能有BUG）：如果集合对象是实体对象，则需要通过属性中conjunction的定义，查找关联的实体对象集合 -->
+    <#----------------------------------------->
+    <#-- [Deep Fetch] 开始处理深层嵌套引用的抓取 -->
+    <#----------------------------------------->
     <#list collObj.attributes as collObjAttr>
-      <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
-      <#assign collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
-      <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
+      <#if collObjAttr.type.custom && collObjAttr.type.name != obj.name>
+        <#local collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
+        <#local collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
 ${""?left_pad(indent)}// 封装关联中明细的【${modelbase.get_object_label(collObjAttrRefObj)}】数据  
 ${""?left_pad(indent)}Set<${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)}> ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids = new HashSet<>();
 ${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
@@ -1444,6 +1477,7 @@ ${""?left_pad(indent)}      break;
 ${""?left_pad(indent)}    }
 ${""?left_pad(indent)}  }
 ${""?left_pad(indent)}}
+      </#if>
     </#list>
   </#list>
 </#macro>
@@ -1452,16 +1486,18 @@ ${""?left_pad(indent)}}
   <#local idAttrs = modelbase.get_id_attributes(obj)>
   <#list obj.attributes as attr>
     <#if !attr.type.collection><#continue></#if>
+    <#if !attr.isLabelled("conjunction")><#continue></#if>
+    <#local conjObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
     <#local collObj = model.findObjectByName(attr.type.componentType.name)>
     <#local collObjIdAttrs = modelbase.get_id_attributes(collObj)>
-    <#if (collObjIdAttrs?size != 1)><#continue></#if>
+    <#if collObjIdAttrs?size == 1><#continue></#if>
 ${""?left_pad(indent)}${java.nameType(attr.type.componentType.name)}Query ${modelbase4java.singularize_coll_attr(attr)}Query = new ${java.nameType(attr.type.componentType.name)}Query();
     <#list collObj.attributes as collObjAttr>
       <#if obj.name == collObjAttr.type.name>
 ${""?left_pad(indent)}${modelbase4java.singularize_coll_attr(attr)}Query.set${java.nameType(modelbase.get_attribute_sql_name(collObjAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttrs[0]))}());    
       </#if>
     </#list>
-${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据  
+${""?left_pad(indent)}// 封装关联的【${modelbase.get_object_label(collObj)}】集合数据 world
 ${""?left_pad(indent)}List<Map<String,Object>> ${java.nameVariable(attr.name)} = ${java.nameVariable(attr.type.componentType.name)}DataAccess.select${java.nameType(attr.type.componentType.name)}(${modelbase4java.singularize_coll_attr(attr)}Query);
 ${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
 ${""?left_pad(indent)}  retVal.get${java.nameType(attr.name)}().add(${java.nameType(collObj.name)}QueryAssembler.assemble${java.nameType(collObj.name)}Query(row));
