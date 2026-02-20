@@ -1114,6 +1114,30 @@ ${""?left_pad(indent)}}
   </#list>
 </#macro>
 
+<#--
+ ### 生成处理“一对多”集合属性所需的依赖注入成员变量（@Autowired）。
+ ### <p>
+ ### 该宏遍历当前对象的所有集合属性，根据子对象的类型，自动生成所需的 DataAccess (DAO) 
+ ### 和 Service 成员变量。它通过 `existings` 参数维护一个已注入列表，防止重复注入。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 初始化: 复制已存在的注入列表，用于当前作用域的去重检查。
+ ### 2. 遍历属性: 仅处理集合类型 (Collection) 属性。
+ ### 3. 注入子对象服务 (Direct Injection):
+ ###    - 如果子对象类型尚未注入，生成对应的 DataAccess 和 Service 字段。
+ ### 4. 注入孙级对象服务 (Deep Injection for Value Objects):
+ ###    - 如果子对象被标记为 "value" (值对象/复合结构)，则进一步扫描子对象的属性。
+ ###    - 如果子对象引用了其他实体 (孙级)，且该实体不是当前父对象本身，则注入孙级实体的 Service。
+ ###      (场景：Order -> OrderItem(Value) -> Product，需注入 ProductService 以便校验或获取价格)。
+ ### 5. 注入中间表服务 (Conjunction Injection):
+ ###    - 如果属性标记为 "conjunction" (多对多)，则注入中间表的 DataAccess 和 Service。
+ ### 6. 更新状态: 将本轮新增的注入项更新回 `existings` 变量。
+ ###
+ ### @param obj
+ ###        当前父对象定义 (ObjectDefinition)
+ ### @param existings
+ ###        一个 Map，记录了已经生成过的变量名，用于去重
+ -->
 <#macro print_object_one2many_members obj existings>
   <#local existingObjs = {} + existings>
   <#list obj.attributes as attr>
@@ -1128,7 +1152,7 @@ ${""?left_pad(indent)}}
   ${java.nameType(attr.type.componentType.name)}Service ${java.nameVariable(attr.type.componentType.name)}Service;
     </#if>
     <#local collObj = model.findObjectByName(attr.type.componentType.name)>
-    <#if collObj.isLabelled("value")>
+    <#if modelbase.is_object_value(collObj)>
       <#list collObj.attributes as collObjAttr>
         <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
         <#local collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>

@@ -2452,6 +2452,27 @@ ${""?left_pad(indent)}${line}
   <#return model.findObjectByName(objname)>
 </#function>
 
+<#--
+ ### 检查对象中是否存在针对指定属性的“观察者”属性。
+ ### <p>
+ ### 该函数用于判断当前对象 (`obj`) 中，是否有一个属性被配置为“观察”另一个属性 (`attr`) 的变化。
+ ### 这通常用于冗余数据维护场景，例如：父对象有一个 'count' 字段，需要观察子集合的 'add/remove' 动作。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历当前对象 (`obj`) 的所有属性。
+ ### 2. 筛选出带有 "observer" 标签的属性（即观察者属性）。
+ ### 3. 读取 "observer" 标签中的 "attribute" 配置项（即被观察的目标表达式）。
+ ### 4. 匹配检查：判断配置的目标表达式是否等于或以传入的属性名 (`attr.name`) 开头。
+ ###    （支持 "items" 或 "items(price)" 这种嵌套表达式的匹配）。
+ ###
+ ### @param obj
+ ###        包含潜在观察者属性的对象定义 (ObjectDefinition)
+ ### @param attr
+ ###        被观察的目标属性定义 (AttributeDefinition)
+ ###
+ ### @return
+ ###        true 表示存在观察者，false 表示不存在
+ -->
 <#function has_observer_for_attribute obj attr>
   <#list obj.attributes as objAttr>
     <#if !objAttr.isLabelled("observer")><#continue></#if>
@@ -2463,8 +2484,23 @@ ${""?left_pad(indent)}${line}
   <#return false>
 </#function>
 
-<#-- 
- ### 
+<#--
+ ### 获取针对指定属性的“观察者”属性定义对象。
+ ### <p>
+ ### 当 `has_observer_for_attribute` 返回 true 时，通常紧接着调用此函数。
+ ### 它返回那个负责“观察”的属性定义，以便生成器读取其具体的聚合逻辑（如 count, sum, max 等）。
+ ###
+ ### 上下文示例:
+ ### Order.totalPrice (观察者) 观察 Order.items (被观察者)。
+ ### 调用 get_observer_for_attribute(Order, items) 将返回 totalPrice 的属性定义。
+ ###
+ ### @param obj
+ ###        包含观察者属性的对象定义
+ ### @param attr
+ ###        被观察的目标属性定义
+ ###
+ ### @return
+ ###        找到的观察者属性定义 (AttributeDefinition)，未找到则无返回值(null)
  -->
 <#function get_observer_for_attribute obj attr>
   <#list obj.attributes as objAttr>
@@ -2476,6 +2512,35 @@ ${""?left_pad(indent)}${line}
   </#list>
 </#function>
 
+<#--
+ ### 解析“可观察属性表达式”，并获取目标属性的定义对象。
+ ### <p>
+ ### 该函数用于解析形如 "relationAttr(targetAttr)" 的字符串表达式，并返回
+ ### 关联对象（或集合组件对象）中的目标属性定义。
+ ###
+ ### 表达式语法 (Syntax):
+ ### "关联属性名(目标属性名)"
+ ### 例如: 在 Order 对象中，表达式 "items(price)"
+ ###   1. "items" 是 Order 的属性，指向 OrderItem 集合。
+ ###   2. "price" 是 OrderItem 的属性。
+ ###   3. 函数返回 OrderItem.price 的属性定义。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 语法检查: 确保表达式包含括号。
+ ### 2. 字符串解析: 分离出当前对象的引用属性名 (objattrname) 和目标对象的属性名 (attrname)。
+ ### 3. 属性查找: 遍历当前对象的属性列表，找到引用属性。
+ ### 4. 类型路由:
+ ###    - 如果是自定义类型 (1:1): 在引用的对象类型中查找目标属性。
+ ###    - 如果是集合类型 (1:N): 在集合的组件类型中查找目标属性。
+ ###
+ ### @param obj
+ ###        当前上下文对象定义 (ObjectDefinition)
+ ### @param attrexpr
+ ###        属性路径表达式字符串 (String)
+ ###
+ ### @return
+ ###        目标属性的定义对象 (AttributeDefinition)，如果未找到则返回 null
+ -->
 <#function get_observable_attribute obj attrexpr>
   <#if attrexpr?contains("(") && attrexpr?ends_with(")")>
     <#local objattrname = attrexpr?substring(0,attrexpr?index_of("("))>
@@ -2499,7 +2564,6 @@ ${""?left_pad(indent)}${line}
   <#local val = tatabase.number(1,113)>
   <#local val = val?substring(0, val?index_of("."))>
   <#return "https://raw.githubusercontent.com/doublegsoft/tatabase-image/refs/heads/main/1024x768/" + val?number?string["0000"] + ".jpg">
-  <#--return "https://gitee.com/christiangann/tatabase-image/raw/main/1024x768/" + val?number?string["0000"] + ".jpg"-->
 </#function>
 
 
@@ -2543,6 +2607,35 @@ ${""?left_pad(indent)}${line}
   <#return false>
 </#function>
 
+<#--
+ ### 递归聚合（扁平化）对象及其关联对象的属性信息。
+ ### <p>
+ ### 该函数用于构建一个包含当前对象及其下级引用对象（1:1）所有属性的扁平列表。
+ ### 它通常用于生成“详情页 DTO”、“宽表结构”或“Excel 导出模型”，将层级结构拉平。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 初始化容器: 准备存放当前对象普通属性 (selfAttrs) 和引用属性 (customAttrs) 的列表。
+ ### 2. 遍历与过滤:
+ ###    - 跳过集合属性 (1:N, N:M)。
+ ###    - 跳过系统属性 (如审计字段)。
+ ###    - 跳过已存在的属性 (去重)。
+ ### 3. 分类:
+ ###    - 引用类型 (Custom): 放入 customAttrs，准备递归。
+ ###    - 基本类型 (Primitive): 放入 selfAttrs，直接收集。
+ ### 4. 合并: 将当前对象的基本属性加入结果集 (consolAttrs)。
+ ### 5. 递归 (Recursion): 遍历 customAttrs，递归调用本函数，将子对象的属性也拉平加入结果集。
+ ###    (注意: 代码中似乎包含了处理同名类型冲突的逻辑框架 `typeCount`)
+ ###
+ ### @param consolAttrs
+ ###        当前已收集的属性累加列表 (Accumulator List)
+ ### @param attrname
+ ###        当前处理属性的上下文名称 (通常用作前缀，处理命名冲突)
+ ### @param obj
+ ###        当前正在处理的对象定义 (ObjectDefinition)
+ ###
+ ### @return
+ ###        合并后的属性列表
+ -->
 <#function consolidate_info_attributes consolAttrs attrname obj>
   <#local selfAttrs = []>
   <#local customAttrs = []>
@@ -2571,6 +2664,23 @@ ${""?left_pad(indent)}${line}
   <#return consolAttrs>
 </#function>
 
+<#--
+ ### 判断对象是否为标准的“业务实体”（Entity）。
+ ### <p>
+ ### 在该模型定义中，“标准实体”被定义为拥有**单一主键**的对象。
+ ### 这类对象通常对应数据库中的标准表，拥有一个独立的 ID 列（如 UUID 或自增 ID）。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历对象属性。
+ ### 2. 统计标记为“可标识”（identifiable/主键）的属性数量。
+ ### 3. 判定：必须【主键数量 == 1】。
+ ###
+ ### @param obj
+ ###        待检查的对象定义 (ObjectDefinition)
+ ###
+ ### @return
+ ###        true 表示是标准单主键实体，false 表示是其他类型（如复合主键对象或无主键对象）
+ -->
 <#function is_object_entity obj>
   <#local idAttrCount = 0>
   <#list obj.attributes as attr>
@@ -2581,6 +2691,27 @@ ${""?left_pad(indent)}${line}
   <#return idAttrCount == 1>
 </#function>
 
+<#--
+ ### 判断对象是否为“值对象”或“带属性的关联实体”（Value Object / Association Entity）。
+ ### <p>
+ ### 此类对象通常具有以下特征：
+ ### 1. **复合主键**：由两个或以上的主键组成（通常是外键组合）。
+ ### 2. **包含业务数据**：除了主键外，至少包含一个非主键的业务属性。
+ ###
+ ### 区别说明：
+ ### - 与【标准实体 (Entity)】的区别：它是多主键，不是单主键。
+ ### - 与【纯中间表 (Conjunction)】的区别：它包含业务属性（如“分数”、“权重”），而纯中间表只包含主键。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历属性，分别统计“主键属性”和“非主键属性”的数量。
+ ### 2. 判定：必须满足【主键数 > 1】且【非主键数 != 0】。
+ ###
+ ### @param obj
+ ###        待检查的对象定义 (ObjectDefinition)
+ ###
+ ### @return
+ ###        true 表示是复合主键且带数据的对象，false 否则
+ -->
 <#function is_object_value obj>
   <#local idAttrCount = 0>
   <#local nonIdAttrCount = 0>
@@ -2594,6 +2725,29 @@ ${""?left_pad(indent)}${line}
   <#return (idAttrCount > 1) && (nonIdAttrCount != 0)>
 </#function>
 
+<#--
+ ### 判断对象是否为“纯关联中间表”（Pure Conjunction/Junction Object）。
+ ### <p>
+ ### “纯关联中间表”通常用于在关系型数据库中实现【多对多 (Many-to-Many)】关系。
+ ### 它的结构特征是：
+ ### 1. 由多个主键组成（通常也是指向两端实体的外键）。
+ ### 2. 不包含任何非主键的业务属性（如备注、时间戳等）。
+ ###
+ ### 如果一个中间表包含业务属性（例如“选课时间”），则本函数返回 false，
+ ### 这种情况下它通常被视为一个独立的业务实体，而非纯粹的关联。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历对象的所有属性。
+ ### 2. 统计主键属性 (identifiable) 的数量。
+ ### 3. 统计非主键属性的数量。
+ ### 4. 判定：必须满足【主键数 > 1】且【非主键数 == 0】。
+ ###
+ ### @param obj
+ ###        待检查的对象定义 (ObjectDefinition)
+ ###
+ ### @return
+ ###        true 表示是纯关联对象，false 表示是普通实体或带属性的关联实体
+ -->
 <#function is_object_conjunction obj>
   <#local idAttrCount = 0>
   <#local nonIdAttrCount = 0>
@@ -2607,6 +2761,26 @@ ${""?left_pad(indent)}${line}
   <#return (idAttrCount > 1) && (nonIdAttrCount == 0)>
 </#function>
 
+<#--
+ ### 判断指定属性是否为“瞬态”（Transient，即非持久化属性）。
+ ### <p>
+ ### “瞬态”属性是指那些存在于对象模型（内存/代码）中，但**不需要**映射到数据库表列的属性。
+ ### 该函数的判断标准是：属性存在，且**缺少** 'persistence' 标签。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 对象解析 (Object Resolution): 在全局模型中收集所有与输入对象同名的定义。
+ ### 2. 递归检查 (Recursive Check): 如果上下文存在 'extObjName'，则递归检查父类/扩展对象。
+ ### 3. 属性遍历 (Attribute Inspection): 遍历对象的属性列表。
+ ### 4. 标签校验 (Label Check): 如果属性名匹配且**未标记** 'persistence'，则返回 true。
+ ###
+ ### @param attrname
+ ###        待检查的属性名称 (String)
+ ### @param obj
+ ###        包含该属性的对象定义
+ ###
+ ### @return
+ ###        true 表示是瞬态属性（不持久化），false 表示是持久化属性
+ -->
 <#function is_attribute_transient attrname obj>
   <#local objs = []>
   <#list model.objects as o>
