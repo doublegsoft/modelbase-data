@@ -37,8 +37,6 @@ Modelbase Data Model Specification
 
 数据访问层统一内部Query耦合。
 
-定义了接口如下：
-
 ### {entity}
 
 实体对象的数据服务操作，包括：
@@ -81,9 +79,13 @@ Modelbase Data Model Specification
 
   查询实体集合，主要针对实体对象的查询，但是同时也支持对值体集合衍生出来的聚合作用的属性。
 
+### {entity + [value + entity]}  
+
 ### {entity + [conjunction]}
 
 实际上就是{entity + [value]}的特殊形式，本质上是一样的。
+
+### {entity + [conjunction + entity]}
 
 ### [entity]
 
@@ -124,11 +126,25 @@ Modelbase Data Model Specification
 
 数据服务操作，包括：
 
-### {one-to-one} = {entity}
+### {one-to-one} = {entity + entity}
 
 直接关联对象，一个实体对象的标识是另一个实体对象，在数据库层面上就是两者的主键相同。
 
 数据服务操作，包括：
+
+* 保存（save）
+ 
+  1. 通过定义的业务唯一字段，找到标识引用的其他实体，如果未定义着无此操作。
+  2. 如果是插入操作，则标识对应的表和实体本身的表需要同时插入。
+
+## 有限状态机服务（BIZ）
+
+* 01：初始状态
+* 90：成功
+* 91：失败
+* 92：本地异常
+* 98：调用第三方失败
+* 99：未知
 
 ## 版本 
 
