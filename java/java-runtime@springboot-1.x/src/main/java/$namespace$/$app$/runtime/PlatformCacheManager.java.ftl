@@ -5,9 +5,11 @@ ${java.license(license)}
 </#if>
 package ${namespace}.${app.name}.runtime;
 
-import jakarta.servlet.http.HttpSession;
 import jakarta.enterprise.context.ApplicationScoped;
-import javax.inject.Named;
+import jakarta.inject.Named;
+import jakarta.servlet.http.HttpSession;
+
+import org.springframework.cache.Cache;
 
 @Named
 @ApplicationScoped
