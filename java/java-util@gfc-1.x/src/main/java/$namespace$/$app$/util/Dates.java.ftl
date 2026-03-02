@@ -9,34 +9,28 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
- * 日期工具类，提供常用日期格式化、解析、计算等静态方法。
- * 所有方法均为线程安全、null 安全。
+ * 日期工具类，支持 java.util.Date 和 java.time.* API。
+ * 所有方法均为 null 安全、线程安全。
  */
 public class Dates {
 
   // ------------------ 当前时间 ------------------
 
-  /**
-   * 获取当前时间 ISO 8601 格式（带毫秒和 Z）
-   * 示例: 2026-03-01T12:34:56.789Z
-   */
   public static String nowIso() {
-    return Instant.now().toString();
+    return Instant.now().toString();  // 示例: 2026-03-01T12:34:56.789Z
   }
 
-  /**
-   * 获取当前时间默认格式 yyyy-MM-dd HH:mm:ss
-   */
   public static String nowDefault() {
     return LocalDateTime.now()
       .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
   }
 
-  /**
-   * 获取当前日期 yyyy-MM-dd
-   */
   public static String todayDate() {
     return LocalDate.now()
       .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
@@ -44,31 +38,55 @@ public class Dates {
 
   // ------------------ 格式化 ------------------
 
-  /**
-   * 格式化 LocalDateTime 为指定模式
-   */
-  public static String format(LocalDateTime dateTime, String pattern) {
-    if (dateTime == null) {
-      return null;
-    }
-    return dateTime.format(DateTimeFormatter.ofPattern(pattern));
-  }
-
-  /**
-   * 格式化 LocalDate 为指定模式
-   */
-  public static String format(LocalDate date, String pattern) {
+  public static String format(Object date, String pattern) {
     if (date == null) {
       return null;
     }
-    return date.format(DateTimeFormatter.ofPattern(pattern));
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+
+    if (date instanceof Date) {
+      return Instant.ofEpochMilli(((Date) date).getTime())
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime()
+        .format(formatter);
+    }
+
+    if (date instanceof LocalDateTime) {
+      return ((LocalDateTime) date).format(formatter);
+    }
+
+    if (date instanceof LocalDate) {
+      return ((LocalDate) date).format(formatter);
+    }
+
+    if (date instanceof Instant) {
+      return ((Instant) date).atZone(ZoneId.systemDefault())
+        .toLocalDateTime()
+        .format(formatter);
+    }
+
+    throw new IllegalArgumentException("Unsupported date type: " + date.getClass().getName());
+  }
+
+  public static String formatDefault(Object date) {
+    return format(date, "yyyy-MM-dd HH:mm:ss");
   }
 
   // ------------------ 解析 ------------------
 
-  /**
-   * 解析字符串为 LocalDateTime
-   */
+  public static Date parseDate(String dateStr, String pattern) {
+    if (dateStr == null || dateStr.trim().isEmpty()) {
+      return null;
+    }
+    try {
+      LocalDateTime ldt = LocalDateTime.parse(dateStr, DateTimeFormatter.ofPattern(pattern));
+      return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("Cannot parse: " + dateStr);
+    }
+  }
+
   public static LocalDateTime parseLocalDateTime(String dateStr, String pattern) {
     if (dateStr == null || dateStr.trim().isEmpty()) {
       return null;
@@ -80,9 +98,6 @@ public class Dates {
     }
   }
 
-  /**
-   * 解析字符串为 LocalDate
-   */
   public static LocalDate parseLocalDate(String dateStr, String pattern) {
     if (dateStr == null || dateStr.trim().isEmpty()) {
       return null;
@@ -96,53 +111,127 @@ public class Dates {
 
   // ------------------ 当天起止时间 ------------------
 
-  /**
-   * 获取当天 00:00:00
-   */
   public static LocalDateTime todayStart() {
     return LocalDate.now().atStartOfDay();
   }
 
-  /**
-   * 获取当天 23:59:59.999999999
-   */
   public static LocalDateTime todayEnd() {
     return LocalDate.now().atTime(LocalTime.MAX);
   }
 
-  // ------------------ 时间差计算 ------------------
+  public static Date todayStartAsDate() {
+    return Date.from(todayStart().atZone(ZoneId.systemDefault()).toInstant());
+  }
+
+  public static Date todayEndAsDate() {
+    return Date.from(todayEnd().atZone(ZoneId.systemDefault()).toInstant());
+  }
+
+  // ------------------ 天数差 ------------------
 
   /**
    * 计算两个日期之间的天数差（不含结束日）
+   * 支持 Date / LocalDate / LocalDateTime / Instant
    */
-  public static long daysBetween(LocalDate start, LocalDate end) {
-    if (start == null || end == null) {
+  public static long daysBetween(Object start, Object end) {
+    LocalDate startDate = toLocalDate(start);
+    LocalDate endDate = toLocalDate(end);
+    if (startDate == null || endDate == null) {
       return 0;
     }
-    return ChronoUnit.DAYS.between(start, end);
+    return ChronoUnit.DAYS.between(startDate, endDate);
+  }
+
+  // ------------------ 工作日计算 ------------------
+
+  /**
+   * 计算从 startDate 开始，经过 workDays 个工作日后的日期
+   * 假日列表 holidays 为 LocalDate 的 Set 或 List，会被跳过
+   * 周末（周六、周日）自动视为非工作日
+   */
+  public static LocalDate addWorkdays(LocalDate startDate, int workDays, List<LocalDate> holidays) {
+    if (startDate == null) {
+      return null;
+    }
+    if (workDays == 0) {
+      return startDate;
+    }
+
+    Set<LocalDate> holidaySet = holidays == null ? new HashSet<>() : new HashSet<>(holidays);
+
+    LocalDate current = startDate;
+    int added = 0;
+
+    while (added < workDays) {
+      current = current.plusDays(1);
+      DayOfWeek dow = current.getDayOfWeek();
+      // 不是周末，且不在假日列表中 → 算一个工作日
+      if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY && !holidaySet.contains(current)) {
+        added++;
+      }
+    }
+
+    return current;
   }
 
   /**
-   * 计算两个日期时间之间的秒数差
+   * 重载：支持 java.util.Date 类型输入
    */
-  public static long secondsBetween(LocalDateTime start, LocalDateTime end) {
-    if (start == null || end == null) {
-      return 0;
+  public static Date addWorkdays(Date startDate, int workDays, List<LocalDate> holidays) {
+    if (startDate == null) {
+      return null;
     }
-    return ChronoUnit.SECONDS.between(start, end);
+    LocalDate localStart = startDate.toInstant()
+      .atZone(ZoneId.systemDefault())
+      .toLocalDate();
+    LocalDate result = addWorkdays(localStart, workDays, holidays);
+    return result == null ? null : Date.from(result.atStartOfDay(ZoneId.systemDefault()).toInstant());
+  }
+
+  // ------------------ 辅助转换 ------------------
+
+  private static LocalDate toLocalDate(Object obj) {
+    if (obj == null) {
+      return null;
+    }
+    if (obj instanceof Date) {
+      return ((Date) obj).toInstant()
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate();
+    }
+    if (obj instanceof LocalDate) {
+      return (LocalDate) obj;
+    }
+    if (obj instanceof LocalDateTime) {
+      return ((LocalDateTime) obj).toLocalDate();
+    }
+    if (obj instanceof Instant) {
+      return ((Instant) obj).atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+    throw new IllegalArgumentException("Unsupported date type: " + obj.getClass().getName());
   }
 
   // ------------------ 友好时间 ------------------
 
-  /**
-   * 友好时间格式（刚刚、几分钟前、昨天、几天前）
-   */
-  public static String friendlyTime(LocalDateTime time) {
+  public static String friendlyTime(Object time) {
     if (time == null) {
       return "";
     }
+
+    LocalDateTime ldt;
+    if (time instanceof Date) {
+      ldt = ((Date) time).toInstant()
+        .atZone(ZoneId.systemDefault())
+        .toLocalDateTime();
+    } else if (time instanceof LocalDateTime) {
+      ldt = (LocalDateTime) time;
+    } else {
+      throw new IllegalArgumentException("Unsupported time type: " + time.getClass().getName());
+    }
+
     LocalDateTime now = LocalDateTime.now();
-    long seconds = ChronoUnit.SECONDS.between(time, now);
+    long seconds = ChronoUnit.SECONDS.between(ldt, now);
+
     if (seconds < 60) {
       return "刚刚";
     }
@@ -152,17 +241,15 @@ public class Dates {
     if (seconds < 86400) {
       return seconds / 3600 + "小时前";
     }
-    long days = ChronoUnit.DAYS.between(time.toLocalDate(), now.toLocalDate());
+
+    long days = ChronoUnit.DAYS.between(ldt.toLocalDate(), now.toLocalDate());
     if (days == 1) {
       return "昨天";
     }
     if (days < 7) {
       return days + "天前";
     }
-    return time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-  }
 
-  private Dates() {
-
+    return format(ldt, "yyyy-MM-dd");
   }
 }
