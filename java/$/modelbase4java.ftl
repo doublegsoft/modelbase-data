@@ -9,13 +9,15 @@
  ###
  ### @return
  ###        the programming language type name
- #-->
-<#function type_attribute attr>
-  <#if attr.type.custom>
+ -->
+<#function type_attribute attr suffix="">
+  <#if attr.type.class?? && attr.type.class.name?ends_with("ObjectDefinition")>
+    <#return (java.nameType(attr.type.name) + suffix)>
+  <#elseif attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
     <#return java.nameType(refObj.name)>
   <#elseif attr.constraint?? && attr.constraint.domainType?? && attr.constraint.domainType.name == "id">
-    <#return "Long">
+    <#return "Long">    
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
     <#return "Integer">  
   <#elseif attr.type.name == "number">
@@ -27,12 +29,12 @@
   <#elseif attr.type.primitive>
     <#return typebase.typename(attr.type.name, "java", "String")>
   <#elseif attr.type.collection>
-    <#assign fakeAttr = {"type": attr.type.componentType}>
+    <#local fakeAttr = {"type": attr.type.componentType}>
     <#return "List<" + type_attribute(fakeAttr) + ">">
   <#elseif attr.type.domain>
-    <#assign exprDomain = attr.type.toString()>
+    <#local exprDomain = attr.type.toString()>
     <#if exprDomain?index_of("&") == 0>
-      <#assign refObj = model.findObjectByName(attr.type.name)>
+      <#local refObj = model.findObjectByName(attr.type.name)>
       <#return java.nameType(refObj.name)>
     <#else>
       <#return typebase.typename(attr.type.name, "java", "String")>
