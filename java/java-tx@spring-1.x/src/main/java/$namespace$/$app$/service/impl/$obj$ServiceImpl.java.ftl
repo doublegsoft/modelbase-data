@@ -270,8 +270,8 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
    * 聚合统计【${modelbase.get_object_label(obj)}】对象。
    */
   @Override
-  public Pagination<${typename}Query> aggregate${typename}(${typename}Query query) throws ServiceException {
-    Pagination<${typename}Query> retVal = new Pagination<>();
+  public List<Map<String,Object>> aggregate${typename}(${typename}Query query) throws ServiceException {
+    List<Map<String,Object>> retVal = new ArrayList<>();
 <#if obj.isLabelled("pivot")> 
   <#if obj.getLabelledOptions("pivot")["master"]??>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
@@ -283,9 +283,7 @@ public class ${typename}ServiceImpl extends QueryHandlerService implements ${typ
 <#else>   
     try {    
       List<Map<String,Object>> results = ${varname}DataAccess.selectAggregateOf${typename}(query);
-      for (Map<String,Object> row : results) {
-        retVal.getData().add(${typename}QueryAssembler.assemble${typename}Query(row));
-      }
+      retVal.addAll(results);
       return retVal;
     } catch (Throwable cause) {
       throw new ServiceException(500, cause);

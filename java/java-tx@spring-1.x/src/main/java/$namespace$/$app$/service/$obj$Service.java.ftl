@@ -162,7 +162,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  Pagination<${typename}Query> aggregate${typename}(${typename}Query query) throws ServiceException;
+  List<Map<String,Object>> aggregate${typename}(${typename}Query query) throws ServiceException;
   
   /**
    * 删除（物理删除）【${modelbase.get_object_label(obj)}】对象。
