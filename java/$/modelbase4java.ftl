@@ -1159,8 +1159,9 @@ ${""?left_pad(indent)}}
         <#if !collObjAttr.type.custom || collObjAttr.type.name == obj.name><#continue></#if>
         <#local collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
         <#if !existings[collObjAttrRefObj.name]??>
+          <#local existings += {collObjAttrRefObj.name: collObjAttrRefObj}>
       
-  @Autowired
+  @Autowired 
   ${java.nameType(collObjAttrRefObj.name)}Service ${java.nameVariable(collObjAttrRefObj.name)}Service;
         </#if>
       </#list>
@@ -1487,17 +1488,17 @@ ${""?left_pad(indent)}}
         <#local collObjAttrRefObj = model.findObjectByName(collObjAttr.type.name)>
         <#local collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
 ${""?left_pad(indent)}// 封装关联中明细的【${modelbase.get_object_label(collObjAttrRefObj)}】数据  
-${""?left_pad(indent)}Set<${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)}> ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids = new HashSet<>();
+${""?left_pad(indent)}Set<${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)}> ${java.nameVariable(collObjAttr.name)}Ids = new HashSet<>();
 ${""?left_pad(indent)}for (Map<String,Object> row : ${java.nameVariable(attr.name)}) {
-${""?left_pad(indent)}  ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids.add((${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)})row.get("${modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)}"));
+${""?left_pad(indent)}  ${java.nameVariable(collObjAttr.name)}Ids.add((${modelbase4java.type_attribute(collObjAttrRefObjIdAttr)})row.get("${modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)}"));
 ${""?left_pad(indent)}}
-${""?left_pad(indent)}${java.nameType(collObjAttrRefObj.name)}Query ${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query = new ${java.nameType(collObjAttrRefObj.name)}Query();
-${""?left_pad(indent)}${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query.setLimit(-1);
-${""?left_pad(indent)}${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query.get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)))}().addAll(${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Ids);
-${""?left_pad(indent)}Pagination<${java.nameType(collObjAttrRefObj.name)}Query> ${java.nameVariable(attr.name)}${java.nameType(modelbase.get_object_plural(obj))} = ${java.nameVariable(collObjAttrRefObj.name)}Service.find${java.nameType(modelbase.get_object_plural(collObjAttrRefObj))}(${java.nameVariable(attr.name)}${java.nameType(collObjAttrRefObj.name)}Query);
-${""?left_pad(indent)}for (${java.nameType(collObjAttrRefObj.name)}Query row : ${java.nameVariable(attr.name)}${java.nameType(modelbase.get_object_plural(obj))}.getData()) {
+${""?left_pad(indent)}${java.nameType(collObjAttrRefObj.name)}Query ${java.nameVariable(collObjAttr.name)}Query = new ${java.nameType(collObjAttrRefObj.name)}Query();
+${""?left_pad(indent)}${java.nameVariable(collObjAttr.name)}Query.setLimit(-1);
+${""?left_pad(indent)}${java.nameVariable(collObjAttr.name)}Query.get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr)))}().addAll(${java.nameVariable(collObjAttr.name)}Ids);
+${""?left_pad(indent)}Pagination<${java.nameType(collObjAttrRefObj.name)}Query> ${java.nameVariable(collObjAttr.name)}${java.nameType(modelbase.get_object_plural(obj))} = ${java.nameVariable(collObjAttrRefObj.name)}Service.find${java.nameType(modelbase.get_object_plural(collObjAttrRefObj))}(${java.nameVariable(collObjAttr.name)}Query);
+${""?left_pad(indent)}for (${java.nameType(collObjAttrRefObj.name)}Query row : ${java.nameVariable(collObjAttr.name)}${java.nameType(modelbase.get_object_plural(obj))}.getData()) {
 ${""?left_pad(indent)}  for (${java.nameType(collObj.name)}Query innerRow : retVal.get${java.nameType(attr.name)}()) {
-${""?left_pad(indent)}    if (innerRow.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr))}().equals(row.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr))}())) {
+${""?left_pad(indent)}    if (innerRow.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttr))}().equals(row.get${java.nameType(modelbase.get_attribute_sql_name(collObjAttrRefObjIdAttr))}())) {
 ${""?left_pad(indent)}      innerRow.set${java.nameType(collObjAttr.name)}(row);
 ${""?left_pad(indent)}      break;
 ${""?left_pad(indent)}    }
