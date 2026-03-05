@@ -2847,3 +2847,31 @@ ${""?left_pad(indent)}${line}
     </#list>
   </#if>
 </#function>
+
+<#--
+ ### 根据对象名称和属性名称查找属性定义对象。
+ ### <p>
+ ### 该函数用于在全局模型中定位特定的属性定义。它首先根据对象名找到对象定义，
+ ### 然后遍历属性列表进行匹配。
+ ###
+ ### 核心特性 - 模糊匹配 (Fuzzy Matching):
+ ### 为了兼容不同的命名风格（特别是数据库表字段带前缀的情况），该函数支持两种匹配模式：
+ ### 1. 精确匹配: 属性名完全一致 (例如: "email" == "email")。
+ ### 2. 前缀匹配: 输入名称等于 "对象名_属性名" (例如: 输入 "user_email" 可以匹配 User 对象下的 "email" 属性)。
+ ###
+ ### @param objname
+ ###        对象名称字符串 (String)
+ ### @param attrname
+ ###        待查找的属性名称字符串 (String)
+ ###
+ ### @return
+ ###        找到的属性定义对象 (AttributeDefinition)，若未找到则隐式返回 null
+ -->
+<#function find_attribute_by_names objname attrname>
+  <#local obj = model.findObjectByName(objname)>
+  <#list obj.attributes as attr>
+    <#if attr.name == attrname || (objname + "_" + attr.name) == attrname>
+      <#return attr>
+    </#if>
+  </#list>
+</#function>
