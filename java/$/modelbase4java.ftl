@@ -48,9 +48,9 @@
     <#local refObj = model.findObjectByName(attr.type.name)>
     <#local refObjIdAttrs = modelbase.get_id_attributes(refObj)>
     <#return type_attribute_primitive(refObjIdAttrs[0])>
-  <#elseif attr.constraint.domainType.name == "id">
+  <#elseif attr.constraint.domainType?? && attr.constraint.domainType.name == "id">
     <#return "Long">  
-  <#elseif attr.constraint.domainType.name == "uuid">
+  <#elseif attr.constraint.domainType?? && attr.constraint.domainType.name == "uuid">
     <#return "String">    
   <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
     <#return "Date">  
