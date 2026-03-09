@@ -153,75 +153,61 @@ public class Datasets {
                 Optional.ofNullable(mapB.get(key)))));
   }
 
-  /* ==============================================================
-   * 1）一对一 LEFT JOIN → Map<LeftKey, Map<String,Object>>
-   * ============================================================== */
-  public static <L, R, K> Map<K, Map<String,Object>> leftJoinOneToOne(
+  /**
+   * 两个 List 的 LEFT JOIN（左表 → 右表），返回 List<R>（每一次匹配产生一条记录）。
+   *
+   * @param left          左表集合（必返回全部记录）
+   * @param right         右表集合
+   * @param leftKeyFn     从左表元素提取连接键的函数
+   * @param rightKeyFn    从右表元素提取连接键的函数
+   * @param merger        合并函数： (L left, R right) -> OUT
+   *                     right 为 null 时表示左侧没有匹配
+   * @param <L>          左表元素类型
+   * @param <R>          右表元素类型
+   * @param <K>          连接键类型（必须实现 equals / hashCode）
+   * @param <OUT>        合并后返回的对象类型（可以是 Map、DTO、或原始对象的子类）
+   * @return List<OUT>   每一次匹配（或左侧无匹配）产生的记录集合
+   */
+  public static <L, R, K, OUT> List<OUT> leftJoin(
       List<L> left,
       List<R> right,
       Function<? super L, K> leftKeyFn,
       Function<? super R, K> rightKeyFn,
-      BiFunction<L,R,Map<String,Object>> merger) {
+      BiFunction<? super L, ? super R, OUT> merger) {
 
-    // ① 把右表放进 Map<K,R>（如果出现冲突保留第一个）
-    Map<K,R> rightMap = right.stream()
-        .collect(Collectors.toMap(rightKeyFn, Function.identity(),
-                (a,b) -> a));
-
-    // ② 遍历左表，构造合并后的 Map
-    Map<K,Map<String,Object>> result = new LinkedHashMap<>();
-    for (L l : left) {
-      K key   = leftKeyFn.apply(l);
-      R rObj = rightMap.get(key);                     // 可能为 null
-      result.put(key, merger.apply(l, rObj));
-    }
-    return result;
-  }
-
-  /* ==============================================================
-   * 2）一对多 LEFT JOIN → Map<LeftKey, List<Map<String,Object>>>
-   * ============================================================== */
-  public static <L, R, K> Map<K, List<Map<String,Object>>> leftJoinOneToMany(
-      List<L> left,
-      List<R> right,
-      Function<? super L, K> leftKeyFn,
-      Function<? super R, K> rightKeyFn,
-      BiFunction<L,R,Map<String,Object>> merger) {
-
-    // ① 把右表聚成 Map<K,List<R>>
-    Map<K, List<R>> rightGrouped = right.stream()
+    // 1️⃣ 把右表聚成 Map<K, List<R>>
+    Map<K, List<R>> rightMap = right.stream()
         .collect(Collectors.groupingBy(rightKeyFn));
 
-    // ② 遍历左表，生成 List<Map>（若没有匹配则返回空列表）
-    Map<K, List<Map<String,Object>>> result = new LinkedHashMap<>();
+    // 2️⃣ 遍历左表，产生合并结果
+    List<OUT> result = new ArrayList<>();
+
     for (L l : left) {
       K key = leftKeyFn.apply(l);
-      List<R> matches = rightGrouped.getOrDefault(key, Collections.emptyList());
+      List<R> matches = rightMap.get(key);
 
-      // 如果没有匹配，仍然需要返回一条空记录（LEFT 的语义）
-      if (matches.isEmpty()) {
-        result.put(key, Collections.singletonList(merger.apply(l, null)));
+      // 没有匹配 → 只产生一条（右侧为 null）的记录
+      if (matches == null || matches.isEmpty()) {
+        result.add(merger.apply(l, null));
       } else {
-        List<Map<String,Object>> combined = new ArrayList<>(matches.size());
+        // 有匹配 → 每一条右记录都产生一次合并输出
         for (R r : matches) {
-          combined.add(merger.apply(l, r));
+          result.add(merger.apply(l, r));
         }
-        result.put(key, combined);
       }
     }
     return result;
   }
 
-  /* ==============================================================
-   * 3）统一的属性提取帮助函数（可复用）
-   * ============================================================== */
-  /** 把 POJO 的属性转成 Map（不包括 null 项） */
+  /* -------------------------------------------------
+   * 辅助：把 POJO 转成 Map<String,Object>（常用于合并时返回 Map）
+   * ------------------------------------------------- */
   public static Map<String,Object> beanToMap(Object bean) {
     if (bean == null) return Collections.emptyMap();
     Map<String,Object> map = new LinkedHashMap<>();
     Class<?> cls = bean.getClass();
 
-    // 先查字段（包括 private），再查 getter
+    // 包含本类 + 父类的所有字段（private 也能访问）
     for (Field f : getAllFields(cls)) {
       f.setAccessible(true);
       try {
@@ -232,10 +218,9 @@ public class Datasets {
     return map;
   }
 
-  /** 递归收集类及其父类的所有字段 */
-  private static List<Field> getAllFields(Class<?> clazz) {
+  private static List<Field> getAllFields(Class<?> cls) {
     List<Field> fields = new ArrayList<>();
-    for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
+    for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
       fields.addAll(Arrays.asList(c.getDeclaredFields()));
     }
     return fields;
