@@ -153,6 +153,94 @@ public class Datasets {
                 Optional.ofNullable(mapB.get(key)))));
   }
 
+  /* ==============================================================
+   * 1）一对一 LEFT JOIN → Map<LeftKey, Map<String,Object>>
+   * ============================================================== */
+  public static <L, R, K> Map<K, Map<String,Object>> leftJoinOneToOne(
+      List<L> left,
+      List<R> right,
+      Function<? super L, K> leftKeyFn,
+      Function<? super R, K> rightKeyFn,
+      BiFunction<L,R,Map<String,Object>> merger) {
+
+    // ① 把右表放进 Map<K,R>（如果出现冲突保留第一个）
+    Map<K,R> rightMap = right.stream()
+        .collect(Collectors.toMap(rightKeyFn, Function.identity(),
+                (a,b) -> a));
+
+    // ② 遍历左表，构造合并后的 Map
+    Map<K,Map<String,Object>> result = new LinkedHashMap<>();
+    for (L l : left) {
+      K key   = leftKeyFn.apply(l);
+      R rObj = rightMap.get(key);                     // 可能为 null
+      result.put(key, merger.apply(l, rObj));
+    }
+    return result;
+  }
+
+  /* ==============================================================
+   * 2）一对多 LEFT JOIN → Map<LeftKey, List<Map<String,Object>>>
+   * ============================================================== */
+  public static <L, R, K> Map<K, List<Map<String,Object>>> leftJoinOneToMany(
+      List<L> left,
+      List<R> right,
+      Function<? super L, K> leftKeyFn,
+      Function<? super R, K> rightKeyFn,
+      BiFunction<L,R,Map<String,Object>> merger) {
+
+    // ① 把右表聚成 Map<K,List<R>>
+    Map<K, List<R>> rightGrouped = right.stream()
+        .collect(Collectors.groupingBy(rightKeyFn));
+
+    // ② 遍历左表，生成 List<Map>（若没有匹配则返回空列表）
+    Map<K, List<Map<String,Object>>> result = new LinkedHashMap<>();
+    for (L l : left) {
+      K key = leftKeyFn.apply(l);
+      List<R> matches = rightGrouped.getOrDefault(key, Collections.emptyList());
+
+      // 如果没有匹配，仍然需要返回一条空记录（LEFT 的语义）
+      if (matches.isEmpty()) {
+        result.put(key, Collections.singletonList(merger.apply(l, null)));
+      } else {
+        List<Map<String,Object>> combined = new ArrayList<>(matches.size());
+        for (R r : matches) {
+          combined.add(merger.apply(l, r));
+        }
+        result.put(key, combined);
+      }
+    }
+    return result;
+  }
+
+  /* ==============================================================
+   * 3）统一的属性提取帮助函数（可复用）
+   * ============================================================== */
+  /** 把 POJO 的属性转成 Map（不包括 null 项） */
+  public static Map<String,Object> beanToMap(Object bean) {
+    if (bean == null) return Collections.emptyMap();
+    Map<String,Object> map = new LinkedHashMap<>();
+    Class<?> cls = bean.getClass();
+
+    // 先查字段（包括 private），再查 getter
+    for (Field f : getAllFields(cls)) {
+      f.setAccessible(true);
+      try {
+        Object v = f.get(bean);
+        if (v != null) map.put(f.getName(), v);
+      } catch (IllegalAccessException ignored) {}
+    }
+    return map;
+  }
+
+  /** 递归收集类及其父类的所有字段 */
+  private static List<Field> getAllFields(Class<?> clazz) {
+    List<Field> fields = new ArrayList<>();
+    for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
+      fields.addAll(Arrays.asList(c.getDeclaredFields()));
+    }
+    return fields;
+  }
+
   private static class AggregateAccumulator {
     private final List<AggregateSpecification> specs;
     private final List<Function<?,Object>> valueGetters; // 与 specs 对齐
