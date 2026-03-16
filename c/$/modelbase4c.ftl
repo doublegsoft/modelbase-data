@@ -2,8 +2,15 @@
  ### get re-assembling attribute type object.
  -->
 <#function type_attribute attr>
-  <#if attr.type.name == "string">
-    <#return {"name": "char*"}>
+  <#if attr.constraint.domainType?? && attr.constraint.domainType.name?starts_with("enum")>
+    <#local pairs = typebase.enumtype(attr.constraint.domainType.name)>
+    <#return {"name": "char","length":pairs[0].key?length}>
+  <#elseif attr.type.name == "string">
+    <#if attr.constraint.maxSize??>
+      <#return {"name": "char", "length":attr.constraint.maxSize}>
+    <#else>
+      <#return {"name": "char*"}>
+    </#if>
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
     <#return {"name": "int"}>
   <#elseif attr.type.name == "date" || attr.type.name == "time" || attr.type.name == "datetime">
