@@ -6,7 +6,7 @@
     <#local pairs = typebase.enumtype(attr.constraint.domainType.name)>
     <#return {"name": "char","length":pairs[0].key?length}>
   <#elseif attr.type.name == "string">
-    <#if attr.constraint.maxSize??>
+    <#if attr.constraint.maxSize?? && attr.constraint.maxSize != 0>
       <#return {"name": "char", "length":attr.constraint.maxSize}>
     <#else>
       <#return {"name": "char*"}>
@@ -30,7 +30,7 @@
   <#if attr.type.custom>
     <#return attr.name>  
   </#if>
-  <#return c.nameVariable(modelbase.get_attribute_sql_name(attr))>
+  <#return c.nameVariable(attr.name)>
 </#function>
 
 <#function name_attribute_as_primitive attr>

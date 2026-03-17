@@ -24,7 +24,8 @@ extern "C"
 **              responsible for freeing this memory.
 */
 ${namespace}_${obj.name}_p 
-${namespace}_${obj.name}_decode(const unsigned char* bytes);
+${namespace}_${obj.name}_decode(const unsigned char* buf, 
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len);
 
 /*!
 ** Serializes (encodes) an object instance into a dynamically allocated byte buffer.

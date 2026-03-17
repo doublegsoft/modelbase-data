@@ -81,21 +81,7 @@ struct ${namespace}_${obj.name}_s
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
-    <#if attr.type.componentType??><#-- 优先判断，是否是自定义数组类型的对象 -->
-      <#if attr.type.componentType.name == "any[]">
-  void**     ${modelbase4c.name_attribute(attr)};    
-      <#else>
-  ${namespace}_${attr.type.componentType.name}_p*     ${modelbase4c.name_attribute(attr)};
-      </#if>
-  int     count_of_${modelbase4c.name_attribute(attr)};
-    <#elseif attr.type.custom><#-- 其次判断单个引用自定义类型 -->
-      <#assign refObj = model.findObjectByName(attr.type.name)>
-  ${namespace}_${refObj.name}_p ${modelbase4c.name_attribute(attr)};    
-    <#elseif attr.name == "state">
-  char  state[2];
-    <#else>
   ${attrtype.name} ${modelbase4c.name_attribute(attr)}<#if attrtype.length??>[${attrtype.length}]</#if>;
-    </#if>
   </#list>
 }; 
 </#list>
