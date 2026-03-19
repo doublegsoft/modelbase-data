@@ -3,7 +3,6 @@
 <#if license??>
 ${c.license(license)}
 </#if>
-
 #ifndef __${app.name?upper_case}_PKT_H__
 #define __${app.name?upper_case}_PKT_H__
 
@@ -25,7 +24,7 @@ extern "C"
         <#list existingPairs as existingPair>
           <#assign existing = false>
           <#list pairs as pair>
-            <#if existing.key == pair.key>
+            <#if existingPair.key == pair.key>
               <#assign existing = true>
               <#break>
             </#if>
@@ -100,39 +99,41 @@ void
 ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p);
   <#list obj.attributes as attr>
     <#assign attrtype = modelbase4c.type_attribute(attr)>
-
-    <#if attr.type.componentType??>
-      <#if attr.type.componentType.name == "any[]">
-/*!
-** 添加【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
-*/
-void
-${namespace}_${obj.name}_add_${modelbase.get_attribute_singular(attr)}_to_${attr.name}(${namespace}_${obj.name}_p, void*);
-
+  
+    <#if attrtype.name == "char*" || (attrtype.name == "char" && attrtype.length??)>
+      <#assign singular = modelbase.get_attribute_singular(attr)>
 /*!
 ** 设置【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
 */
 void
-${namespace}_${obj.name}_set_${attr.name}(${namespace}_${obj.name}_p, void**, int);
-      <#else>
-/*!
-** 添加【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
-*/
-void
-${namespace}_${obj.name}_add_${attr.type.componentType.name}_to_${attr.name}(${namespace}_${obj.name}_p, ${namespace}_${attr.type.componentType.name}_p);
+${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, const char*, size_t);  
+      <#if attr.type.countedName??>
 
 /*!
-** 设置【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
+** 获取【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】某个索引值。
 */
-void
-${namespace}_${obj.name}_set_${attr.name}(${namespace}_${obj.name}_p, ${namespace}_${attr.type.componentType.name}_p*, int);      
+char*
+${namespace}_${obj.name}_get_${singular}(${namespace}_${obj.name}_p, int idx, size_t*);
       </#if>
+    <#elseif attrtype.name?contains("*")>
+      <#assign singular = modelbase.get_attribute_singular(attr)>
+/*!
+** 设置【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
+*/
+void
+${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, const ${attrtype.name}, size_t);    
+
+/*!
+** 获取【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】某个索引值。
+*/
+${attrtype.name?replace("*","")}
+${namespace}_${obj.name}_get_${singular}(${namespace}_${obj.name}_p, int idx);    
     <#else>
 /*!
 ** 设置【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
 */
 void
-${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, <#if attrtype.name == "char*" || (attrtype.name == "char" && attrtype.length??)>const char*<#else>${attrtype.name}</#if>);
+${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, ${attrtype.name});
     </#if>
   </#list>
 </#list>

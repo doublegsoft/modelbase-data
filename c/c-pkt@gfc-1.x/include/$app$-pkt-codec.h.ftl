@@ -4,8 +4,8 @@
 ${c.license(license)}
 </#if>
 
-#ifndef __${app.name?upper_case}_PKT_H__
-#define __${app.name?upper_case}_PKT_H__
+#ifndef __${app.name?upper_case}_PKT_CODEC_H__
+#define __${app.name?upper_case}_PKT_CODEC_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -50,4 +50,4 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}unsigned int* size);
 }
 #endif
 
-#endif // __${app.name?upper_case}_PKT_H__
+#endif // __${app.name?upper_case}_PKT_CODEC_H__
