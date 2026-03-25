@@ -99,18 +99,33 @@
     </#if>
   </#if>
   <#if attr.name == 'code'>
+    <#if attr.parent.name?starts_with("$")>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Code'>
+    </#if>
     <#return naming.nameVariable(attr.parent.name) + 'Code'>
   </#if>
   <#if attr.name == 'name'>
+    <#if attr.parent.name?starts_with("$")>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Name'>
+    </#if>
     <#return naming.nameVariable(attr.parent.name) + 'Name'>
   </#if>
   <#if attr.name == 'type'>
+    <#if attr.parent.name?starts_with("$")>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Type'>
+    </#if>
     <#return naming.nameVariable(attr.parent.name) + 'Type'>
   </#if>
   <#if attr.name == 'text'>
+    <#if attr.parent.name?starts_with("$")>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Text'>
+    </#if>
     <#return naming.nameVariable(attr.parent.name) + 'Text'>
   </#if>
   <#if attr.name == 'group'>
+    <#if attr.parent.name?starts_with("$")>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Group'>
+    </#if>
     <#return naming.nameVariable(attr.parent.name) + 'Group'>
   </#if>
   <#if attr.type.primitive>

@@ -1,7 +1,7 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4js.ftl" as modelbase4js>
 <#if license??>
-${dart.license(license)}
+${js.license(license)}
 </#if>
 import sdk from './options';
 
@@ -37,18 +37,18 @@ sdk.fetchWelcomeImages = async function (params) {
 /**
  * 保存【${modelbase.get_object_label(obj)}】数据。
  */
-sdk.save${dart.nameType(obj.name)} = async function (${dart.nameVariable(obj.name)}) {
+sdk.save${js.nameType(obj.name)} = async function (${js.nameVariable(obj.name)}) {
   await delay();
   <#list idAttrs as idAttr>
-  ${dart.nameVariable(obj.name)}.${modelbase.get_attribute_sql_name(idAttr)} = ${modelbase4js.test_unit_value(idAttr)};
+  ${js.nameVariable(obj.name)}.${modelbase.get_attribute_sql_name(idAttr)} = ${modelbase4js.test_unit_value(idAttr)};
   </#list>   
-  return ${dart.nameVariable(obj.name)};
+  return ${js.nameVariable(obj.name)};
 }
 
 /**
  * 读取【${modelbase.get_object_label(obj)}】数据。
  */
-sdk.read${dart.nameType(obj.name)} = async function (
+sdk.read${js.nameType(obj.name)} = async function (
   <#list idAttrs as idAttr>
   ${modelbase.get_attribute_sql_name(idAttr)}<#if idAttr?index != idAttrs?size - 1>,</#if>
   </#list>
@@ -66,7 +66,7 @@ sdk.read${dart.nameType(obj.name)} = async function (
 /**
  * 加载【${modelbase.get_object_label(obj)}】数据。
  */
-sdk.find${dart.nameType(inflector.pluralize(obj.name))} = async function (query) {
+sdk.find${js.nameType(inflector.pluralize(obj.name))} = async function (query) {
   await delay();
   let items = [];
   let limit = query.limit || 10;
@@ -89,7 +89,7 @@ sdk.find${dart.nameType(inflector.pluralize(obj.name))} = async function (query)
 /**
  * 删除【${modelbase.get_object_label(obj)}】数据。
  */
-sdk.remove${dart.nameType(obj.name)} = async function (query) {
+sdk.remove${js.nameType(obj.name)} = async function (query) {
   await delay();
   return true;
 }
