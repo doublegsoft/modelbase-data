@@ -1755,6 +1755,70 @@
   <#return false>
 </#function>
 
+<#--
+ ### 判断当前属性是否作为其他属性的“长度/计数器”字段。
+ ### <p>
+ ### 在底层数据结构（如 C 语言的 struct 或 TLV 协议包）中，变长数据（如动态数组、字符串）
+ ### 通常依赖另一个整型字段来记录其实际长度（例如：`int item_count; Item* items;`）。
+ ### 
+ ### 该函数用于【反向检查】：判断当前传入的属性（例如 `item_count`），是否被同一对象中的
+ ### 某个其他属性（例如 `items`）显式指定为了长度字段（即 `lengthName`）。
+ ### 这在生成 C 语言代码时非常有用，比如我们在分配内存或序列化时，经常需要对这种
+ ### 充当“计数器”的字段做特殊处理（例如不把它当成普通字段独立生成，而是与数组绑定生成）。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 回溯上下文: 获取当前属性的父对象 (Parent Object)。
+ ### 2. 遍历兄弟节点: 遍历父对象的所有属性。
+ ### 3. 依赖匹配: 检查是否有任何兄弟属性显式声明了 `lengthName`，且该配置等于当前属性的名称。
+ ### 4. 返回判定: 若匹配成功，证明当前属性是一个“长度字段”，返回 true。
+ ###
+ ### @param attr
+ ###        待检查的属性定义对象 (AttributeDefinition)
+ ###
+ ### @return
+ ###        true 表示该属性被用作长度/计数器字段，false 表示不是
+ -->
+<#function is_attribute_length_name attr>
+  <#local obj = attr.parent>
+  <#list obj.attributes as objAttr>
+    <#if objAttr.type.lengthName?? && objAttr.type.lengthName == attr.name>
+      <#return true>
+    </#if>
+  </#list>
+  <#return false>
+</#function>
+
+<#--
+ ### 判断当前属性是否作为其他集合属性的“计数器（元素个数）”字段。
+ ### <p>
+ ### 在底层数据结构（如 C/C++ 的 struct 内存布局或二进制通讯协议）中，
+ ### 动态数组（Array/Collection）不能独立存在，必须依赖另一个整型字段来记录
+ ### 其包含的【元素数量】（例如：`int item_count; Item* items;`）。
+ ### 
+ ### 该函数用于【反向检查】：判断当前传入的属性（例如 `item_count`），是否被同一对象中的
+ ### 某个其他集合属性（例如 `items`）显式指定为了计数器字段（即 `countedName`）。
+ ###
+ ### 业务场景:
+ ### 在生成序列化（Encode/Decode）代码时，生成器需要知道哪些字段是普通业务数据，
+ ### 哪些字段是纯粹的“结构元数据”。作为计数器的字段，其值是由后面数组的实际长度决定的，
+ ### 因此在生成赋值或拷贝代码时，往往需要对其进行跳过或做特殊联动处理。
+ ###
+ ### @param attr
+ ###        待检查的属性定义对象 (AttributeDefinition)
+ ###
+ ### @return
+ ###        true 表示该属性被用作数组/集合的元素计数器，false 表示不是
+ -->
+<#function is_attribute_counted_name attr>
+  <#local obj = attr.parent>
+  <#list obj.attributes as objAttr>
+    <#if objAttr.type.countedName?? && objAttr.type.countedName == attr.name>
+      <#return true>
+    </#if>
+  </#list>
+  <#return false>
+</#function>
+
 <#function is_attribute_avatar attr>
   <#if attr.name == "avatar" || attr.type.name == "avatar" || attr.isLabelled("avatar")>
     <#return true>

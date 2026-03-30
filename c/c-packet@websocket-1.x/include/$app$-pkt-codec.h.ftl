@@ -41,9 +41,9 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len);
 **              the total size (in bytes) of the newly allocated buffer.
 */
 void 
-${namespace}_${obj.name}_encode(${namespace}_${obj.name}_p obj, 
+${namespace}_${obj.name}_encode(const ${namespace}_${obj.name}_p obj, 
 ${""?left_pad(namespace?length + obj.name?length + 9)}unsigned char** bytes, 
-${""?left_pad(namespace?length + obj.name?length + 9)}unsigned int* size);
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size);
 </#list>
 
 #ifdef __cplusplus
