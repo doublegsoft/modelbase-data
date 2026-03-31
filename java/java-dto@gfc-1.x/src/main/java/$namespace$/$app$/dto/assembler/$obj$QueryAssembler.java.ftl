@@ -102,8 +102,6 @@ import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
 /**
  * 【${modelbase.get_object_label(obj)}】实体各层对象的装配器。
  *
- * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
- *
  * @since ${version}
  */
 public final class ${typename}QueryAssembler {

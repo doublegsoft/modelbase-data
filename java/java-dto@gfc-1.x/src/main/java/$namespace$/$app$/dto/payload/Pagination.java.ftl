@@ -11,9 +11,7 @@ import java.util.List;
 /**
  * It's the paged result object.
  *
- * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
- *
- * @since 1.0
+ * @param <T> the type of elements contained in the paginated result list
  */
 public class Pagination<T> {
 

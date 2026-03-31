@@ -94,13 +94,9 @@ public class ${typename}Controller extends BaseController {
   @PostMapping(value = "/${obj.name}/aggregate", produces = MediaType.APPLICATION_JSON_VALUE + ";charset=utf-8")
   public RestResult aggregate${java.nameType(obj.name)}(${typename}Query query) {
     try {
-      Pagination<${typename}Query> page = ${varname}Service.aggregate${java.nameType(obj.name)}(query);
+      List<Map<String,Object>> rows = ${varname}Service.aggregate${java.nameType(obj.name)}(query);
       RestResult retVal = new RestResult();
-      retVal.setTotal(page.getTotal());
-      List<Map<String,Object>> rows = new ArrayList<>();
-      for (${typename}Query item : page.getData()) {
-        rows.add(item.toMap());
-      }
+      retVal.setTotal(rows.size());
       retVal.setData(rows);
       return retVal;
     } catch (Throwable cause) {

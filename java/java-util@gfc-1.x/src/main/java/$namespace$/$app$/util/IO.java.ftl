@@ -34,7 +34,7 @@ public class IO {
   }
 
   /**
-   * 读取文件所有行（List<String>）
+   * 读取文件所有行
    */
   public static List<String> readLines(String path) {
     if (path == null || path.trim().isEmpty()) {

@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Collections;
 
-/*!
-** 
-*/
+/**
+ * 查询处理器DTO。
+ */
 public class QueryHandler {
   
   protected String handler;

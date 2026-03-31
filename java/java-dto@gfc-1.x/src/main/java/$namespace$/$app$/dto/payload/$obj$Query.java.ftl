@@ -17,9 +17,9 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 import ${imp};
 </#list>
 
-/*!
-** 【${modelbase.get_object_label(obj)}】
-*/
+/**
+ * 【${modelbase.get_object_label(obj)}】
+ */
 public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Serializable {
 
   private static final long serialVersionUID = -1L;

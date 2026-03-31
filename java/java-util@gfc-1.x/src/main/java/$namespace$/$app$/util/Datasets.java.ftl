@@ -16,25 +16,26 @@ import java.util.stream.*;
 
 /**
  * It's the string utility.
- * 
- * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
- *
- * @since 2.0
+
  */
 public class Datasets {
 
   /**
-   * 对 List<T> 按若干属性分组，并一次性完成所有 AggSpec 中声明的聚合。
-   * <p>
-   *   返回值为 {@code List<Map<String,Object>>}：<br>
-   *   - 每个 Map 代表一个分组；<br>
-   *   - Map 中的键为 AggSpec.name（如 "totalAmount"），值为对应聚合结果。
+   * Groups a list of elements by given fields and performs multiple aggregations.
    *
-   * @param dataset          原始数据集合
-   * @param aggSpecs         需要执行的聚合列表（可以有任意数量）
-   * @param groupColumnNames 用来分组的属性名（一个或多个）
-   * @param <T>              列表元素的类型
-   * @return List<Map<String,Object>>
+   * <p>The result is a list of maps where:
+   * <ul>
+   *   <li>Each map represents a group</li>
+   *   <li>Keys are aggregation names defined in {@code AggregateSpecification}</li>
+   *   <li>Values are aggregation results</li>
+   * </ul>
+   *
+   * @param dataset the source data list
+   * @param aggSpecs the aggregation specifications (must not be empty)
+   * @param groupColumnNames the field names used for grouping (one or more)
+   * @param <T> the type of elements in the dataset
+   * @return a list of grouped aggregation results
+   * @throws IllegalArgumentException if {@code aggSpecs} is empty
    */
   @SuppressWarnings("unchecked") 
   public static <T> List<Map<String,Object>> group(
@@ -114,18 +115,19 @@ public class Datasets {
   }
   
   /**
-   * 两条 List 按指定键横向合并，返回 Map<key, Object>。
-   * value 实际是一个 Map<String,Object>（也可以是自定义 DTO）。
+   * 两条 List 按指定键横向合并，返回结果集。
+   * value 实际是一个 Map（也可以是自定义 DTO）。
    *
    * @param listA   第一个列表（类型 A）
    * @param keyFnA  从 A 中取匹配键的函数
    * @param listB   第二个列表（类型 B）
    * @param keyFnB  从 B 中取匹配键的函数
-   * @param merger  合并函数，接收 Optional<A>、Optional<B>，返回属性 Map
+   * @param merger  合并函数，接收两个集合对象，返回属性 Map
    * @param <K>    键的类型（本例使用 String）
    * @param <A>    列表 A 的元素类型
    * @param <B>    列表 B 的元素类型
-   * @return Map<String, Object>
+   * @return 合并后的结果，键为连接键的字符串形式，值为 merger 生成的属性 Map
+   * @throws IllegalArgumentException if listA or listB is null
    */
   public static <K, A, B> Map<String, Object> merge(
       List<A> listA,
@@ -154,7 +156,7 @@ public class Datasets {
   }
 
   /**
-   * 两个 List 的 LEFT JOIN（左表 → 右表），返回 List<R>（每一次匹配产生一条记录）。
+   * 两个 List 的 LEFT JOIN（左表 → 右表），返回 List（每一次匹配产生一条记录）。
    *
    * @param left          左表集合（必返回全部记录）
    * @param right         右表集合
@@ -166,7 +168,7 @@ public class Datasets {
    * @param <R>          右表元素类型
    * @param <K>          连接键类型（必须实现 equals / hashCode）
    * @param <OUT>        合并后返回的对象类型（可以是 Map、DTO、或原始对象的子类）
-   * @return List<OUT>   每一次匹配（或左侧无匹配）产生的记录集合
+   * @return 每一次匹配（或左侧无匹配）产生的记录集合
    */
   public static <L, R, K, OUT> List<OUT> leftJoin(
       List<L> left,

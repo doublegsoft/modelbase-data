@@ -10,9 +10,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
-/*!
-** 查询DTO基类。
-*/
+/**
+ * 查询DTO基类。
+ */
 public abstract class AbstractQuery {
 
   protected int start = 0;
