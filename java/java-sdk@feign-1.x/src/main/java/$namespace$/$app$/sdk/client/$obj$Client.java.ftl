@@ -3,14 +3,13 @@
 <#if license??>
 ${java.license(license)}
 </#if>
-package <#if namespace??>${namespace}.</#if>${app.name}.client;
+package <#if namespace??>${namespace}.</#if>${app.name}.sdk.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-import <#if namespace??>${namespace}.</#if>${app.name}.dto.*;
-import <#if namespace??>${namespace}.</#if>${app.name}.util.Pagination;
+import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
 
 <#-- 元数据变量提取 -->
 <#assign typename = java.nameType(obj.name)>
@@ -19,7 +18,6 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.Pagination;
 <#assign pluralName = inflector.pluralize(obj.name)>
 <#assign kebabPath = pluralName?replace("_", "-")?lower_case>
 <#assign idAttrs = modelbase.get_id_attributes(obj)>
-
 <#-- 获取主键类型和名称 (假设单主键场景用于 REST Path) -->
 <#assign hasSingleId = (idAttrs?size == 1)>
 <#if hasSingleId>
@@ -27,11 +25,10 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.Pagination;
   <#assign idName = java.nameVariable(idAttrs[0].name)>
   <#assign idSqlName = modelbase.get_attribute_sql_name(idAttrs[0])>
 </#if>
-
-<#--
- ### 自动生成的 OpenFeign 客户端接口。
- ### 负责微服务之间对【${modelbase.get_object_label(obj)}】资源的 RPC 调用。
- -->
+/**
+ * 自动生成的 OpenFeign 客户端接口。
+ * 负责微服务之间对【${modelbase.get_object_label(obj)}】资源的 RPC 调用。
+ */
 @FeignClient(
   contextId = "${varname}Client",
   name = "${app.name}-service",
@@ -42,58 +39,37 @@ public interface ${typename}Client {
   /**
    * 创建【${modelbase.get_object_label(obj)}】
    */
-  @PostMapping
+  @PostMapping("/save")
   ${typename}Query save${typename}(@RequestBody ${typename}Query query);
 
   /**
-   * 创建【${modelbase.get_object_label(obj)}】
+   * 获得第一个【${modelbase.get_object_label(obj)}】
    */
-  @PostMapping
-  ${typename}Query create${typename}(@RequestBody ${typename}Query query);
+  @PostMapping("/get")
+  ${typename}Query get${typename}(@RequestBody ${typename}Query query);
 
-<#if hasSingleId>
   /**
    * 根据主键获取【${modelbase.get_object_label(obj)}】详情
    */
-  @GetMapping("/{${idName}}")
-  ${typename}Query get${typename}(@PathVariable("${idName}") ${idType} ${idName});
-
-  /**
-   * 全量更新【${modelbase.get_object_label(obj)}】(覆盖更新)
-   */
-  @PutMapping("/{${idName}}")
-  ${typename}Query update${typename}(@PathVariable("${idName}") ${idType} ${idName}, @RequestBody ${typename}Query query);
+  @PostMapping("/read")
+  ${typename}Query read${typename}(@RequestBody ${typename}Query query);
 
   /**
    * 局部修改【${modelbase.get_object_label(obj)}】(仅更新非空字段)
    */
-  @PatchMapping("/{${idName}}")
-  ${typename}Query modify${typename}(@PathVariable("${idName}") ${idType} ${idName}, @RequestBody ${typename}Query query);
+  @PostMapping("/modify")
+  ${typename}Query modify${typename}(@RequestBody ${typename}Query query);
 
   /**
    * 删除【${modelbase.get_object_label(obj)}】(物理删除)
    */
-  @DeleteMapping("/{${idName}}")
-  void delete${typename}(@PathVariable("${idName}") ${idType} ${idName});
-<#else>
-  <#-- 对于复合主键或值对象，通常使用 POST 传递 Query 对象进行操作 -->
-  /**
-   * 修改【${modelbase.get_object_label(obj)}】(基于复合主键)
-   */
-  @PatchMapping("/modify")
-  ${typename}Query modify${typename}(@RequestBody ${typename}Query query);
-
-  /**
-   * 删除【${modelbase.get_object_label(obj)}】(基于复合主键)
-   */
   @PostMapping("/delete")
   void delete${typename}(@RequestBody ${typename}Query query);
-</#if>
 
   /**
    * 查找【${modelbase.get_object_label(obj)}】分页列表
    */
-  @PostMapping("/search")
+  @PostMapping("/find")
   Pagination<${typename}Query> find${java.nameType(pluralName)}(@RequestBody ${typename}Query query);
 
   /**
@@ -105,29 +81,18 @@ public interface ${typename}Client {
 <#-- 状态机流转 (Enable / Disable) 逻辑 -->
 <#list obj.attributes as attr>
   <#if attr.name == "state" || attr.name == "status">
-    <#if hasSingleId>
   /**
    * 启用【${modelbase.get_object_label(obj)}】
-   */
-  @PostMapping("/{${idName}}/enable")
-  void enable${typename}(@PathVariable("${idName}") ${idType} ${idName});
-
-  /**
-   * 禁用【${modelbase.get_object_label(obj)}】
-   */
-  @PostMapping("/{${idName}}/disable")
-  void disable${typename}(@PathVariable("${idName}") ${idType} ${idName});
-    <#else>
-  /**
-   * 启用/禁用【${modelbase.get_object_label(obj)}】
    */
   @PostMapping("/enable")
   void enable${typename}(@RequestBody ${typename}Query query);
 
+  /**
+   * 禁用【${modelbase.get_object_label(obj)}】
+   */
   @PostMapping("/disable")
   void disable${typename}(@RequestBody ${typename}Query query);
-    </#if>
-    <#break> <#-- 生成一次即可跳出循环 -->
+    <#break>
   </#if>
 </#list>
 
