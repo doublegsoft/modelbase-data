@@ -3,7 +3,7 @@
 <#if license??>
 ${java.license(license)}
 </#if>
-package biz.doublegsoft.${app.name}.service;
+package <#if namespace??>${namespace}.</#if>${app.name}.service;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
