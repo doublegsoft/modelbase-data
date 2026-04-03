@@ -233,7 +233,9 @@
   <#elseif attr.type.name == 'bool'>
     <#return '"true"'>
   <#elseif attr.type.name == 'number'>
-    <#return '"' + tatabase.number(0,100) + '"'>
+    <#local dot = tatabase.number(0,100)?index_of(".")>
+    <#local scale = attr.type.scale>
+    <#return '"' + tatabase.number(0,100)?substring(0, dot + scale) + '"'>
   <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
     <#return '36'>
   <#elseif attr.type.name == 'long'>
@@ -247,7 +249,17 @@
   <#elseif attr.type.collection>
     <#return '[]'>
   <#elseif attr.type.name == 'string'>
-    <#return '"' + tatabase.string((attr.type.length!12)/4) + '"'>  
+    <#local len = attr.type.length!2>
+    <#if (len >= 100)>
+      <#local len = len / 10>
+    <#elseif (len >= 20)>
+      <#local len = len / 5>
+    <#elseif (len >= 10)>  
+      <#local len = 4>
+    <#else>
+      <#local len = 2>
+    </#if>
+    <#return '"' + tatabase.string(len) + '"'>  
   <#else>
     <#return '"666666"'>
   </#if>

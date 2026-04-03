@@ -59,7 +59,13 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
 <#list obj.attributes as attr>
   <#-- 非持久化的属性，不参与read判断 -->
   <#if modelbase.is_attribute_system(attr) || attr.identifiable || attr.type.collection || !attr.persistenceName??><#continue></#if>  
+  <#if attr.type.name == "number">
+    toSaveQuery.${modelbase4java.name_setter(attr)}(toSaveQuery.${modelbase4java.name_getter(attr)}().setScale(${attr.type.scale}, java.math.RoundingMode.HALF_UP));
+    readQuery.${modelbase4java.name_setter(attr)}(readQuery.${modelbase4java.name_getter(attr)}().setScale(${attr.type.scale}, java.math.RoundingMode.HALF_UP));
+    Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}().stripTrailingZeros(), readQuery.${modelbase4java.name_getter(attr)}().stripTrailingZeros());
+  <#else>
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), readQuery.${modelbase4java.name_getter(attr)}());
+  </#if>  
 </#list>
   }
 
