@@ -170,18 +170,18 @@ public class Datasets {
    * @param <OUT>        合并后返回的对象类型（可以是 Map、DTO、或原始对象的子类）
    * @return 每一次匹配（或左侧无匹配）产生的记录集合
    */
-  public static <L, R, K, OUT> List<OUT> leftJoin(
+  public static <L, R, K, OUT> List<OUT> join(
       List<L> left,
       List<R> right,
       Function<? super L, K> leftKeyFn,
       Function<? super R, K> rightKeyFn,
       BiFunction<? super L, ? super R, OUT> merger) {
 
-    // 1️⃣ 把右表聚成 Map<K, List<R>>
+    // 把右表聚成 Map<K, List<R>>
     Map<K, List<R>> rightMap = right.stream()
         .collect(Collectors.groupingBy(rightKeyFn));
 
-    // 2️⃣ 遍历左表，产生合并结果
+    // 遍历左表，产生合并结果
     List<OUT> result = new ArrayList<>();
 
     for (L l : left) {
@@ -199,33 +199,6 @@ public class Datasets {
       }
     }
     return result;
-  }
-
-  /* -------------------------------------------------
-   * 辅助：把 POJO 转成 Map<String,Object>（常用于合并时返回 Map）
-   * ------------------------------------------------- */
-  public static Map<String,Object> beanToMap(Object bean) {
-    if (bean == null) return Collections.emptyMap();
-    Map<String,Object> map = new LinkedHashMap<>();
-    Class<?> cls = bean.getClass();
-
-    // 包含本类 + 父类的所有字段（private 也能访问）
-    for (Field f : getAllFields(cls)) {
-      f.setAccessible(true);
-      try {
-        Object v = f.get(bean);
-        if (v != null) map.put(f.getName(), v);
-      } catch (IllegalAccessException ignored) {}
-    }
-    return map;
-  }
-
-  private static List<Field> getAllFields(Class<?> cls) {
-    List<Field> fields = new ArrayList<>();
-    for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
-      fields.addAll(Arrays.asList(c.getDeclaredFields()));
-    }
-    return fields;
   }
 
   private static class AggregateAccumulator {
