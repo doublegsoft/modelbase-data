@@ -6,9 +6,6 @@ ${java.license(license)}
 package ${namespace}.${app.name}.util;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.*;
@@ -37,7 +34,7 @@ public class Datasets {
    * @return a list of grouped aggregation results
    * @throws IllegalArgumentException if {@code aggSpecs} is empty
    */
-  @SuppressWarnings("unchecked") 
+  @SuppressWarnings("unchecked")
   public static <T> List<Map<String,Object>> group(
       List<T> dataset,
       List<AggregateSpecification> aggSpecs,
@@ -62,7 +59,7 @@ public class Datasets {
           if (spec.getField() == null) return (Function<T,Object>) t -> null;
           // 数值聚合需要转成 Number，其他聚合保留原始 Object
           if (EnumSet.of(AggregateType.SUM, AggregateType.AVG,
-              AggregateType.MIN, AggregateType.MAX, AggregateType.DISTINCT_COUNT)
+                  AggregateType.MIN, AggregateType.MAX, AggregateType.DISTINCT_COUNT)
               .contains(spec.getType())) {
             return buildNumberExtractor(spec.getField());
           }
@@ -113,7 +110,7 @@ public class Datasets {
     }
     return finalResult;
   }
-  
+
   /**
    * 两条 List 按指定键横向合并，返回结果集。
    * value 实际是一个 Map（也可以是自定义 DTO）。
@@ -139,11 +136,11 @@ public class Datasets {
     // ① 把两条 List 先转成 Map<key, element>
     Map<K, A> mapA = listA.stream()
         .collect(Collectors.toMap(keyFnA, Function.identity(),
-                (v1, v2) -> v1));      // 键冲突保留第一个
+            (v1, v2) -> v1));      // 键冲突保留第一个
 
     Map<K, B> mapB = listB.stream()
         .collect(Collectors.toMap(keyFnB, Function.identity(),
-                (v1, v2) -> v1));
+            (v1, v2) -> v1));
 
     // ② 键并集 → 对每个键执行合并 → 直接收集成 Map<String,Object>
     return Stream.concat(mapA.keySet().stream(), mapB.keySet().stream())
@@ -201,14 +198,159 @@ public class Datasets {
     return result;
   }
 
-  private static class AggregateAccumulator {
+  public static <A, B, C, K1, K2, AB, OUT> List<OUT> join3(
+      List<A> listA,
+      List<B> listB,
+      List<C> listC,
+      Function<? super A, K1> keyAtoB,
+      Function<? super B, K1> keyB,
+      Function<? super A, K2> keyAtoC,
+      Function<? super C, K2> keyC,
+      BiFunction<? super A, ? super B, AB> abMerger,
+      BiFunction<? super AB, ? super C, OUT> finalMerger) {
+
+    // 1️⃣ 构建索引
+    Map<K1, List<B>> mapB = listB.stream()
+        .collect(Collectors.groupingBy(keyB));
+
+    Map<K2, List<C>> mapC = listC.stream()
+        .collect(Collectors.groupingBy(keyC));
+
+    List<OUT> result = new ArrayList<>();
+
+    for (A a : listA) {
+
+      List<B> bs = mapB.getOrDefault(
+          keyAtoB.apply(a),
+          Collections.singletonList(null));
+
+      List<C> cs = mapC.getOrDefault(
+          keyAtoC.apply(a),
+          Collections.singletonList(null));
+
+      // 2️⃣ 笛卡尔展开
+      for (B b : bs) {
+        AB ab = abMerger.apply(a, b);
+
+        for (C c : cs) {
+          result.add(finalMerger.apply(ab, c));
+        }
+      }
+    }
+
+    return result;
+  }
+
+  public static <A, B, C, D, K1, K2, K3, AB, ABC, OUT> List<OUT> join4(
+      List<A> listA,
+      List<B> listB,
+      List<C> listC,
+      List<D> listD,
+      Function<? super A, K1> keyAtoB,
+      Function<? super B, K1> keyB,
+      Function<? super A, K2> keyAtoC,
+      Function<? super C, K2> keyC,
+      Function<? super A, K3> keyAtoD,
+      Function<? super D, K3> keyD,
+      BiFunction<? super A, ? super B, AB> abMerger,
+      BiFunction<? super AB, ? super C, ABC> abcMerger,
+      BiFunction<? super ABC, ? super D, OUT> finalMerger) {
+
+    Map<K1, List<B>> mapB = listB.stream()
+        .collect(Collectors.groupingBy(keyB));
+
+    Map<K2, List<C>> mapC = listC.stream()
+        .collect(Collectors.groupingBy(keyC));
+
+    Map<K3, List<D>> mapD = listD.stream()
+        .collect(Collectors.groupingBy(keyD));
+
+    List<OUT> result = new ArrayList<>();
+
+    for (A a : listA) {
+
+      List<B> bs = mapB.getOrDefault(keyAtoB.apply(a), Collections.singletonList(null));
+      List<C> cs = mapC.getOrDefault(keyAtoC.apply(a), Collections.singletonList(null));
+      List<D> ds = mapD.getOrDefault(keyAtoD.apply(a), Collections.singletonList(null));
+
+      for (B b : bs) {
+        AB ab = abMerger.apply(a, b);
+
+        for (C c : cs) {
+          ABC abc = abcMerger.apply(ab, c);
+
+          for (D d : ds) {
+            result.add(finalMerger.apply(abc, d));
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+
+  public enum AggregateType {
+    COUNT,          // 计数（不需要指定字段，默认对整个记录计数）
+    SUM,            // 求和
+    AVG,            // 平均值（内部会根据 SUM + COUNT 计算）
+    MIN,            // 最小值
+    MAX,            // 最大值
+    DISTINCT_COUNT, // 去重计数
+    FIRST,          // 第一个（保持流的顺序）
+    LAST            // 最后一个
+  }
+
+  public static class AggregateSpecification {
+    private final String   name;   // 结果中使用的键名
+    private final AggregateType  type;
+    private final String   field;  // 需要聚合的属性名（COUNT、FIRST、LAST 可 null）
+
+    public AggregateSpecification(String name, AggregateType type, String field) {
+      this.name  = name;
+      this.type  = type;
+      this.field = field;
+    }
+
+    public String getName()   { return name;   }
+    public AggregateType getType() { return type;   }
+    public String getField() { return field;   }
+
+    /** 方便创建（可链式调用） */
+    public static AggregateSpecification sum(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.SUM, field);
+    }
+    public static AggregateSpecification avg(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.AVG, field);
+    }
+    public static AggregateSpecification min(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.MIN, field);
+    }
+    public static AggregateSpecification max(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.MAX, field);
+    }
+    public static AggregateSpecification distinctCount(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.DISTINCT_COUNT, field);
+    }
+    public static AggregateSpecification count(String name) {
+      return new AggregateSpecification(name, AggregateType.COUNT, null);
+    }
+    public static AggregateSpecification first(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.FIRST, field);
+    }
+    public static AggregateSpecification last(String name, String field) {
+      return new AggregateSpecification(name, AggregateType.LAST, field);
+    }
+  }
+
+  public static class AggregateAccumulator {
     private final List<AggregateSpecification> specs;
     private final List<Function<?,Object>> valueGetters; // 与 specs 对齐
     private final List<Object> states;                    // 中间状态
 
     @SuppressWarnings("unchecked")
     AggregateAccumulator(List<AggregateSpecification> specs,
-                  List<Function<?,Object>> valueGetters) {
+                         List<Function<?,Object>> valueGetters) {
       this.specs       = specs;
       this.valueGetters= valueGetters;
       this.states      = new ArrayList<>(Collections.nCopies(specs.size(), null));
@@ -425,4 +567,221 @@ public class Datasets {
   private Datasets() {
 
   }
+
+  public static void main(String[] args) {
+
+    List<Team> teams = List.of(
+        new Team(1L, "Barcelona"),
+        new Team(2L, "Real Madrid"),
+        new Team(3L, "Bayern")
+    );
+
+    List<Match> matches = List.of(
+        new Match(100L, 1L, 2L),
+        new Match(101L, 2L, 3L),
+        new Match(102L, 1L, 99L) // away 不存在
+    );
+
+    List<MatchView> result = join3(
+        matches,
+        teams,
+        teams,
+
+        // home join
+        Match::getHomeTeamId,
+        Team::getId,
+
+        // away join
+        Match::getAwayTeamId,
+        Team::getId,
+
+        // A + B（match + home）
+        (match, home) -> new MatchHome(match, home),
+
+        // (match+home) + away
+        (mh, away) -> new MatchView(
+            mh.match,
+            mh.home,
+            away
+        )
+    );
+
+    System.out.println("===== MATCH JOIN =====");
+    result.forEach(System.out::println);
+
+    List<Action> actions = List.of(
+        new Action(1L, "Start"),
+        new Action(2L, "Approve"),
+        new Action(3L, "Finish")
+    );
+
+    List<Connection> conns = List.of(
+        new Connection(1L, 2L, 3L),
+        new Connection(2L, 3L, 99L) // next 不存在
+    );
+
+    List<ConnView> result1 = join4(
+        conns,
+        actions,
+        actions,
+        actions,
+
+        // prev
+        Connection::getPrevActionId,
+        Action::getId,
+
+        // curr
+        Connection::getCurrActionId,
+        Action::getId,
+
+        // next
+        Connection::getNextActionId,
+        Action::getId,
+
+        // step1: conn + prev
+        (conn, prev) -> new ConnPrev(conn, prev),
+
+        // step2: (conn+prev) + curr
+        (cp, curr) -> new ConnPrevCurr(cp.conn, cp.prev, curr),
+
+        // step3: + next
+        (cpc, next) -> new ConnView(
+            cpc.conn,
+            cpc.prev,
+            cpc.curr,
+            next
+        )
+    );
+
+    System.out.println("===== WORKFLOW JOIN =====");
+    result1.forEach(System.out::println);
+  }
+
+  static class Team {
+    Long id;
+    String name;
+
+    public Team(Long id, String name) {
+      this.id = id;
+      this.name = name;
+    }
+
+    public Long getId() { return id; }
+
+    public String toString() { return name; }
+  }
+
+  static class Match {
+    Long id;
+    Long homeTeamId;
+    Long awayTeamId;
+
+    public Match(Long id, Long homeTeamId, Long awayTeamId) {
+      this.id = id;
+      this.homeTeamId = homeTeamId;
+      this.awayTeamId = awayTeamId;
+    }
+
+    public Long getHomeTeamId() { return homeTeamId; }
+    public Long getAwayTeamId() { return awayTeamId; }
+  }
+
+  static class MatchHome {
+    Match match;
+    Team home;
+
+    public MatchHome(Match m, Team h) {
+      this.match = m;
+      this.home = h;
+    }
+  }
+
+  static class MatchView {
+    Match match;
+    Team home;
+    Team away;
+
+    public MatchView(Match m, Team h, Team a) {
+      this.match = m;
+      this.home = h;
+      this.away = a;
+    }
+
+    public String toString() {
+      return "Match " + match.id +
+          ": " + home + " vs " + away;
+    }
+
+  }
+
+  static class Action {
+    Long id;
+    String name;
+
+    public Action(Long id, String name) {
+      this.id = id;
+      this.name = name;
+    }
+
+    public Long getId() { return id; }
+
+    public String toString() { return name; }
+  }
+
+  static class Connection {
+    Long prevActionId;
+    Long currActionId;
+    Long nextActionId;
+
+    public Connection(Long p, Long c, Long n) {
+      this.prevActionId = p;
+      this.currActionId = c;
+      this.nextActionId = n;
+    }
+
+    public Long getPrevActionId() { return prevActionId; }
+    public Long getCurrActionId() { return currActionId; }
+    public Long getNextActionId() { return nextActionId; }
+  }
+
+  static class ConnPrev {
+    Connection conn;
+    Action prev;
+
+    public ConnPrev(Connection c, Action p) {
+      this.conn = c;
+      this.prev = p;
+    }
+  }
+
+  static class ConnPrevCurr {
+    Connection conn;
+    Action prev;
+    Action curr;
+
+    public ConnPrevCurr(Connection c, Action p, Action cur) {
+      this.conn = c;
+      this.prev = p;
+      this.curr = cur;
+    }
+  }
+
+  static class ConnView {
+    Connection conn;
+    Action prev;
+    Action curr;
+    Action next;
+
+    public ConnView(Connection c, Action p, Action cur, Action n) {
+      this.conn = c;
+      this.prev = p;
+      this.curr = cur;
+      this.next = n;
+    }
+
+    public String toString() {
+      return "[" + prev + " → " + curr + " → " + next + "]";
+    }
+  }
+
 }
