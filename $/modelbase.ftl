@@ -2954,3 +2954,30 @@ ${""?left_pad(indent)}${line}
     </#if>
   </#list>
 </#function>
+
+<#--
+ ### 获取代理属性（Proxy Attribute）所指向的原始领域属性定义。
+ ### <p>
+ ### 在 ModelBase/UseBase 架构中，DTO 或表单参数中的属性经常会使用 `original` 标签
+ ### 来映射底层的真实领域实体字段。例如：DTO 中的 `authorName` 属性可能会被标记为 
+ ### `@original(object="User", attribute="name")`。
+ ### 
+ ### 该函数负责解析这个标签，并在全局数据模型中反向查找到真正的 `AttributeDefinition` 对象。
+ ### 这对于在生成代码时获取真实字段的数据类型、长度限制或数据库列名至关重要。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 从传入的代理属性中读取 `original.object` 配置项（原始对象名）。
+ ### 2. 从传入的代理属性中读取 `original.attribute` 配置项（原始属性名）。
+ ### 3. 委托给 `find_attribute_by_names` 函数进行跨对象查找（支持模糊/前缀匹配）。
+ ###
+ ### @param proxyAttr
+ ###        带有 `original` 映射标签的代理属性定义对象 (AttributeDefinition)
+ ###
+ ### @return
+ ###        映射的底层原始属性定义对象 (AttributeDefinition)，未找到则返回 null
+ -->
+<#function get_attribute_from_original proxyAttr>
+  <#local origObjName = proxyAttr.getLabelledOptions("original")["object"]>
+  <#local origAttrName = proxyAttr.getLabelledOptions("original")["attribute"]>
+  <#return model.findAttributeByNames(origObjName, origAttrName)>
+</#function>
