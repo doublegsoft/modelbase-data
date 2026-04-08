@@ -32,10 +32,6 @@ import <#if namespace??>${namespace}.</#if>${app.name}.service.*;
 <#assign idAttrs = modelbase.get_id_attributes(obj)>
 /**
  * 【${modelbase.get_object_label(obj)}】控制器。
- *
- * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
- *
- * @since ${version}
  */
 @RestController("<#if namespace??>${namespace}.</#if>${app.name}.mvc.${typename}Controller") 
 @RequestMapping("/${app.name}")
