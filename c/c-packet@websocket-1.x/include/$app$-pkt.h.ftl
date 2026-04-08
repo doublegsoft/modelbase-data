@@ -10,6 +10,7 @@ ${c.license(license)}
 extern "C"
 {
 #endif
+
 <#------------------------------->
 <#-- 通过Modelbase的枚举属性定义，-->
 <#-- 生成C语言的枚举类型。        -->
@@ -24,7 +25,7 @@ extern "C"
         <#list existingPairs as existingPair>
           <#assign existing = false>
           <#list pairs as pair>
-            <#if existingPair.key == pair.key>
+            <#if existingPair.code == pair.code>
               <#assign existing = true>
               <#break>
             </#if>
@@ -47,7 +48,7 @@ extern "C"
 typedef enum 
 {
   <#list pairs as pair>
-  ${name?upper_case}_${pair.value?upper_case}<#if pair?has_next>,</#if>
+  ${name?upper_case}_${pair.name?upper_case}<#if pair?has_next>,</#if>
   </#list>
 } 
 ${namespace}_${name}_t;
@@ -70,10 +71,6 @@ typedef        ${namespace}_${obj.name}_t*     ${namespace}_${obj.name}_p;
 */
 struct ${namespace}_${obj.name}_s 
 {
-  /*!
-  ** 指明这个对象的类型名称。
-  */
-  char typename[64];
   <#list obj.attributes as attr>
     <#assign attrtype = modelbase4c.type_attribute(attr)>
 

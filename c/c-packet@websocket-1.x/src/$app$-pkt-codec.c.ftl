@@ -18,10 +18,6 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len)
   size_t offset = 0;
   size_t block_bytes = 0;
 
-  if (buf_len < sizeof(${namespace}_${obj.name}_t)) {
-    return NULL; 
-  }
-
   <#list obj.attributes as attr>
     <#assign attrtype = modelbase4c.type_attribute(attr)>
     <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, "ret")?string>

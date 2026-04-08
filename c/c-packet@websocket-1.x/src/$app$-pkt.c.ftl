@@ -15,7 +15,6 @@ ${namespace}_${obj.name}_p
 ${namespace}_${obj.name}_init(void)
 {
   ${namespace}_${obj.name}_p ret = (${namespace}_${obj.name}_p) malloc(sizeof(${namespace}_${obj.name}_t));
-  strcpy(ret->typename, "${namespace}_${obj.name}_p");
 <#list obj.attributes as attr>
   <#assign attrtype = modelbase4c.type_attribute(attr)>
   <#if attr.type.componentType??><#-- 优先判断，是否是自定义数组类型的对象 -->
@@ -29,7 +28,12 @@ ${namespace}_${obj.name}_init(void)
   <#elseif attrtype.name == "char*">
   ret->${modelbase4c.name_attribute(attr)} = NULL;
   <#elseif attrtype.name == "int" || attrtype.name == "long">
+    <#if attr.constraint.defaultValue??>
+  ret->${modelbase4c.name_attribute(attr)} = ${attr.constraint.defaultValue};
+    <#else>
   ret->${modelbase4c.name_attribute(attr)} = INT_MIN;
+    </#if>
+   <#elseif attrtype.name == "char" && !attrtype.length??>
   <#elseif attrtype.name == "char" || attrtype.length??>
   ret->${modelbase4c.name_attribute(attr)}[0] = '\0';
   <#elseif attrtype.name == "char">

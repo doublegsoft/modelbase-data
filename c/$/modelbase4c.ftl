@@ -11,7 +11,7 @@
     </#if>
   <#elseif attr.constraint.domainType?? && attr.constraint.domainType.name?starts_with("enum")>
     <#local pairs = typebase.enumtype(attr.constraint.domainType.name)>
-    <#return {"name": "char","length":pairs[0].key?length}>
+    <#return {"name": "char","length":pairs[0].code?length}>
   <#elseif attr.type.name == "string">
     <#if attr.constraint.maxSize?? && attr.constraint.maxSize != 0>
       <#return {"name": "char", "length":attr.constraint.maxSize}>
