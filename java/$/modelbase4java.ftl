@@ -317,7 +317,7 @@ ${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});
 </#macro>
 
 <#function get_attribute_default_value attr>
-  <#if attr.constraint.defaultValue == "now">
+  <#if attr.constraint.defaultValue?? && attr.constraint.defaultValue == "now">
     <#return "new java.sql.Timestamp(System.currentTimeMillis())">
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
     <#return attr.constraint.defaultValue> 
@@ -328,6 +328,10 @@ ${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${attrname});
       <#return "\"" + attr.constraint.defaultValue?substring(1,attr.constraint.defaultValue?length - 1)  + "\"">  
     </#if>
     <#return "\"" + attr.constraint.defaultValue + "\"">
+  <#elseif attr.type.custom>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#local refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+    <#return get_attribute_default_value(refObjIdAttr)>
   </#if>
   <#return "null">
 </#function>
@@ -345,7 +349,15 @@ ${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(new java.sql.T
 ${""?left_pad(indent)}}    
     <#elseif attr.constraint.defaultValue??>
 ${""?left_pad(indent)}if (${varname}.get${java.nameType(attr.name)}() == null && isCreating) {
+      <#if attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#local refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+${""?left_pad(indent)}  ${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
+${""?left_pad(indent)}  ${java.nameVariable(refObj.name)}.set${java.nameType(refObjIdAttr.name)}(${get_attribute_default_value(attr)});
+${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(${java.nameVariable(refObj.name)});        
+      <#else>
 ${""?left_pad(indent)}  ${varname}.set${java.nameType(attr.name)}(${get_attribute_default_value(attr)});
+      </#if>
 ${""?left_pad(indent)}}    
     <#elseif attr.name == "last_modified_time" || attr.constraint.domainType.name == "now">
 ${""?left_pad(indent)}${varname}.set${java.nameType(attr.name)}(new java.sql.Timestamp(System.currentTimeMillis()));
