@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +32,11 @@ public class Beans {
 
     // 包含本类 + 父类的所有字段（private 也能访问）
     for (Field f : getAllFields(cls)) {
+      if (Modifier.isStatic(f.getModifiers()) || 
+          Modifier.isFinal(f.getModifiers()) || 
+          Modifier.isTransient(f.getModifiers())) {
+        continue;
+      }
       f.setAccessible(true);
       try {
         Object v = f.get(bean);
