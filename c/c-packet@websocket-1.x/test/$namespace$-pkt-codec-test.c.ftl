@@ -8,7 +8,7 @@ ${c.license(license)}
 #include <stdio.h>
 #include <assert.h>
 
-#include "${app.name}-pkt-codec.h"
+#include "${namespace}-pkt-codec.h"
 <#list model.objects as obj>
 
 void
