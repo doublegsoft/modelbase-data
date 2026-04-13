@@ -4,15 +4,15 @@
 ${c.license(license)}
 </#if>
 
-#ifndef __${app.name?upper_case}_PKT_CODEC_H__
-#define __${app.name?upper_case}_PKT_CODEC_H__
+#ifndef __${namespace?upper_case}_PKT_CODEC_H__
+#define __${namespace?upper_case}_PKT_CODEC_H__
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#include "${app.name}-pkt.h"
+#include "${namespace}-pkt.h"
 <#list model.objects as obj>
 
 /*!
@@ -50,4 +50,4 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size);
 }
 #endif
 
-#endif // __${app.name?upper_case}_PKT_CODEC_H__
+#endif // __${namespace?upper_case}_PKT_CODEC_H__

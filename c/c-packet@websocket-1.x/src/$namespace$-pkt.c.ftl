@@ -8,7 +8,7 @@ ${c.license(license)}
 #include <string.h>
 #include <limits.h>
 
-#include "${app.name}-pkt.h"
+#include "${namespace}-pkt.h"
 <#list model.objects as obj>
 
 ${namespace}_${obj.name}_p

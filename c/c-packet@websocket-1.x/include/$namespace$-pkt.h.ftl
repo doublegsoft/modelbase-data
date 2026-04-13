@@ -3,8 +3,8 @@
 <#if license??>
 ${c.license(license)}
 </#if>
-#ifndef __${app.name?upper_case}_PKT_H__
-#define __${app.name?upper_case}_PKT_H__
+#ifndef __${namespace?upper_case}_PKT_H__
+#define __${namespace?upper_case}_PKT_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -139,4 +139,4 @@ ${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${
 }
 #endif
 
-#endif // __${app.name?upper_case}_PKT_H__
+#endif // __${namespace?upper_case}_PKT_H__
