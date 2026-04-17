@@ -77,6 +77,7 @@ struct ${namespace}_${obj.name}_s
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
+  // ${attr.type.name}
   ${attrtype.name} ${modelbase4c.name_attribute(attr)}<#if attrtype.length??>[${attrtype.length}]</#if>;
   </#list>
 }; 

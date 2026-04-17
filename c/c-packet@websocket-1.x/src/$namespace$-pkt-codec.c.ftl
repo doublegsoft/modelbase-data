@@ -30,6 +30,17 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len)
       </#if>
   memcpy((void*)<#if !attr.type.collection && !attr.type.lengthName?? && attrtype.name != "char">&</#if>ret->${attr.name}, bytes + offset, ${lenExpr});
   offset += ${lenExpr};
+      <#if attr.type.constant??>
+        <#if attr.type.name == "int">
+  if (ret->${attr.name} != ${attr.type.value}) 
+        <#else>
+  if (strcmp(ret->${attr.name}, "${attr.type.value}") != 0)       
+        </#if>
+  {
+    free(ret);
+    return NULL;
+  }
+      </#if>
     <#else>
       <#assign countedName = modelbase4c.get_attribute_counted_name(attr)>
   block_bytes = 0;    
