@@ -30,9 +30,9 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len)
       </#if>
   memcpy((void*)<#if !attr.type.collection && !attr.type.lengthName?? && attrtype.name != "char">&</#if>ret->${attr.name}, bytes + offset, ${lenExpr});
   offset += ${lenExpr};
-      <#if attr.type.constant??>
-        <#if attr.type.name == "int">
-  if (ret->${attr.name} != ${attr.type.value}) 
+      <#if attr.type.constant>
+        <#if attr.type.name == "int" || attr.type.name == "integer">
+  if (ret->${attr.name} != ${attr.type.value?string("###")}) 
         <#else>
   if (strcmp(ret->${attr.name}, "${attr.type.value}") != 0)       
         </#if>
