@@ -74,11 +74,16 @@
  ###
  ### @return the sql alias name for the attribute
  #-->
-<#function get_attribute_sql_name attr>
+<#function get_attribute_sql_name attr prefix="">
+  <#local attrname = attr.name>
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>
-    <#return naming.nameVariable(attr.parent.name) + 'Id'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Id'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Id'>  
+    </#if>
   </#if>
   <#if attr.type.custom && model??>
     <#assign refObj = model.findObjectByName(attr.type.name)!''>
@@ -86,9 +91,9 @@
     <#if refObjIdAttrs?size == 0><#return naming.nameVariable(attr.type.name) + 'Id'></#if>
     <#if refObjIdAttrs[0].name?starts_with(refObj.name)>
       <#if refObjIdAttrs[0].name == refObj.name>
-        <#return naming.nameVariable(refObjIdAttrs[0].name) + "Id">
+        <#return naming.nameVariable(prefix + '_' + refObjIdAttrs[0].name) + "Id">
       <#else>
-        <#return naming.nameVariable(refObjIdAttrs[0].name)>
+        <#return naming.nameVariable(prefix + '_' + refObjIdAttrs[0].name)>
       </#if>
     </#if>
     <#assign alias = naming.nameVariable(refObj.name) + naming.nameType(refObjIdAttrs[0].name)>
@@ -102,36 +107,64 @@
     <#if attr.parent.name?starts_with("$")>
       <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Code'>
     </#if>
-    <#return naming.nameVariable(attr.parent.name) + 'Code'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Code'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Code'>  
+    </#if>
   </#if>
   <#if attr.name == 'name'>
     <#if attr.parent.name?starts_with("$")>
       <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Name'>
     </#if>
-    <#return naming.nameVariable(attr.parent.name) + 'Name'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Name'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Name'>  
+    </#if>
   </#if>
   <#if attr.name == 'type'>
     <#if attr.parent.name?starts_with("$")>
       <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Type'>
     </#if>
-    <#return naming.nameVariable(attr.parent.name) + 'Type'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Type'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Type'>  
+    </#if>
   </#if>
   <#if attr.name == 'text'>
     <#if attr.parent.name?starts_with("$")>
       <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Text'>
     </#if>
-    <#return naming.nameVariable(attr.parent.name) + 'Text'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Text'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Text'>  
+    </#if>
   </#if>
   <#if attr.name == 'group'>
     <#if attr.parent.name?starts_with("$")>
       <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Group'>
     </#if>
-    <#return naming.nameVariable(attr.parent.name) + 'Group'>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.parent.name) + 'Group'>
+    <#else>
+      <#return naming.nameVariable(prefix) + 'Group'>  
+    </#if>
   </#if>
   <#if attr.type.primitive>
-    <#return naming.nameVariable(attr.name)>
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#return naming.nameVariable(attr.name)>  
+    <#else>
+      <#return naming.nameVariable(prefix + '_' + attr.name)>  
+    </#if>
   </#if>
-  <#return naming.nameVariable(attr.name)>
+  <#if prefix == "" || attr.name?starts_with(prefix)>
+    <#return naming.nameVariable(attr.name)>  
+  <#else>
+    <#return naming.nameVariable(prefix + '_' + attr.name)>  
+  </#if>
 </#function>
 
 <#--

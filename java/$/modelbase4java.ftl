@@ -265,12 +265,12 @@
   </#if>
 </#function>
 
-<#function name_getter attr>
-  <#return "get" + java.nameType(modelbase.get_attribute_sql_name(attr))>
+<#function name_getter attr prefix="">
+  <#return "get" + java.nameType(modelbase.get_attribute_sql_name(attr, prefix))>
 </#function>
 
-<#function name_setter attr>
-  <#return "set" + java.nameType(modelbase.get_attribute_sql_name(attr))>
+<#function name_setter attr prefix="">
+  <#return "set" + java.nameType(modelbase.get_attribute_sql_name(attr, prefix))>
 </#function>
 
 <#macro print_reference_assemble attr objname attrname indent>
@@ -408,27 +408,28 @@ ${""?left_pad(indent)}}
 </#macro>
 
 <#-- Query对象类成员 -->
-<#macro print_object_query_members obj processedAttrs excludingColls=false>
+<#macro print_object_query_members obj processedAttrs excludingColls=false prefix="">
   <#list obj.attributes as attr>
-    <#if processedAttrs[modelbase.get_attribute_sql_name(attr)]??><#continue></#if>
+    <#if processedAttrs[modelbase.get_attribute_sql_name(attr, prefix)]??><#continue></#if>
     <#if attr.type.collection && excludingColls == false>
-    
+
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
-  protected final List<${java.nameType(attr.type.componentType.name)}Query> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} = new ArrayList<>();
+  protected final List<${java.nameType(attr.type.componentType.name)}Query> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))} = new ArrayList<>();
   
-  protected final Map<String,Object> in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))} = new HashMap<>();
+  protected final Map<String,Object> in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))} = new HashMap<>();
     <#else>
+      <#local attrname = modelbase.get_attribute_sql_name(attr, prefix)>
   
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)};
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)};
   
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}0;
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}0;
   
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}1;
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}1;
     </#if>
     <#-- 需要集合属性作为查询条件的 -->
     <#if attr.constraint.identifiable ||
@@ -436,7 +437,7 @@ ${""?left_pad(indent)}}
          attr.constraint.domainType.name?starts_with("enum") ||
          modelbase.is_masterless_detail_reference_attribute(attr)> 
        
-  protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} = new ArrayList<>();
+  protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))} = new ArrayList<>();
     </#if>
     <#-- 引用对象需要作为结果的 -->
     <#if attr.type.custom>
@@ -446,9 +447,9 @@ ${""?left_pad(indent)}}
     </#if>
     <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>
   
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}2;
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}2;
     </#if>
-    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr):attr}>
+    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr, prefix):attr}>
     <#local processedAttrs += {attr.name:attr}>
   </#list>
   <#-- REFERENCE -->
@@ -462,51 +463,56 @@ ${""?left_pad(indent)}}
     </#if>
   </#list>
   <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
+  <#-- 自定义对象作为主键，也就是一对一情况，或者是属性被标记为主动加载 -->
   <#list obj.attributes as attr>
-    <#if attr.type.custom && attr.constraint.identifiable>
+    <#if attr.type.custom && (attr.constraint.identifiable || attr.isLabelled("eager"))>
       <#local refObj = model.findObjectByName(attr.type.name)>
-<@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true />  
+      <#if attr.name == refObj.name>
+<@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true />       
+      <#else>
+<@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true prefix=attr.name /> 
+      </#if>
     </#if>
   </#list>  
 </#macro>
 
 <#-- Query Setters and Getters -->
-<#macro print_object_query_xetters obj processedAttrs>
+<#macro print_object_query_xetters obj processedAttrs prefix="">
   <#list obj.attributes as attr>
-    <#if processedAttrs[modelbase.get_attribute_sql_name(attr)]??><#continue></#if>
+    <#if processedAttrs[modelbase.get_attribute_sql_name(attr, prefix)]??><#continue></#if>
     <#if attr.type.collection>
     
-  public List<${java.nameType(attr.type.componentType.name)}Query> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
-    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))};
+  public List<${java.nameType(attr.type.componentType.name)}Query> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))};
   }
   
-  public Map<String,Object> getIn${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
-    return in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))};
+  public Map<String,Object> getIn${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))}() {
+    return in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))};
   }
     <#else>
     
-  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}() {
-    return ${modelbase.get_attribute_sql_name(attr)};
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)};
   }
   
-  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}) {
-    this.${modelbase.get_attribute_sql_name(attr)} = ${modelbase.get_attribute_sql_name(attr)};
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}) {
+    this.${modelbase.get_attribute_sql_name(attr, prefix)} = ${modelbase.get_attribute_sql_name(attr, prefix)};
   }
   
-  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}0() {
-    return ${modelbase.get_attribute_sql_name(attr)}0;
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}0() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)}0;
   }
   
-  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}0(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}0) {
-    this.${modelbase.get_attribute_sql_name(attr)}0 = ${modelbase.get_attribute_sql_name(attr)}0;
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}0(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}0) {
+    this.${modelbase.get_attribute_sql_name(attr, prefix)}0 = ${modelbase.get_attribute_sql_name(attr, prefix)}0;
   }
   
-  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}1() {
-    return ${modelbase.get_attribute_sql_name(attr)}1;
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}1() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)}1;
   }
   
-  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}1(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}1) {
-    this.${modelbase.get_attribute_sql_name(attr)}1 = ${modelbase.get_attribute_sql_name(attr)}1;
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}1(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}1) {
+    this.${modelbase.get_attribute_sql_name(attr, prefix)}1 = ${modelbase.get_attribute_sql_name(attr, prefix)}1;
   }
     </#if>
     <#if attr.constraint.identifiable ||
@@ -514,12 +520,12 @@ ${""?left_pad(indent)}}
          attr.constraint.domainType.name?starts_with("enum") ||
          modelbase.is_masterless_detail_reference_attribute(attr)>
        
-  public List<${modelbase4java.type_attribute_primitive(attr)}> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))}() {
-    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))};
+  public List<${modelbase4java.type_attribute_primitive(attr)}> get${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))};
   }
   
-  public void add${java.nameType(modelbase.get_attribute_sql_name(attr))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}) {
-    ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.add(${modelbase.get_attribute_sql_name(attr)});
+  public void add${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}) {
+    ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}.add(${modelbase.get_attribute_sql_name(attr, prefix)});
   }
     </#if>
     <#-- 引用对象需要作为结果的 -->
@@ -536,12 +542,12 @@ ${""?left_pad(indent)}}
     </#if>
     <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>  
   
-  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr))}2() {
-    return ${modelbase.get_attribute_sql_name(attr)}2;
+  public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}2() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)}2;
   }
   
-  public void set${java.nameType(modelbase.get_attribute_sql_name(attr))}2(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)}2) {
-    this.${modelbase.get_attribute_sql_name(attr)}2 = ${modelbase.get_attribute_sql_name(attr)}2;
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}2(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}2) {
+    this.${modelbase.get_attribute_sql_name(attr, prefix)}2 = ${modelbase.get_attribute_sql_name(attr, prefix)}2;
   }
     </#if>    
     <#local processedAttrs += {modelbase.get_attribute_sql_name(attr):attr}>
@@ -567,13 +573,17 @@ ${""?left_pad(indent)}}
   <#list obj.attributes as attr>
     <#if attr.constraint.identifiable && attr.type.custom>
       <#local refObj = model.findObjectByName(attr.type.name)> 
+      <#if attr.name == refObj.name>
 <@print_object_query_xetters obj=refObj processedAttrs=processedAttrs /> 
+      <#else>
+<@print_object_query_xetters obj=refObj processedAttrs=processedAttrs prefix=attr.name /> 
+      </#if>
     </#if>
   </#list>
 </#macro>
 
 <#--  -->
-<#macro print_object_query_to_query obj root>
+<#macro print_object_query_to_query obj root prefix="">
   <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
   <#list obj.attributes as attr>
     <#if !(attr.type.custom && attr.constraint.identifiable)><#continue></#if>
@@ -585,66 +595,66 @@ ${""?left_pad(indent)}}
       <#local found = false>
       <#list root.attributes as innerAttr>
         <#if refObjAttr.name == innerAttr.name>
-    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr)}());  
+    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr, attr.name)}());  
           <#local found = true>  
           <#break>    
         </#if>
       </#list>
       <#if !found>
         <#if refObjAttr.type.collection>
-    retVal.${name_getter(refObjAttr)}().addAll(${name_getter(refObjAttr)}());        
+    retVal.${name_getter(refObjAttr)}().addAll(${name_getter(refObjAttr, attr.name)}());        
         <#else>  
-    retVal.${name_setter(refObjAttr)}(${name_getter(refObjAttr)}());    
+    retVal.${name_setter(refObjAttr)}(${name_getter(refObjAttr, attr.name)}());    
         </#if>
       </#if>
     </#list>  
     return retVal;
   }
-<@print_object_query_to_query obj=refObj root=root />    
+<@print_object_query_to_query obj=refObj root=root prefix=attr.name/>    
   </#list>  
 </#macro>
 
-<#macro print_object_query_to_map obj processedAttrs>
+<#macro print_object_query_to_map obj processedAttrs prefix="">
   <#list obj.attributes as attr>
     <#if processedAttrs[attr.name]??><#continue></#if>
     <#if attr.type.collection>
-    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.isEmpty()) {
-      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))});
+    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}.isEmpty()) {
+      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))});
     }
     <#else>
       <#local attrtype = modelbase4java.type_attribute_primitive(attr)>
       <#if attrtype == "Long">
-    if (${modelbase.get_attribute_sql_name(attr)} != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}", ${modelbase.get_attribute_sql_name(attr)});
+    if (${modelbase.get_attribute_sql_name(attr, prefix)} != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}", ${modelbase.get_attribute_sql_name(attr, prefix)});
     }
-    if (${modelbase.get_attribute_sql_name(attr)}0 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", ${modelbase.get_attribute_sql_name(attr)}0);
+    if (${modelbase.get_attribute_sql_name(attr, prefix)}0 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}0", ${modelbase.get_attribute_sql_name(attr, prefix)}0);
     }
-    if (${modelbase.get_attribute_sql_name(attr)}1 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", ${modelbase.get_attribute_sql_name(attr)}1);
+    if (${modelbase.get_attribute_sql_name(attr, prefix)}1 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}1", ${modelbase.get_attribute_sql_name(attr, prefix)}1);
     }  
       <#else>
-    if (${modelbase.get_attribute_sql_name(attr)} != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}", ${modelbase.get_attribute_sql_name(attr)});
+    if (${modelbase.get_attribute_sql_name(attr, prefix)} != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}", ${modelbase.get_attribute_sql_name(attr, prefix)});
     }
-    if (${modelbase.get_attribute_sql_name(attr)}0 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}0", ${modelbase.get_attribute_sql_name(attr)}0);
+    if (${modelbase.get_attribute_sql_name(attr, prefix)}0 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}0", ${modelbase.get_attribute_sql_name(attr, prefix)}0);
     }
-    if (${modelbase.get_attribute_sql_name(attr)}1 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}1", ${modelbase.get_attribute_sql_name(attr)}1);
+    if (${modelbase.get_attribute_sql_name(attr, prefix)}1 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}1", ${modelbase.get_attribute_sql_name(attr, prefix)}1);
     }
       </#if>
     </#if>
     <#if attr.constraint.identifiable ||
          attr.type.custom ||
          attr.constraint.domainType.name?starts_with("enum")>
-    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.isEmpty()) {
-      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))});
+    if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}.isEmpty()) {
+      retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))});
     }
     </#if>
     <#if attr.type.name == "string" && !attr.type.custom && !attr.identifiable>  
-    if (${modelbase.get_attribute_sql_name(attr)}2 != null) {
-      retVal.put("${modelbase.get_attribute_sql_name(attr)}2", ${modelbase.get_attribute_sql_name(attr)}2);
+    if (${modelbase.get_attribute_sql_name(attr, prefix)}2 != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}2", ${modelbase.get_attribute_sql_name(attr, prefix)}2);
     }
     </#if>    
     <#local processedAttrs += {attr.name:attr}>
@@ -664,7 +674,11 @@ ${""?left_pad(indent)}}
   <#list obj.attributes as attr>
     <#if attr.constraint.identifiable && attr.type.custom>
       <#local refObj = model.findObjectByName(attr.type.name)> 
+      <#if attr.name == refObj.name>
 <@print_object_query_to_map obj=refObj processedAttrs=processedAttrs /> 
+      <#else>
+<@print_object_query_to_map obj=refObj processedAttrs=processedAttrs prefix=attr.name /> 
+      </#if>
     if (${java.nameVariable(attr.name)} != null) {
       retVal.put("${java.nameVariable(attr.name)}", ${java.nameVariable(attr.name)}.toMap());
     }
@@ -1427,7 +1441,7 @@ ${""?left_pad(indent)}${java.nameVariable(refObj.name)}Query.${modelbase4java.na
 ${""?left_pad(indent)}try {
 ${""?left_pad(indent)}  results = ${java.nameVariable(refObj.name)}DataAccess.select${java.nameType(refObj.name)}(${java.nameVariable(refObj.name)}Query);
 ${""?left_pad(indent)}  if (results.size() == 1) {
-${""?left_pad(indent)}    result = results.get(0);
+${""?left_pad(indent)}    result = results.get(0); // hello
 ${""?left_pad(indent)}    ${java.nameVariable(refObj.name)}Query = ${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(result);
   <#list refObj.attributes as refObjAttr>
     <#if refObjAttr.identifiable><#continue></#if>
@@ -1442,7 +1456,7 @@ ${""?left_pad(indent)}    ${java.nameVariable(refObj.name)}Query = ${java.nameTy
       <#if refObjAttr.type.collection>
 ${""?left_pad(indent)}    retVal.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}().addAll(${java.nameVariable(refObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}());       
       <#else>
-${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}(${java.nameVariable(refObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}());     
+${""?left_pad(indent)}    retVal.set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, rootObjIdAttr.name))}(${java.nameVariable(refObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr))}());     
       </#if>
     </#if>
   </#list>    

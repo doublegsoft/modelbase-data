@@ -4,59 +4,63 @@
 ${java.license(license)}
 </#if>
 <#--  -->
-<#macro print_hierarchy_assemble obj processedAttrs>
+<#macro print_hierarchy_assemble obj processedAttrs prefix="">
   <#list obj.attributes as attr>
     <#if processedAttrs[attr.name]??><#continue></#if>
-    <#assign attrname = modelbase.get_attribute_sql_name(attr)>
-    <#assign attrtype = modelbase4java.type_attribute_primitive(attr)>  
+    <#if prefix == "" || attr.name?starts_with(prefix)>
+      <#local attrname = modelbase.get_attribute_sql_name(attr)>
+    <#else>
+      <#local attrname =  modelbase.get_attribute_sql_name(attr, prefix)>
+    </#if>
+    <#local attrtype = modelbase4java.type_attribute_primitive(attr)>  
     <#if attr.type.custom || attr.constraint.domainType.name?starts_with("enum")>
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), ${attrtype}.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), ${attrtype}.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), ${attrtype}.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), ${attrtype}.class));
       if (params.get("${inflector.pluralize(attrname)}") != null) {     
         retVal.get${java.nameType(inflector.pluralize(attrname))}().addAll((List<${attrtype}>)params.get("${inflector.pluralize(attrname)}"));
       }
       <#if attr.type.custom>
-      if (params.containsKey(prefix + "${java.nameVariable(attr.name)}")) {
-        retVal.set${java.nameType(attr.name)}(${java.nameType(attr.type.name)}QueryAssembler.assemble${java.nameType(attr.type.name)}Query(params, prefix + "${java.nameVariable(attr.name)}"));  
+      if (params.containsKey("${java.nameVariable(attr.name)}")) {
+        retVal.set${java.nameType(attr.name)}(${java.nameType(attr.type.name)}QueryAssembler.assemble${java.nameType(attr.type.name)}Query(params, "${java.nameVariable(attr.name)}"));  
       }
       </#if>
     <#elseif attr.constraint.domainType.name == "id">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), Long.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), Long.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), Long.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), Long.class));   
     <#elseif attr.type.name == "int" || attr.type.name == "integer">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), Integer.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), Integer.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), Integer.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), Integer.class));
     <#elseif attr.type.name == "long">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), Long.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), Long.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), Long.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), Long.class)); 
     <#elseif attr.type.name == "number">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), BigDecimal.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), BigDecimal.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), BigDecimal.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), BigDecimal.class));    
     <#elseif attr.type.name == "datetime">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), Timestamp.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), Timestamp.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), Timestamp.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), Timestamp.class));
     <#elseif attr.type.name == "date">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), java.sql.Date.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), java.sql.Date.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), java.sql.Date.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), java.sql.Date.class));
     <#elseif attr.type.name == "time">  
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), java.sql.Time.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), java.sql.Time.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), java.sql.Time.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), java.sql.Time.class));
     <#elseif attr.type.name == "string">
-      retVal.set${java.nameType(attrname)}(Safe.safe(params.get(prefix + "${attrname}"), ${attrtype}.class));
+      retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), ${attrtype}.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), ${attrtype}.class));
-      retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}0"), ${attrtype}.class));
+      retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), ${attrtype}.class));
     </#if>  
     <#if attr.identifiable>
       if (params.get("${inflector.pluralize(attrname)}") != null) {     
-        retVal.get${java.nameType(inflector.pluralize(attrname))}().addAll(Safe.safeMore((List<Object>)params.get("${inflector.pluralize(attrname)}"), ${attrtype}.class));
+        retVal.get${java.nameType(inflector.pluralize(attrname))}().addAll(Safe.safeMore((List<Object>)params.get("${inflector.pluralize(java.nameVariable(attrname))}"), ${attrtype}.class));
       }
     <#elseif attr.type.name == "string" && !attr.type.custom && !attr.constraint.domainType.name?starts_with("enum")>
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}2"), ${attrtype}.class));
@@ -69,15 +73,15 @@ ${java.license(license)}
     <#list obj.attributes as attr>
       <#if attr.constraint.identifiable && attr.type.custom>
         <#local refObj = model.findObjectByName(attr.type.name)> 
-<@print_hierarchy_assemble obj=refObj processedAttrs=processedAttrs /> 
+<@print_hierarchy_assemble obj=refObj processedAttrs=processedAttrs prefix=attr.name /> 
       </#if>
     </#list>
   <#else>
     <#list obj.attributes as attr>
       <#if attr.constraint.identifiable && attr.type.custom>
         <#local refObj = model.findObjectByName(attr.type.name)> 
-      if (params.containsKey("${java.nameVariable(attr.name)}")) {
-        retVal.set${java.nameType(attr.name)}(${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(params, "${java.nameVariable(attr.name)}"));
+      if (params.containsKey("${java.nameVariable(attrname)}")) {
+        retVal.set${java.nameType(attrname)}(${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(params, "${java.nameVariable(attrname)}"));
       }  
       </#if>
     </#list>
