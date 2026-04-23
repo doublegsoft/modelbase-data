@@ -76,6 +76,9 @@
  #-->
 <#function get_attribute_sql_name attr prefix="">
   <#local attrname = attr.name>
+  <#if prefix == attr.parent.name>
+    <#local prefix = "">
+  </#if>
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>

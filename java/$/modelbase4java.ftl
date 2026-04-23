@@ -595,7 +595,12 @@ ${""?left_pad(indent)}}
       <#local found = false>
       <#list root.attributes as innerAttr>
         <#if refObjAttr.name == innerAttr.name>
-    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr, attr.name)}());  
+        // ${attr.name} FIXME ${root.name} ${refObj.name}}
+          <#if attr.name == refObj.name>
+    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr)}());  
+          <#else>
+    retVal.${name_setter(refObjAttr)}(${name_getter(innerAttr, attr.name)}());    
+          </#if>
           <#local found = true>  
           <#break>    
         </#if>
@@ -603,7 +608,7 @@ ${""?left_pad(indent)}}
       <#if !found>
         <#if refObjAttr.type.collection>
     retVal.${name_getter(refObjAttr)}().addAll(${name_getter(refObjAttr, attr.name)}());        
-        <#else>  
+        <#else>
     retVal.${name_setter(refObjAttr)}(${name_getter(refObjAttr, attr.name)}());    
         </#if>
       </#if>
