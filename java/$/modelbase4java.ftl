@@ -235,7 +235,7 @@
   <#elseif attr.type.name == 'number'>
     <#local dot = tatabase.number(0,100)?index_of(".")>
     <#local scale = attr.type.scale>
-    <#return '"' + tatabase.number(0,100)?substring(0, dot + scale) + '"'>
+    <#return '"' + tatabase.number(0,100)?substring(0, dot) + '"'>
   <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
     <#return '36'>
   <#elseif attr.type.name == 'long'>

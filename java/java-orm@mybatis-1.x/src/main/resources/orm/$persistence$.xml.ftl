@@ -1,5 +1,19 @@
 <#import '/$/modelbase.ftl' as modelbase>
 <#import '/$/modelbase4java.ftl' as modelbase4java>
+<#function build_left_join_objects root attrname processedObjs>
+  <#local ret = []>
+  <#local ret += [{"attrname":attrname, "obj": root}]>
+  <#list root.attributes as attr>
+    <#if !attr.type.custom><#continue></#if>
+    <#if !attr.identifiable && !attr.isLabelled("eager")><#continue></#if>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#if processedObjs[refObj.name]??><#continue></#if>
+    <#local attrname = modelbase.get_attribute_sql_name(attr)>
+    <#local processedObjs += {attrname: refObj}>
+    <#local ret += build_left_join_objects(refObj, attr.name, processedObjs)>
+  </#list>
+  <#return ret>
+</#function>
 <#macro print_id idAttr>${java.nameVariable(idAttr.name)}<#if idAttr.type.custom><#local refObj=model.findObjectByName(idAttr.type.name)><#local refIdAttr=modelbase.get_id_attributes(refObj)[0]>.<@print_id idAttr=refIdAttr /></#if></#macro>
 <#macro print_o2o_left_join idAttr>
   <#if idAttr.type.custom>
@@ -67,7 +81,6 @@
   "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="${namespace}.${app.name}.dao.${java.nameType(obj.name)}DataAccess">
-
   <sql id="join${java.nameType(obj.name)}">
 <#------------->
 <#-- 主键扩展 -->  

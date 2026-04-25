@@ -88,15 +88,17 @@
       <#return naming.nameVariable(prefix) + 'Id'>  
     </#if>
   </#if>
-  <#if attr.type.custom && model??>
+  <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)!''>
     <#assign refObjIdAttrs = get_id_attributes(refObj)>
-    <#if refObjIdAttrs?size == 0><#return naming.nameVariable(attr.type.name) + 'Id'></#if>
+    <#if refObjIdAttrs?size == 0>
+      <#return naming.nameVariable(attr.name) + 'Id'>
+    </#if>
     <#if refObjIdAttrs[0].name?starts_with(refObj.name)>
       <#if refObjIdAttrs[0].name == refObj.name>
-        <#return naming.nameVariable(prefix + '_' + refObjIdAttrs[0].name) + "Id">
+        <#return naming.nameVariable(prefix + '_' + attr.name) + "Id">
       <#else>
-        <#return naming.nameVariable(prefix + '_' + refObjIdAttrs[0].name)>
+        <#return naming.nameVariable(prefix + '_' + attr.name) + "Id">)>
       </#if>
     </#if>
     <#assign alias = naming.nameVariable(refObj.name) + naming.nameType(refObjIdAttrs[0].name)>
