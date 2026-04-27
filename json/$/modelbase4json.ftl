@@ -18,9 +18,9 @@
   <#elseif attr.type.name == 'number'>
     <#return '"' + tatabase.number(0,100) + '"'>
   <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
-    <#return '36'>
+    <#return '"36"'>
   <#elseif attr.type.name == 'long'>
-    <#return '36'>
+    <#return '"63"'>
   <#elseif attr.type.name == 'date'>
     <#return '"' + tatabase.datetime() + '"'>
   <#elseif attr.type.name == 'datetime'>
