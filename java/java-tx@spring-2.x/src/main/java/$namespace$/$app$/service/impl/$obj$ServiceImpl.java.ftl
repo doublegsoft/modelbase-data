@@ -81,10 +81,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 </#list>
     boolean existing = true;
 <#list flow.types as typeObj>
-  <#if typeDef.persistence && typeDef.name == typeObj.name>    
-    <#--------------------------------------------------------------------------------->
-    <#-- 验证标识属性是否有值，如果没有则认为是新数据需要生成标识值，如果有则认为是已有数据需要更新 -->
-    <#--------------------------------------------------------------------------------->
+  <#if typeDef.persistence && typeDef.name == typeObj.name>
+    <#---------------------------------------------------->
+    <#-- 这个意味着是妥妥的数据对象，就是这个服务类的主要操作对象 -->
+    <#---------------------------------------------------->
+    <#------------------------------------------------------------------------------------>
+    <#-- 1. 验证标识属性是否有值，如果没有则认为是新数据需要生成标识值，如果有则认为是已有数据需要更新 -->
+    <#------------------------------------------------------------------------------------>
     <#list idAttrs as idAttr>    
     ${modelbase4java.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}();
     if (Strings.isBlank(${modelbase.get_attribute_sql_name(idAttr)})) {
@@ -95,9 +98,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       existing = false;
     }
     </#list>
-    <#-------------------------------------------------------------------------->
-    <#-- 即使标识属性存在值也要验证是否真的存在，避免前端传入一个不存在的标识值导致保存失败 -->
-    <#-------------------------------------------------------------------------->
+    <#----------------------------------------------------------------------------->
+    <#-- 2. 即使标识属性存在值也要验证是否真的存在，避免前端传入一个不存在的标识值导致保存失败 -->
+    <#----------------------------------------------------------------------------->
     if (existing) {
       ${java.nameType(typeDef.name)}Query existingQuery = new ${java.nameType(typeDef.name)}Query();
     <#list idAttrs as idAttr>
@@ -105,40 +108,48 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#list>
       existing = ${java.nameVariable(typeDef.name)}DataAccess.isExisting${java.nameType(typeDef.name)}(existingQuery);
     } 
-    <#---------------------------------------------->
-    <#-- 根据数据模型定义，设置默认值并且校验数据的合法性 --> 
-    <#---------------------------------------------->
+    <#------------------------------------------------->
+    <#-- 3. 根据数据模型定义，设置默认值并且校验数据的合法性 --> 
+    <#------------------------------------------------->
     ${java.nameType(typeObj.name)}Query.setDefaultValues(query, !existing); 
     ValidationResult res = ${java.nameVariable(typeObj.name)}Validation.validate(query, !existing);
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
-    <#---------------------------->
-    <#-- 插入或者更新主要对象的数据 -->
-    <#---------------------------->
+  <#elseif !typeDef.persistence && typeDef.name != typeObj.name>
+    <#---------------------------------------------------------------------------------------->
+    <#-- 类型对象是非持久化的，说明这个对象可能是聚合对象（aggregate root）、合成对象（composite row） -->
+    <#-- 或者是非持久化的数据对象 （data object），最后一个也是重点对象。                            -->
+    <#---------------------------------------------------------------------------------------->
+    <#if typeObj.collection>
+    // TODO: 建立关联关系
+    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(null/* TODO */);
+    <#else>
+    // TODO: 建立关联关系
+    ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    </#if>
+  <#elseif typeDef.persistence && typeDef.name != typeObj.name>
+    <#------------------------------------------------------------------------------------>
+    <#-- 类型对象是持久化的，说明是数据对象的包装，通过variable（实际上就是属性名称）在父对象中获得它 -->
+    <#------------------------------------------------------------------------------------>
+    if (query.get${java.nameType(typeObj.variable)}() != null) {
+    <#--  <#assign refObjIdAttr = typeObj.getIdentifiableAttribute()>
+    <#assign attrRefObj = typeDef.getAttributeByName(typeObj.variable)>  -->
+      ${java.nameVariable(typeObj.name)}Query = query.get${java.nameType(typeObj.variable)}();
+      ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+      <#--  query.set${modelbase4java.name_setter(attrRefObj)}Query.get${modelbase4java.name_getter(refObjIdAttr)}());  -->
+    }
+  </#if>
+  <#if typeDef.persistence>
+    <#------------------------------------------------------>
+    <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
+    <#------------------------------------------------------>
     ${java.nameType(typeObj.name)} ${java.nameVariable(typeDef.name)} = ${java.nameType(typeObj.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
     if (!existing) {
       ${java.nameVariable(typeObj.name)}DataAccess.insert${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)});
     } else {
       ${java.nameVariable(typeDef.name)}DataAccess.updatePartial${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});      
-    }
-  <#elseif !typeDef.persistence && typeDef.name != typeObj.name>
-    <#------------------------------------------------------------------------------------------>
-    <#-- 类型对象是非持久化的，说明这个对象可能是聚合对象（aggregate root）或者合成对象（composite row） -->
-    <#------------------------------------------------------------------------------------------>
-    <#if typeObj.collection>
-    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(null/* TODO */);
-    <#else>
-    ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-    </#if>
-  <#elseif typeDef.persistence && typeDef.name != typeObj.name>
-    <#--------------------------------------->
-    <#-- 类型对象是持久化的，说明是数据对象的包装 -->
-    <#--------------------------------------->
-    if (query.get${java.nameType(typeObj.variable)}() != null) {
-      ${java.nameVariable(typeObj.name)}Query = query.get${java.nameType(typeObj.variable)}();
-      ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);  
     }
   </#if>
 </#list>   
