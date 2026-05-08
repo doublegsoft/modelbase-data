@@ -24,8 +24,6 @@ import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
 /**
  * 【${modelbase.get_object_label(obj)}】存储事务化的服务规范。
  *
- * @author <a href="mailto:guo.guo.gan@gmail.com">Christian Gann</a>
- *
  * @since ${version}
  */
 public interface ${typename}Service {
@@ -45,7 +43,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  void batch${inflector.pluralize(typename)}(${typename}Query existingQuery, List<String> compareFields, List<${typename}Query> queries) throws ServiceException;
+  // void batch${inflector.pluralize(typename)}(${typename}Query existingQuery, List<String> compareFields, List<${typename}Query> queries) throws ServiceException;
 
   /**
    * 保存多个【${modelbase.get_object_label(obj)}】对象。
@@ -56,7 +54,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  void save${inflector.pluralize(typename)}(List<${typename}Query> queries) throws ServiceException;
+  //void save${inflector.pluralize(typename)}(List<${typename}Query> queries) throws ServiceException;
   
   /**
    * 保存【${modelbase.get_object_label(obj)}】对象。
@@ -83,7 +81,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  ${typename}Query create${typename}(${typename}Query query) throws ServiceException;
+  // ${typename}Query create${typename}(${typename}Query query) throws ServiceException;
   
   /**
    * 单纯地更新【${modelbase.get_object_label(obj)}】对象。
@@ -96,7 +94,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  ${typename}Query update${typename}(${typename}Query query) throws ServiceException;
+  // ${typename}Query update${typename}(${typename}Query query) throws ServiceException;
 </#if>  
 
   /**
@@ -110,7 +108,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  ${typename}Query modify${typename}(${typename}Query query) throws ServiceException;
+  // ${typename}Query modify${typename}(${typename}Query query) throws ServiceException;
 
   /**
    * 查询【${modelbase.get_object_label(obj)}】列表对象。
@@ -162,7 +160,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  List<Map<String,Object>> aggregate${typename}(${typename}Query query) throws ServiceException;
+  // List<Map<String,Object>> aggregate${typename}(${typename}Query query) throws ServiceException;
   
   /**
    * 删除（物理删除）【${modelbase.get_object_label(obj)}】对象。
@@ -177,9 +175,9 @@ public interface ${typename}Service {
 <#list obj.attributes as attr>
   <#if attr.name == "state">
   
-  void enable${typename}(${typename}Query query) throws ServiceException;
+  // void enable${typename}(${typename}Query query) throws ServiceException;
   
-  void disable${typename}(${typename}Query query) throws ServiceException;
+  // void disable${typename}(${typename}Query query) throws ServiceException;
   </#if>
 </#list>    
 <#-------------------->

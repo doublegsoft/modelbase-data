@@ -5,14 +5,25 @@ ${java.license(license)}
 </#if>
 <#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
 <#assign flow = typeDef.flow>
-<#assign idFields = typeDef.getIdentifiableFields()>
-<#assign idAttrs = []>
-<#list idFields as idField>
-  <#if !idField.definition??>
-    <#stop "无法找到【${modelbase.get_object_label(obj)}】对象的标识属性，请检查数据模型定义。">
-  </#if>
-  <#assign idAttrs += [idField.definition]>
-</#list>
+<#assign idAttrs = typeDef.getIdentifiableAttributes()>
+<#assign existings = {}>
+<#macro print_variables flow>
+  <#local existings = {}>
+  <#list flow.types as typeObj>
+    <#if existings[typeObj.name]??><#continue></#if>
+    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
+    <#local existings = {typeObj.name: typeObj}>
+  </#list>
+  <#local existings = {}>
+  <#list flow.types as typeObj>
+    <#if existings[typeObj.name]??><#continue></#if>
+    ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.name)} = null;
+    <#local existings = {typeObj.name: typeObj}>
+  </#list>
+  <#list idAttrs as idAttr>
+    ${modelbase4java.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)} = null;
+  </#list>
+</#macro>
 package <#if namespace??>${namespace}.</#if>${app.name}.service.impl;
 
 import java.util.List;
@@ -45,6 +56,7 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 @Named("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
 public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerService implements ${java.nameType(typeDef.name)}Service {
  <#list flow.types as typeObj>
+  <#if existings[typeObj.name]??><#continue></#if>
   <#------------------------------------------->
   <#-- 说明当前的类型定义就是数据对象，这个非常重要 -->
   <#------------------------------------------->
@@ -60,6 +72,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   @Inject
   private ${java.nameType(typeObj.name)}Service ${java.nameVariable(typeObj.name)}Service;
   </#if>
+  <#assign existings += {typeObj.name: typeObj}>
 </#list>   
 
   /**
@@ -75,10 +88,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#------------------->    
 <#-- 涉及到的变量定义 -->
 <#------------------->      
-<#list flow.types as typeObj>
-    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
-</#list>
     boolean existing = true;
+<@print_variables flow />    
 <#list flow.types as typeObj>
   <#if typeDef.persistence && typeDef.name == typeObj.name>
     <#---------------------------------------------------->
@@ -88,7 +99,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#-- 1. 验证标识属性是否有值，如果没有则认为是新数据需要生成标识值，如果有则认为是已有数据需要更新 -->
     <#------------------------------------------------------------------------------------>
     <#list idAttrs as idAttr>    
-    ${modelbase4java.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}();
+    ${modelbase.get_attribute_sql_name(idAttr)} = query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}();
+      <#if modelbase.type_attribute_primitive(idAttr) != "Long"><#continue></#if>
     if (Strings.isBlank(${modelbase.get_attribute_sql_name(idAttr)})) {
       <#if idAttr.type.name == "long" || idAttr.type.name == "string">    
       ${modelbase.get_attribute_sql_name(idAttr)} = IdGenerator.id();
@@ -115,22 +127,27 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
-  <#elseif !typeDef.persistence && typeDef.name != typeObj.name>
+  <#elseif (!typeDef.persistence || typeDef.meta) && typeDef.name != typeObj.name>
     <#---------------------------------------------------------------------------------------->
     <#-- 类型对象是非持久化的，说明这个对象可能是聚合对象（aggregate root）、合成对象（composite row） -->
     <#-- 或者是非持久化的数据对象 （data object），最后一个也是重点对象。                            -->
     <#---------------------------------------------------------------------------------------->
-    <#if typeObj.collection>
+    <#if typeObj.collection || typeDef.meta || typeDef.pivot>
     // TODO: 建立关联关系
     ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(null/* TODO */);
+    <#elseif typeDef.meta>
+    // TODO
     <#else>
-    // TODO: 建立关联关系
+    <#-- composite, aggregate, meta, extension, pivot -->
     ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
+    <#list idAttrs as idAttr>
+    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}());
+    </#list>
     ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
     </#if>
   <#elseif typeDef.persistence && typeDef.name != typeObj.name>
     <#------------------------------------------------------------------------------------>
-    <#-- 类型对象是持久化的，说明是数据对象的包装，通过variable（实际上就是属性名称）在父对象中获得它 -->
+    <#-- 类型对象是持久化的，说明是数据对象的包装，通过variable（实际上就是属性名称）从所属对象中获得它 -->
     <#------------------------------------------------------------------------------------>
     <#assign refObjIdAttr = typeObj.getIdentifiableAttribute()>
     <#assign attrRefObj = typeDef.getAttribute(typeObj.variable)>
@@ -145,7 +162,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#------------------------------------------------------>
     <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
     <#------------------------------------------------------>
-    ${java.nameType(typeDef.name)} ${java.nameVariable(typeDef.name)} = ${java.nameType(typeDef.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
+    ${java.nameVariable(typeDef.name)} = ${java.nameType(typeDef.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
     if (!existing) {
       ${java.nameVariable(typeDef.name)}DataAccess.insert${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});
     } else {
@@ -169,12 +186,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#------------->    
     ${java.nameType(typeDef.name)}Query retVal = null;
     List<Map<String, Object>> results = null;
-<#list flow.types as typeObj>
-    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
-</#list>
-<#list flow.types as typeObj>
-    ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.name)} = null;
-</#list>
+<@print_variables flow />
 <#list flow.types as typeObj>
   <#if typeDef.persistence && typeDef.name == typeObj.name>      
     <#------------->
@@ -204,11 +216,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
     }
     retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
-    <#break>
-  <#elseif typeDef.name != typeObj.name>
-    <#assign typeRef = typeObj.reference>
-    <#assign leftAttr = typeRef.getLeftAttributeFromReference()>
-    <#assign rightAttr = typeRef.getRightAttributeFromReference()>
+  <#elseif (!typeDef.persistence || typeDef.meta) && typeDef.name != typeObj.name>
+    <#--  <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+    <#assign rightAttr = typeObj.getRightAttributeFromReference()>
     ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
     ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(${java.nameType(leftAttr.parent.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(leftAttr))}());
     <#if typeObj.collection>
@@ -217,7 +227,56 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#else>
     ${java.nameVariable(typeObj.name)} = ${java.nameVariable(typeObj.name)}Service.read${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}());
     retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.name)});
+    </#if>  -->
+  <#elseif typeDef.persistence && typeDef.name != typeObj.name>
+    <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+    <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(retVal.${modelbase4java.name_getter(leftAttr)}());
+    <#if typeObj.collection>
+    ${java.nameVariable(inflector.pluralize(typeObj.name))} = ${java.nameVariable(typeObj.name)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.name)}Query);
+    retVal.get${java.nameType(inflector.pluralize(typeObj.name))}().addAll(${java.nameVariable(inflector.pluralize(typeObj.name))});
+    <#else>
+    ${java.nameVariable(typeObj.name)}Query = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.name)}Query);
     </#if>
+  </#if>
+</#list>
+    return retVal;
+  }
+
+  /**
+   * 读取【${typeDef.label!""}】对象实例
+   *
+   * @param query
+   *        【${modelbase.get_object_label(obj)}】查询对象
+   *
+   * @return 【${typeDef.label!""}】对象实例
+   */
+  public ${java.nameType(typeDef.name)}Query get${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
+<#------------->    
+<#-- 变量定义 -->
+<#------------->    
+    ${java.nameType(typeDef.name)}Query retVal = null;
+    List<Map<String, Object>> results = null;
+<@print_variables flow />
+<#list flow.types as typeObj>
+  <#if typeDef.persistence && typeDef.name == typeObj.name>      
+    <#------------------>    
+    <#-- 主要对象的查询 -->    
+    <#------------------>
+    try {
+      results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
+    } catch (Throwable cause) {
+      throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
+    }
+    if (results == null || results.size() == 0) {
+      return null;
+    }
+    retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
+    <#break>
+  <#elseif typeDef.name != typeObj.name>
+    <#-- TODO -->
   </#if>
 </#list>
     return retVal;
@@ -230,35 +289,30 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    *        查询条件
    * @return 符合条件的【${typeDef.label!""}】对象实例列表
    */
-  public List<${java.nameType(typeDef.name)}Query> find${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
+  public Pagination<${java.nameType(typeDef.name)}Query> find${java.nameType(inflector.pluralize(typeDef.name))}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
     <#------------------->    
     <#-- 涉及到的变量定义 -->
     <#------------------->
-    List<${java.nameType(typeDef.name)}Query> retVal = new ArrayList<>();
+    Pagination<${java.nameType(typeDef.name)}Query> retVal = new Pagination<>();
     List<Map<String, Object>> results = null;
-<#list flow.types as typeObj>
-    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
-</#list>
-<#list flow.types as typeObj>
-    ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.name)} = null;
-</#list>
+<@print_variables flow />
+    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() == -1 ? Integer.MAX_VALUE : query.getLimit());
 <#list flow.types as typeObj>
   <#if typeDef.persistence>       
     <#------------------>    
     <#-- 主要对象的查询 -->    
     <#------------------>
     try {
-      results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
+      results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query, rowBounds);  
     } catch (Throwable cause) {
       throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
     }
     if (results == null || results.size() == 0) {
-      throw new ServiceException(404, "没有找到【${modelbase.get_object_label(obj)}】对象实例。");
+      return retVal;
     }
-    if (results.size() > 1) {
-      throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
+    for (Map<String, Object> row : results) {
+      retVal.getData().add(${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(row));
     }
-    ${java.nameVariable(typeDef.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromMap(results.get(0));
     <#break>
   <#else>
     <#assign typeRef = typeObj.reference>
