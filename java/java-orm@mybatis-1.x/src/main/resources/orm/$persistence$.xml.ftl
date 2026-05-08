@@ -705,14 +705,6 @@
   </update>
   </#if>
 </#list>
-<#if idAttrs?size == 1>
-  
-  <select id="isExisting${java.nameType(obj.name)}" parameterType="${modelbase4java.type_attribute_primitive(idAttrs[0])}">
-    select exists (
-      select 1 from ${obj.persistenceName} where ${idAttrs[0].persistenceName}=${r"#{"}${modelbase.get_attribute_sql_name(idAttrs[0])}}
-    )
-  </select>
-<#else>
   
   <select id="isExisting${java.nameType(obj.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(obj.name)}Query">
     select exists (
@@ -725,5 +717,4 @@
 </#list>
     )
   </select>  
-</#if>
 </mapper>

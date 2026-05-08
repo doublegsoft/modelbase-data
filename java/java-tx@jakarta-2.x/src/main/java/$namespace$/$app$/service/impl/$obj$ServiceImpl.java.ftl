@@ -25,11 +25,10 @@ import java.math.BigDecimal;
 import java.io.Serializable;
 import java.util.Date;
 import java.sql.Timestamp;
+import jakarta.inject.*;
+import jakarta.transaction.*;
 
 import org.apache.ibatis.session.RowBounds;
-import org.springframework.beans.factory.annotation.*;
-import org.springframework.transaction.annotation.*;
-import org.springframework.stereotype.*;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.poco.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.orm.assembler.*;
@@ -43,7 +42,7 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 /**
  * 【${typeDef.label!""}】存储事务化的服务实现。
  */
-@Service("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
+@Named("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
 public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerService implements ${java.nameType(typeDef.name)}Service {
  <#list flow.types as typeObj>
   <#------------------------------------------->
@@ -71,7 +70,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    *
    * @return 保存后的【${typeDef.label!""}】对象查询条件，包含了标识属性等默认值
    */
-  @Transactional(readOnly = false, rollbackFor = Exception.class)
+  @Transactional(rollbackOn = Exception.class)
   public ${java.nameType(typeDef.name)}Query save${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
 <#------------------->    
 <#-- 涉及到的变量定义 -->
@@ -133,26 +132,27 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#------------------------------------------------------------------------------------>
     <#-- 类型对象是持久化的，说明是数据对象的包装，通过variable（实际上就是属性名称）在父对象中获得它 -->
     <#------------------------------------------------------------------------------------>
+    <#assign refObjIdAttr = typeObj.getIdentifiableAttribute()>
+    <#assign attrRefObj = typeDef.getAttribute(typeObj.variable)>
     if (query.get${java.nameType(typeObj.variable)}() != null) {
-    <#--  <#assign refObjIdAttr = typeObj.getIdentifiableAttribute()>
-    <#assign attrRefObj = typeDef.getAttributeByName(typeObj.variable)>  -->
       ${java.nameVariable(typeObj.name)}Query = query.get${java.nameType(typeObj.variable)}();
       ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-      <#--  query.set${modelbase4java.name_setter(attrRefObj)}Query.get${modelbase4java.name_getter(refObjIdAttr)}());  -->
+      query.${modelbase4java.name_setter(attrRefObj)}(${java.nameVariable(typeObj.name)}Query.${modelbase4java.name_getter(refObjIdAttr)}());
     }
   </#if>
+</#list>
   <#if typeDef.persistence>
     <#------------------------------------------------------>
     <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
     <#------------------------------------------------------>
-    ${java.nameType(typeObj.name)} ${java.nameVariable(typeDef.name)} = ${java.nameType(typeObj.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
+    ${java.nameType(typeDef.name)} ${java.nameVariable(typeDef.name)} = ${java.nameType(typeDef.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
     if (!existing) {
-      ${java.nameVariable(typeObj.name)}DataAccess.insert${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)});
+      ${java.nameVariable(typeDef.name)}DataAccess.insert${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});
     } else {
       ${java.nameVariable(typeDef.name)}DataAccess.updatePartial${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});      
     }
   </#if>
-</#list>   
+    return query;   
   }
   
   /**
@@ -163,7 +163,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    *
    * @return 【${typeDef.label!""}】对象实例
    */
-  public ${typeDef.name}Query read${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
+  public ${java.nameType(typeDef.name)}Query read${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
 <#------------->    
 <#-- 变量定义 -->
 <#------------->    
@@ -187,7 +187,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     </#list>
     if (areAllIdsEmpty) {
-      throw new ServiceException("400", "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
+      throw new ServiceException(400, "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
     }
     <#------------------>    
     <#-- 主要对象的查询 -->    
@@ -195,7 +195,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
     } catch (Throwable cause) {
-      throw new ServiceException("500", "查询${typeDef.label!""}失败", cause);
+      throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
     }
     if (results == null || results.size() == 0) {
       throw new ServiceException(404, "没有找到【${modelbase.get_object_label(obj)}】对象实例。");
@@ -250,7 +250,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
     } catch (Throwable cause) {
-      throw new ServiceException("500", "查询${typeDef.label!""}失败", cause);
+      throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
     }
     if (results == null || results.size() == 0) {
       throw new ServiceException(404, "没有找到【${modelbase.get_object_label(obj)}】对象实例。");
@@ -258,7 +258,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     if (results.size() > 1) {
       throw new ServiceException(400, "找到多个【${modelbase.get_object_label(obj)}】对象实例，请检查查询条件。");
     }
-    ${java.nameVariable(typeDef.name)} = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
+    ${java.nameVariable(typeDef.name)} = ${java.nameType(obj.name)}Assembler.assemble${java.nameType(obj.name)}FromMap(results.get(0));
     <#break>
   <#else>
     <#assign typeRef = typeObj.reference>
@@ -281,7 +281,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    * @param query
    *        【${modelbase.get_object_label(obj)}】查询对象
    */
-  @Transactional(readOnly = false, rollbackFor = Exception.class)
+  @Transactional(rollbackOn = Exception.class)
   public void delete${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
 <#list flow.types as typeObj>
   <#if typeDef.persistence>               
@@ -295,12 +295,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     </#list>
     if (areAllIdsEmpty) {
-      throw new ServiceException("400", "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
+      throw new ServiceException(400, "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
     }
     try {
-      ${java.nameVariable(typeDef.name)}DataAccess.delete${java.nameType(typeDef.name)}(query);  
+      ${java.nameVariable(typeDef.name)}DataAccess.delete${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query));  
     } catch (Throwable cause) {
-      throw new ServiceException("500", "删除${typeDef.label!""}失败", cause);
+      throw new ServiceException(500, "删除${typeDef.label!""}失败", cause);
     }
     <#break>
   <#else>

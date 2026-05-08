@@ -119,18 +119,6 @@ public interface ${typename}DataAccess {
 <#-- 
  ### 主键个数是一个的实体对象，自然带有通过主键查询判断存不存在的操作
  -->
-<#if idAttrs?size == 1>
-  
-  /**
-   * 判断【${modelbase.get_object_label(obj)}】实体对象是否存在
-   *
-   * @param ${modelbase.get_attribute_sql_name(idAttrs[0])}
-   *        【${modelbase.get_object_label(obj)}】对象标识
-   *
-   * @return 存在为，不存在为false
-   */ 
-  boolean isExisting${java.nameType(obj.name)}(@Param("${modelbase.get_attribute_sql_name(idAttrs[0])}") ${modelbase4java.type_attribute_primitive(idAttrs[0])} ${modelbase.get_attribute_sql_name(idAttrs[0])});
-<#else>  
 
   /**
    * 判断【${modelbase.get_object_label(obj)}】值体对象是否存在
@@ -141,7 +129,6 @@ public interface ${typename}DataAccess {
    * @return 存在为，不存在为false
    */ 
   boolean isExisting${java.nameType(obj.name)}(${java.nameType(obj.name)}Query query);
-</#if> 
 <#-- 观察属性 -->  
 <#--
 <#assign existingAttrExprs = {}>
