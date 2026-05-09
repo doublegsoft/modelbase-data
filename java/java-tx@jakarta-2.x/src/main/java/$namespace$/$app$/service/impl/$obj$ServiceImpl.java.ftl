@@ -132,11 +132,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#-- 类型对象是非持久化的，说明这个对象可能是聚合对象（aggregate root）、合成对象（composite row） -->
     <#-- 或者是非持久化的数据对象 （data object），最后一个也是重点对象。                            -->
     <#---------------------------------------------------------------------------------------->
-    <#if typeObj.collection || typeDef.meta || typeDef.pivot>
-    // TODO: 建立关联关系
-    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(null/* TODO */);
-    <#elseif typeDef.meta>
-    // TODO
+    <#if typeObj.collection>
+    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(inflector.pluralize(typeObj.name))}Queries = query.get${inflector.pluralize(java.nameType(typeObj.name))}();
+    for (${java.nameType(typeObj.name)}Query item : ${java.nameVariable(inflector.pluralize(typeObj.name))}Queries) {
+      <#--  item.${modelbase4java.name_setter(modelbase.get_attribute_sql_name(typeObj.getLeftAttributeFromReference()))}(query.${modelbase4java.name_getter(modelbase.get_attribute_sql_name(typeObj.getLeftAttributeFromReference()))}());  -->
+    }
+    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(inflector.pluralize(typeObj.name))}Queries);
     <#else>
     <#-- composite, aggregate, meta, extension, pivot -->
     ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
