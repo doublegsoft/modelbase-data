@@ -75,6 +75,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   <#assign existings += {typeObj.name: typeObj}>
 </#list>   
 
+  @Transactional(rollbackOn = Exception.class)
+  public void save${java.nameType(modelbase.get_object_plural(obj))}(List<${java.nameType(obj.name)}Query> queries) throws ServiceException {
+    for (${java.nameType(obj.name)}Query query : queries) {
+      save${java.nameType(obj.name)}(query);
+    }
+  }
+
   /**
    * 保存【${typeDef.label!""}】对象实例
    *
@@ -133,11 +140,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#-- 或者是非持久化的数据对象 （data object），最后一个也是重点对象。                            -->
     <#---------------------------------------------------------------------------------------->
     <#if typeObj.collection>
-    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(inflector.pluralize(typeObj.name))}Queries = query.get${inflector.pluralize(java.nameType(typeObj.name))}();
-    for (${java.nameType(typeObj.name)}Query item : ${java.nameVariable(inflector.pluralize(typeObj.name))}Queries) {
-      <#--  item.${modelbase4java.name_setter(modelbase.get_attribute_sql_name(typeObj.getLeftAttributeFromReference()))}(query.${modelbase4java.name_getter(modelbase.get_attribute_sql_name(typeObj.getLeftAttributeFromReference()))}());  -->
-    }
-    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(inflector.pluralize(typeObj.name))}Queries);
+    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.name)}Queries = query.to${java.nameType(typeObj.plural)}();
+    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.name)}Queries);
     <#else>
     <#-- composite, aggregate, meta, extension, pivot -->
     ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();

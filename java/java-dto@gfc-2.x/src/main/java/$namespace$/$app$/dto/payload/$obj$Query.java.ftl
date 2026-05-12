@@ -16,6 +16,7 @@ import java.util.ArrayList;
 <#list modelbase4java.get_imports(obj)?sort as imp>
 import ${imp};
 </#list>
+import ${namespace}.${app.name}.util.Dates;
 
 /**
  * 【${modelbase.get_object_label(obj)}】
@@ -29,15 +30,32 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <@modelbase4java.print_object_query_xetters obj=obj processedAttrs=processedAttrs />   
 <@modelbase4java.print_object_query_to_query obj=obj root=obj />
 <#-- pivot的master可以不定义 -->
+
 <#if obj.isLabelled("pivot") || obj.isLabelled("meta")>
-  <#if obj.getLabelledOptions("pivot")["master"]??>
-    <#assign masterOrDetailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  <#else>
-    <#assign masterOrDetailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#if obj.isLabelled("pivot")>
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+    <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+    <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+    <#assign masterObjIdAttr = modelbase4java.get_id_attributes(masterObj)?first>
+  <#elseif obj.isLabelled("meta")>
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("meta")["master"])>
+    <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("meta")["detail"])>
+    <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])??>
+      <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])>
+    <#else>
+      <#assign keyAttr = model.findAttributeByNames(detailObj.name, "property_name")>
+    </#if>
+    <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])??>
+      <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])>
+    <#else>
+      <#assign valAttr = model.findAttributeByNames(detailObj.name, "property_value")>
+    </#if>
+    <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
   </#if>  
   
-  public ${java.nameType(masterOrDetailObj.name)}Query to${java.nameType(masterOrDetailObj.name)}Query() {
-    ${java.nameType(masterOrDetailObj.name)}Query retVal = new ${java.nameType(masterOrDetailObj.name)}Query();
+  public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
+    ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
   <#list obj.attributes as attr>
     <#if attr.isLabelled("redefined")><#continue></#if>
     <#if attr.type.collection>
@@ -49,17 +67,31 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     return retVal;
   }
 
-  <#-- TODO -->
-  public List<${java.nameType(masterOrDetailObj.name)}Query> to${java.nameType(masterOrDetailObj.name)}Queries() {
-    List<${java.nameType(masterOrDetailObj.name)}Query> retVal = new ArrayList<>();
-  <#--  <#list obj.attributes as attr>
-    <#if attr.isLabelled("redefined")><#continue></#if>
+  public List<${java.nameType(detailObj.name)}Query> to${java.nameType(detailObj.getLabelledOptions("name")["plural"])}() {
+    List<${java.nameType(detailObj.name)}Query> retVal = new ArrayList<>();
+    ${java.nameType(detailObj.name)}Query item = null;
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
     <#if attr.type.collection>
     retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
     <#else>
-    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
+    item = new ${java.nameType(detailObj.name)}Query();
+      <#list detailObj.attributes as detailAttr>
+        <#if detailAttr.type.name == masterObj.name>
+    item.${modelbase4java.name_setter(detailAttr)}(${modelbase.get_attribute_sql_name(masterObjIdAttr)});   
+          <#break>
+        </#if>
+      </#list>
+    item.${modelbase4java.name_setter(keyAttr)}("${attr.name?upper_case}");
+    <#if attr.type.name == "date">
+    item.${modelbase4java.name_setter(valAttr)}(Dates.format(${modelbase.get_attribute_sql_name(attr)}, "yyyy-MM-dd"));
+    <#else>
+    item.${modelbase4java.name_setter(valAttr)}(${modelbase.get_attribute_sql_name(attr)});
     </#if>
-  </#list>    -->
+    ${java.nameType(detailObj.name)}Query.setDefaultValues(item, true);
+    retVal.add(item);
+    </#if>
+  </#list>  
     return retVal;
   }
 </#if>

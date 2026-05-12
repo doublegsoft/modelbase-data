@@ -43,7 +43,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  // void batch${inflector.pluralize(typename)}(${typename}Query existingQuery, List<String> compareFields, List<${typename}Query> queries) throws ServiceException;
+  // void save${inflector.pluralize(typename)}(${typename}Query existingQuery, List<String> compareFields, List<${typename}Query> queries) throws ServiceException;
 
   /**
    * 保存多个【${modelbase.get_object_label(obj)}】对象。
@@ -54,7 +54,7 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常   
    */
-  //void save${inflector.pluralize(typename)}(List<${typename}Query> queries) throws ServiceException;
+  void save${java.nameType(modelbase.get_object_plural(obj))}(List<${typename}Query> queries) throws ServiceException;
   
   /**
    * 保存【${modelbase.get_object_label(obj)}】对象。
