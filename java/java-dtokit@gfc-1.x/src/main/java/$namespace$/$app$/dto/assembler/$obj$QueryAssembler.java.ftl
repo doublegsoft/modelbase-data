@@ -80,8 +80,8 @@ ${java.license(license)}
     <#list obj.attributes as attr>
       <#if attr.constraint.identifiable && attr.type.custom>
         <#local refObj = model.findObjectByName(attr.type.name)> 
-      if (params.containsKey("${java.nameVariable(attrname)}")) {
-        retVal.set${java.nameType(attrname)}(${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(params, "${java.nameVariable(attrname)}"));
+      if (params.containsKey("${java.nameVariable(attr.name)}")) {
+        retVal.set${java.nameType(attr.name)}(${java.nameType(refObj.name)}QueryAssembler.assemble${java.nameType(refObj.name)}Query(params, "${java.nameVariable(attr.name)}"));
       }  
       </#if>
     </#list>
