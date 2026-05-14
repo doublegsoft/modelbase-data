@@ -234,18 +234,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first)}());
     ${java.nameVariable(typeObj.name)}Query = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
     retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.name)}Query);
-  <#elseif typeRefType == "PREF">
-    <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
-    <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    <#--  ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(retVal.${modelbase4java.name_getter(leftAttr)}());
-    ${java.nameVariable(typeObj.name)} = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-    retVal.from${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)});    -->
+  <#elseif typeRefType == "PREF"><#-- 在读取里面这种类型忽略 -->
   <#elseif typeRefType == "CREF">
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
     <#assign rightAttr = typeObj.getRightAttributeFromReference()>
     ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(retVal.${modelbase4java.name_getter(leftAttr)}());
+    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
     ${java.nameVariable(typeObj.name)}Queries = ${java.nameVariable(typeObj.name)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.name)}Query).getData();
     retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.name)}Queries);
   </#if>
