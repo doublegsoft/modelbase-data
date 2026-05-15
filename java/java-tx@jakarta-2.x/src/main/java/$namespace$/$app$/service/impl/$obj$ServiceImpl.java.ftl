@@ -10,21 +10,21 @@ ${java.license(license)}
 <#macro print_variables flow>
   <#local existings = {}>
   <#list flow.types as typeObj>
-    <#if existings[typeObj.name]??><#continue></#if>
-    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
-    <#local existings = {typeObj.name: typeObj}>
+    <#if existings[typeObj.variable]??><#continue></#if>
+    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.variable)}Query = null;
+    <#local existings = {typeObj.variable: typeObj}>
   </#list>
   <#local existings = {}>
   <#list flow.types as typeObj>
-    <#if existings[typeObj.name]??><#continue></#if>
-    ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.name)} = null;
-    <#local existings = {typeObj.name: typeObj}>
+    <#if existings[typeObj.variable]??><#continue></#if>
+    ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.variable)} = null;
+    <#local existings = {typeObj.variable: typeObj}>
   </#list>
   <#local existings = {}>
   <#list flow.types as typeObj>
-    <#if existings[typeObj.name]??><#continue></#if>
-    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.name)}Queries = null;
-    <#local existings = {typeObj.name: typeObj}>
+    <#if existings[typeObj.variable]??><#continue></#if>
+    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = null;
+    <#local existings = {typeObj.variable: typeObj}>
   </#list>
   <#list idAttrs as idAttr>
     ${modelbase4java.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)} = null;
@@ -62,7 +62,7 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 @Named("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
 public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerService implements ${java.nameType(typeDef.name)}Service {
 <#list flow.types as typeObj>
-  <#if existings[typeObj.name]??><#continue></#if>
+  <#if existings[typeObj.variable]??><#continue></#if>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#------------------------------------------->
   <#-- 说明当前的类型定义就是数据对象，这个非常重要 -->
@@ -77,9 +77,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   <#else>
 
   @Inject
-  private ${java.nameType(typeObj.name)}Service ${java.nameVariable(typeObj.name)}Service;
+  private ${java.nameType(typeObj.name)}Service ${java.nameVariable(typeObj.variable)}Service;
   </#if>
-  <#assign existings += {typeObj.name: typeObj}>
+  <#assign existings += {typeObj.variable: typeObj}>
 </#list>   
 
   @Transactional(rollbackOn = Exception.class)
@@ -138,7 +138,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#-- 3. 根据数据模型定义，设置默认值并且校验数据的合法性 --> 
     <#------------------------------------------------->
     ${java.nameType(typeObj.name)}Query.setDefaultValues(query, !existing); 
-    ValidationResult res = ${java.nameVariable(typeObj.name)}Validation.validate(query, !existing);
+    ValidationResult res = ${java.nameVariable(typeObj.variable)}Validation.validate(query, !existing);
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
@@ -150,22 +150,22 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#---------------------------------------------------------------------------------------->
     <#-- 次对象和主对象的关系来确定，采用什么方式处理 -->
     <#if refTypeName == "PREF">
-    ${java.nameVariable(typeObj.name)}Query = query.get${java.nameType(typeObj.name)}();
-    if (${java.nameVariable(typeObj.name)}Query != null) {
-      ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    ${java.nameVariable(typeObj.variable)}Query = query.get${java.nameType(typeObj.name)}();
+    if (${java.nameVariable(typeObj.variable)}Query != null) {
+      ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     }
     <#elseif refTypeName == "AREF">
-    ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
-    if (${java.nameVariable(typeObj.name)}Query != null) {
-      ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    if (${java.nameVariable(typeObj.variable)}Query != null) {
+      ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     }
     <#elseif refTypeName == "CREF">
-    ${java.nameVariable(typeObj.name)}Queries = query.to${java.nameType(typeObj.name)}Queries();
-    ${java.nameVariable(typeObj.name)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.name)}Queries);
+    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);
     <#elseif refTypeName == "OREF">  
-    ${java.nameVariable(typeObj.name)}Query = query.to${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
       <#list idAttrs as idAttr>
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}());
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}());
       </#list>
     </#if>  
   </#if>
@@ -192,19 +192,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    *
    * @return 【${typeDef.label!""}】对象实例
    */
-  public ${java.nameType(typeDef.name)}Query read${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
-<#------------->    
-<#-- 变量定义 -->
-<#------------->    
-    ${java.nameType(typeDef.name)}Query retVal = null;
+  public ${java.nameType(typeDef.name)}Query read${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException { 
+    ${java.nameType(typeDef.name)}Query retVal = new ${java.nameType(typeDef.name)}Query();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
-    <#------------->
-    <#-- 参数校验 -->
-    <#------------->    
     boolean areAllIdsEmpty = true;
     <#list idAttrs as idAttr>
     if (!Strings.isBlank(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}())) {
@@ -214,9 +208,6 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     if (areAllIdsEmpty) {
       throw new ServiceException(400, "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
     }
-    <#------------------>    
-    <#-- 主要对象的查询 -->    
-    <#------------------>
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
     } catch (Throwable cause) {
@@ -230,32 +221,31 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
   <#elseif typeRefType == "AREF">
-    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first)}());
-    ${java.nameVariable(typeObj.name)}Query = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-    retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.name)}Query);
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first)}());
+    ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   <#elseif typeRefType == "PREF">
-    
     <#if typeObj.reference??>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
-    ${java.nameVariable(typeObj.name)}Query = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+    ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     <#else>
-    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    <#--  ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());  -->
-    ${java.nameVariable(typeObj.name)}Query = ${java.nameVariable(typeObj.name)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
-    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.name)}Query);
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    <#--  ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());  -->
+    ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
   <#elseif typeRefType == "CREF">
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
     <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
-    ${java.nameVariable(typeObj.name)}Queries = ${java.nameVariable(typeObj.name)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.name)}Query).getData();
-    retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.name)}Queries);
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.variable))}(${java.nameVariable(typeObj.variable)}Query).getData();
+    retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
   </#if>
 </#list>
     return retVal;
@@ -270,17 +260,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    * @return 【${typeDef.label!""}】对象实例
    */
   public ${java.nameType(typeDef.name)}Query get${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
-<#------------->    
-<#-- 变量定义 -->
-<#------------->    
-    ${java.nameType(typeDef.name)}Query retVal = null;
+    ${java.nameType(typeDef.name)}Query retVal = new ${java.nameType(typeDef.name)}Query();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#list flow.types as typeObj>
-  <#if typeDef.persistence && typeDef.name == typeObj.name>      
-    <#------------------>    
-    <#-- 主要对象的查询 -->    
-    <#------------------>
+  <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+  <#if typeRefType == "SREF">
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
     } catch (Throwable cause) {
@@ -291,8 +276,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
     <#break>
-  <#elseif typeDef.name != typeObj.name>
-    <#-- TODO -->
+  <#elseif typeRefType == "PREF">
+    <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.variable)}Query();
+    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
+    ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
   </#if>
 </#list>
     return retVal;
@@ -314,10 +303,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <@print_variables flow />
     RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() == -1 ? Integer.MAX_VALUE : query.getLimit());
 <#list flow.types as typeObj>
-   <#if typeDef.persistence && typeDef.name == typeObj.name>
-    <#------------------>    
-    <#-- 主要对象的查询 -->    
-    <#------------------>
+  <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+  <#if typeRefType == "SREF">
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query, rowBounds);  
     } catch (Throwable cause) {
@@ -327,19 +314,11 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       return retVal;
     }
     for (Map<String, Object> row : results) {
-      retVal.getData().add(${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(row));
+      retVal.getData().add(${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(row));   
     }
-    <#break>
-  <#else>
-    <#--  <#assign typeRef = typeObj.reference>
-    <#assign leftAttr = typeRef.getLeftAttributeFromReference()>
-    <#assign rightAttr = typeRef.getRightAttributeFromReference()>
-    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
-    for (${java.nameType(leftAttr.parent.name)}Query row : ${java.nameVariable(inflector.pluralize(leftAttr.parent.name))}) {
-      ${java.nameVariable(typeObj.name)}Query.add${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(row.get${java.nameType(modelbase.get_attribute_sql_name(leftAttr))}());
-    }
-    ${java.nameVariable(inflector.pluralize(typeObj.name))} = ${java.nameVariable(typeObj.name)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.name)}Query.get${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}());  -->
-    <#-- TODO -->
+  <#elseif typeRefType == "AREF">
+  <#elseif typeRefType == "PREF">
+  <#elseif typeRefType == "CREF"><#-- 不需要处理这个 -->
   </#if>  
 </#list>
     return retVal;
@@ -374,7 +353,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     <#break>
   <#elseif typeDef.persistence>
-    ${java.nameVariable(typeObj.name)}Service.delete${java.nameType(typeObj.name)}(query.to${java.nameType(typeObj.name)}Query());
+    ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(query.to${java.nameType(typeObj.name)}Query());
     <#break>  
   </#if>
 </#list>  
