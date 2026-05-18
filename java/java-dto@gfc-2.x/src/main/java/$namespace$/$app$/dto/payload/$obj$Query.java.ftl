@@ -101,6 +101,10 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     // TODO
   }
 
+  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
+    // TODO
+  }
+
   public void from${java.nameType(detailObj.name)}Queries(List<${java.nameType(detailObj.name)}Query> queries) {
     if (queries == null || queries.isEmpty()) {
       return;
