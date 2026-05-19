@@ -150,7 +150,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#---------------------------------------------------------------------------------------->
     <#-- 次对象和主对象的关系来确定，采用什么方式处理 -->
     <#if refTypeName == "PREF">
-    ${java.nameVariable(typeObj.variable)}Query = query.get${java.nameType(typeObj.name)}();
+    ${java.nameVariable(typeObj.variable)}Query = query.get${java.nameType(typeObj.variable)}();
     if (${java.nameVariable(typeObj.variable)}Query != null) {
       ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     }
@@ -232,12 +232,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     <#else>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     <#--  ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());  -->
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
   <#elseif typeRefType == "CREF">
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
@@ -281,10 +281,10 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);  
   <#elseif typeRefType == "PREF">
     <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
-    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.variable)}Query();
-    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr, typeObj.variable)}());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-    retVal.set${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
   </#if>
 </#list>
     return retVal;
@@ -343,13 +343,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     </#if>
   <#elseif typeRefType == "PREF">
-    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.name)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
     for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
       for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
         <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
         <#assign rightAttr = typeObj.getRightAttributeFromReference()>
         if (row.${modelbase4java.name_getter(rightAttr)}().equals(retRow.${modelbase4java.name_getter(leftAttr)}())) {
-          retRow.set${java.nameType(typeObj.name)}(row);
+          retRow.set${java.nameType(typeObj.variable)}(row);
           break;
         }
       }
@@ -407,11 +407,18 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#if typeObj.reference??>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+    if (query.${modelbase4java.name_getter(leftAttr)}() != null) {
+      ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+      ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);  
+    }  
     <#else>
     ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
     </#if>
-    ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);  
+  <#elseif typeRefType == "CREF">
+    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
+    for (${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.variable)}Query : ${java.nameVariable(typeObj.variable)}Queries) {
+      ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+    }  
   </#if>
 </#list>  
   }

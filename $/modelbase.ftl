@@ -82,11 +82,12 @@
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>
-    <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Id'>
-    <#else>
-      <#return naming.nameVariable(prefix) + 'Id'>  
+    <#if prefix?ends_with(attr.parent.name)>
+      <#return naming.nameVariable(prefix) + 'Id'>
+    <#elseif prefix != "">
+      <#return naming.nameVariable(prefix + '_' + attr.parent.name) + 'Id'>
     </#if>
+    <#return naming.nameVariable(attr.parent.name) + 'Id'>
   </#if>
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)!''>

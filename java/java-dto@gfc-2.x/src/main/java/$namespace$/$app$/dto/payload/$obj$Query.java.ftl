@@ -98,19 +98,35 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   }
 
   public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
-    // TODO
+  <#list obj.attributes as attr>
+    <#if attr.isLabelled("redefined")><#continue></#if>
+    if (query.${modelbase4java.name_getter(attr)}() != null) {
+      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
+    }
+  </#list>  
   }
 
   public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
-    // TODO
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    if ("${attr.name?upper_case}".equals(query.${modelbase4java.name_getter(keyAttr)}())) {
+      <#if attr.type.name == "date">
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Dates.parseDate(query.${modelbase4java.name_getter(valAttr)}(), "yyyy-MM-dd"));
+      <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(query.${modelbase4java.name_getter(valAttr)}()));
+      <#else>
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(query.${modelbase4java.name_getter(valAttr)}());
+      </#if>
+    }
+  </#list>  
   }
 
   public void from${java.nameType(detailObj.name)}Queries(List<${java.nameType(detailObj.name)}Query> queries) {
     if (queries == null || queries.isEmpty()) {
       return;
     }
-    for (${java.nameType(detailObj.name)}Query query : queries) {
-      // TODO
+    for (${java.nameType(detailObj.name)}Query row : queries) {
+      from${java.nameType(detailObj.name)}Query(row);
     }
   }
 </#if>
