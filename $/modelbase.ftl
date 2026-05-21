@@ -1,5 +1,5 @@
 <#function get_extension_objects obj>
-  <#if !obj.isLabelled("extension")><#return {}></#if>
+  <#--  <#if !obj.isLabelled("extension")><#return {}></#if>
   <#local objsexpr = obj.getLabelledOptions("extension")["objects"]>
   <#local objexprs = objsexpr?split(";")>
   <#local ret = {}>
@@ -8,8 +8,8 @@
     <#local attrname = objexpr?substring(objexpr?index_of("(")+1,objexpr?index_of(")"))>
     <#local extAttr = model.findAttributeByNames(objname,attrname)>
     <#local ret += {objname:extAttr}>
-  </#list>
-  <#return ret>
+  </#list>  -->
+  <#return {}>
 </#function>
 
 <#--

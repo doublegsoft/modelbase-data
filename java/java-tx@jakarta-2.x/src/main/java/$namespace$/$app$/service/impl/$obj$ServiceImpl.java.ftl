@@ -344,6 +344,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     </#if>
   <#elseif typeRefType == "PREF">
+    <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
     for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
       for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
