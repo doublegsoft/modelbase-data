@@ -31,7 +31,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <@modelbase4java.print_object_query_to_query obj=obj root=obj />
 <#-- pivot的master可以不定义 -->
 
-<#if obj.isLabelled("pivot") || obj.isLabelled("meta")>
+<#if obj.isLabelled("pivot") || obj.isLabelled("meta") || obj.isLabelled("extension")>
   <#if obj.isLabelled("pivot")>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
     <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
@@ -52,6 +52,8 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       <#assign valAttr = model.findAttributeByNames(detailObj.name, "property_value")>
     </#if>
     <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
+  <#elseif obj.isLabelled("extension")>
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>  
   </#if>  
   
   public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
@@ -67,36 +69,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     return retVal;
   }
 
-  public List<${java.nameType(detailObj.name)}Query> to${java.nameType(detailObj.name)}Queries() {
-    List<${java.nameType(detailObj.name)}Query> retVal = new ArrayList<>();
-    ${java.nameType(detailObj.name)}Query item = null;
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
-    <#if attr.type.collection>
-    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
-    <#else>
-    item = new ${java.nameType(detailObj.name)}Query();
-      <#list detailObj.attributes as detailAttr>
-        <#if detailAttr.type.name == masterObj.name>
-    item.${modelbase4java.name_setter(detailAttr)}(${modelbase.get_attribute_sql_name(masterObjIdAttr)});   
-          <#break>
-        </#if>
-      </#list>
-    item.${modelbase4java.name_setter(keyAttr)}("${attr.name?upper_case}");
-    <#if attr.type.name == "date">
-    item.${modelbase4java.name_setter(valAttr)}(Dates.format(${modelbase.get_attribute_sql_name(attr)}, "yyyy-MM-dd"));
-    <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
-    item.${modelbase4java.name_setter(valAttr)}(Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
-    <#else>
-    item.${modelbase4java.name_setter(valAttr)}(${modelbase.get_attribute_sql_name(attr)});
-    </#if>
-    ${java.nameType(detailObj.name)}Query.setDefaultValues(item, true);
-    retVal.add(item);
-    </#if>
-  </#list>  
-    return retVal;
-  }
-
   public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
   <#list obj.attributes as attr>
     <#if attr.isLabelled("redefined")><#continue></#if>
@@ -105,10 +77,41 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     }
   </#list>  
   }
+  <#if detailObj??>
+
+  public List<${java.nameType(detailObj.name)}Query> to${java.nameType(detailObj.name)}Queries() {
+    List<${java.nameType(detailObj.name)}Query> retVal = new ArrayList<>();
+    ${java.nameType(detailObj.name)}Query item = null;
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled("redefined")><#continue></#if>
+      <#if attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
+      <#else>
+    item = new ${java.nameType(detailObj.name)}Query();
+        <#list detailObj.attributes as detailAttr>
+          <#if detailAttr.type.name == masterObj.name>
+    item.${modelbase4java.name_setter(detailAttr)}(${modelbase.get_attribute_sql_name(masterObjIdAttr)});   
+            <#break>
+          </#if>
+        </#list>
+    item.${modelbase4java.name_setter(keyAttr)}("${attr.name?upper_case}");
+        <#if attr.type.name == "date">
+    item.${modelbase4java.name_setter(valAttr)}(Dates.format(${modelbase.get_attribute_sql_name(attr)}, "yyyy-MM-dd"));
+        <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
+    item.${modelbase4java.name_setter(valAttr)}(Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
+        <#else>
+    item.${modelbase4java.name_setter(valAttr)}(${modelbase.get_attribute_sql_name(attr)});
+        </#if>
+    ${java.nameType(detailObj.name)}Query.setDefaultValues(item, true);
+    retVal.add(item);
+      </#if>
+    </#list>  
+    return retVal;
+  }
 
   public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
-  <#list obj.attributes as attr>
-    <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#list obj.attributes as attr>
+      <#if !attr.isLabelled("redefined")><#continue></#if>
     if ("${attr.name?upper_case}".equals(query.${modelbase4java.name_getter(keyAttr)}())) {
       <#if attr.type.name == "date">
       set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Dates.parseDate(query.${modelbase4java.name_getter(valAttr)}(), "yyyy-MM-dd"));
@@ -118,7 +121,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       set${java.nameType(modelbase.get_attribute_sql_name(attr))}(query.${modelbase4java.name_getter(valAttr)}());
       </#if>
     }
-  </#list>  
+    </#list>  
   }
 
   public void from${java.nameType(detailObj.name)}Queries(List<${java.nameType(detailObj.name)}Query> queries) {
@@ -129,6 +132,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       from${java.nameType(detailObj.name)}Query(row);
     }
   }
+  </#if><#-- detailObj?? -->
 </#if>
 
   public Map<String,Object> toMap() {
