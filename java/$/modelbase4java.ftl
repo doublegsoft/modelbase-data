@@ -431,7 +431,9 @@ ${""?left_pad(indent)}}
   
   protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}1;
     </#if>
+    <#---------------------------->
     <#-- 需要集合属性作为查询条件的 -->
+    <#---------------------------->
     <#if attr.constraint.identifiable ||
          attr.type.custom ||
          attr.constraint.domainType.name?starts_with("enum") ||
@@ -455,10 +457,13 @@ ${""?left_pad(indent)}}
   <#-- REFERENCE -->
   <#list obj.attributes as attr>
     <#if attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] == "id">
-      <#assign referenceName = attr.getLabelledOptions("reference")["name"]>
+      <#local referenceId = attr.getLabelledOptions("reference")["value"]>
+      <#local referenceName = attr.getLabelledOptions("reference")["name"]>
       <#if processedAttrs[java.nameVariable(referenceName)]??><#continue></#if>
       <#local processedAttrs += {referenceName:attr}>
-      
+
+  protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))} = new ArrayList<>();
+
   protected AbstractQuery ${java.nameVariable(referenceName)};
     </#if>
   </#list>
@@ -471,7 +476,7 @@ ${""?left_pad(indent)}}
 <@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true />       
       <#else>
 <@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true prefix=attr.name /> 
-      </#if>
+      </#if>     
     </#if>
   </#list>  
 </#macro>
@@ -559,6 +564,14 @@ ${""?left_pad(indent)}}
       <#assign referenceName = attr.getLabelledOptions("reference")["name"]>
       <#if processedAttrs[java.nameVariable(referenceName)]??><#continue></#if>
       <#local processedAttrs += {referenceName:attr}>
+
+  public void add${java.nameType(attr.name)}(${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}) {
+    ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}.add(${modelbase.get_attribute_sql_name(attr, prefix)});
+  }
+
+  public List<${modelbase4java.type_attribute_primitive(attr)}> get${java.nameType(inflector.pluralize(attr.name))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))};
+  }
       
   public AbstractQuery get${java.nameType(referenceName)}() {
     return ${java.nameVariable(referenceName)};
@@ -578,6 +591,7 @@ ${""?left_pad(indent)}}
       <#else>
 <@print_object_query_xetters obj=refObj processedAttrs=processedAttrs prefix=attr.name /> 
       </#if>
+    <#elseif attr.type.custom>   
     </#if>
   </#list>
 </#macro>

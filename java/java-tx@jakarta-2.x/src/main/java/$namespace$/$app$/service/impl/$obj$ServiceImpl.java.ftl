@@ -26,8 +26,11 @@ ${java.license(license)}
     List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = null;
     <#local existings = {typeObj.variable: typeObj}>
   </#list>
+  <#local existings = {}>
   <#list idAttrs as idAttr>
+    <#if existings[modelbase.get_attribute_sql_name(idAttr)]??><#continue></#if>
     ${modelbase4java.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)} = null;
+    <#local existings = {modelbase.get_attribute_sql_name(idAttr): idAttr}>
   </#list>
 </#macro>
 package <#if namespace??>${namespace}.</#if>${app.name}.service.impl;
@@ -325,7 +328,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#if typeObj.reference??>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-      <#-- TODO -->
+      <#-- TODO: 继续查询 -->
     <#else>
       <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     </#if>
@@ -339,9 +342,16 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       <#list flow.types as innerTypeObj>
         <#if innerTypeObj?index == 0><#continue></#if>
         <#assign innerTypeObjIdAttr = modelbase.get_id_attributes(model.findObjectByName(innerTypeObj.name))?first>
+        <#if innerTypeObj.reference??>
+          <#assign innerTypeObjLeftAttr = innerTypeObj.getLeftAttributeFromReference()>
+          <#assign innerTypeObjRightAttr = innerTypeObj.getRightAttributeFromReference()>
+      ${java.nameVariable(innerTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(innerTypeObjRightAttr))}(row.${modelbase4java.name_getter(innerTypeObjLeftAttr)}());
+        <#else>
       ${java.nameVariable(innerTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(innerTypeObjIdAttr))}(row.${modelbase4java.name_getter(innerTypeObjIdAttr)}());
+        </#if>
       </#list>
     }
+      <#-- TODO: 继续查询 -->
     </#if>
   <#elseif typeRefType == "PREF">
     <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>

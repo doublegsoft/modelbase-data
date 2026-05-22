@@ -59,6 +59,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
     ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
   <#list obj.attributes as attr>
+    <#if (attr.getLabelledOption("original", "object")!"") != masterObj.name><#continue></#if>
     <#if attr.isLabelled("redefined")><#continue></#if>
     <#if attr.type.collection>
     retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
@@ -71,6 +72,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 
   public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
   <#list obj.attributes as attr>
+    <#if (attr.getLabelledOption("original", "object")!"") != masterObj.name><#continue></#if>
     <#if attr.isLabelled("redefined")><#continue></#if>
     if (query.${modelbase4java.name_getter(attr)}() != null) {
       ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
