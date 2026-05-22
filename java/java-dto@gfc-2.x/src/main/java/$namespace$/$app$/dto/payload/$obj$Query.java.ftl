@@ -53,14 +53,13 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     </#if>
     <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
   <#elseif obj.isLabelled("extension")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>  
+    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>
+    <#assign detailObjNames = obj.getLabelledOptions("extension")["details"]!"">
   </#if>  
   
   public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
     ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
-  <#list obj.attributes as attr>
-    <#if (attr.getLabelledOption("original", "object")!"") != masterObj.name><#continue></#if>
-    <#if attr.isLabelled("redefined")><#continue></#if>
+  <#list masterObj.attributes as attr>
     <#if attr.type.collection>
     retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
     <#else>
@@ -71,9 +70,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   }
 
   public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
-  <#list obj.attributes as attr>
-    <#if (attr.getLabelledOption("original", "object")!"") != masterObj.name><#continue></#if>
-    <#if attr.isLabelled("redefined")><#continue></#if>
+  <#list masterObj.attributes as attr>
     if (query.${modelbase4java.name_getter(attr)}() != null) {
       ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
     }
@@ -135,6 +132,36 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     }
   }
   </#if><#-- detailObj?? -->
+  <#if detailObjNames?? && detailObjNames != "">
+    <#list detailObjNames?split(";") as detailObjName>
+      <#if detailObjName?contains("(")>
+        <#assign objName = detailObjName?substring(0, detailObjName?index_of("("))>
+        <#assign detailObj = model.findObjectByName(objName)>
+      <#else>  
+        <#assign detailObj = model.findObjectByName(detailObjName)>
+      </#if>
+
+  public ${java.nameType(detailObj.name)}Query to${java.nameType(detailObj.name)}Query() {
+    ${java.nameType(detailObj.name)}Query retVal = new ${java.nameType(detailObj.name)}Query();
+      <#list detailObj.attributes as attr>
+        <#if attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
+        <#else>
+    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
+        </#if>
+      </#list>  
+    return retVal;
+  }
+
+  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
+      <#list detailObj.attributes as attr>
+    if (query.${modelbase4java.name_getter(attr)}() != null) {
+      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
+    }
+      </#list>  
+  }
+    </#list>
+  </#if><#-- detailObjNames != "" -->
 </#if>
 
   public Map<String,Object> toMap() {
