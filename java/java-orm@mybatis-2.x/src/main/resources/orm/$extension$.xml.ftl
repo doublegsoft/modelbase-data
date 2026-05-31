@@ -11,7 +11,14 @@
   <sql id="join${java.nameType(extension.name)}">
 <#list flow.types as typeObj>
   <#assign origObj = model.findObjectByName(typeObj.name)>
-  ${origObj.persistenceName} ${modelbase.get_object_sql_alias(origObj)}
+  <#if typeObj.reference??>
+    <#assign predicate = typeObj.reference.joinPredicates[0]>
+    <#assign leftObj = predicate.leftObject>
+    <#assign leftAttr = predicate.leftAttribute>
+    <#assign rightObj = predicate.rightObject>
+    <#assign rightAttr = predicate.rightAttribute>
+  left join ${rightObj.persistenceName} ${modelbase.get_object_sql_alias(rightObj)} on ${modelbase.get_object_sql_alias(leftObj)}.${leftAttr.persistenceName} = ${modelbase.get_object_sql_alias(rightObj)}.${rightAttr.persistenceName} 
+  </#if>
 </#list>
   </sql>
   
