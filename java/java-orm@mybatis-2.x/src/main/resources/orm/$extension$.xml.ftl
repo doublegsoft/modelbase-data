@@ -17,23 +17,35 @@
     <#assign leftAttr = predicate.leftAttribute>
     <#assign rightObj = predicate.rightObject>
     <#assign rightAttr = predicate.rightAttribute>
-  left join ${rightObj.persistenceName} ${modelbase.get_object_sql_alias(rightObj)} on ${modelbase.get_object_sql_alias(leftObj)}.${leftAttr.persistenceName} = ${modelbase.get_object_sql_alias(rightObj)}.${rightAttr.persistenceName} 
+    left join ${rightObj.persistenceName} ${modelbase.get_object_sql_alias(rightObj)} on ${modelbase.get_object_sql_alias(leftObj)}.${leftAttr.persistenceName} = ${modelbase.get_object_sql_alias(rightObj)}.${rightAttr.persistenceName} 
   </#if>
 </#list>
   </sql>
-  
+
+<#assign columnedAttrs = []>
+<#assign existingAttrs = {}>  
+<#list flow.types as typeObj>
+  <#assign origObj = model.findObjectByName(typeObj.name)>
+  <#list origObj.attributes as attr>
+    <#if !attr.isLabelled("persistence")><#continue></#if>
+    <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
+    <#if existingAttrs[attrSqlName]??><#continue></#if>
+    <#assign existingAttrs += {attrSqlName: attr}>
+    <#assign columnedAttrs += [attr]>
+  </#list>
+</#list>    
   <sql id="column${java.nameType(extension.name)}">
+<#list columnedAttrs as attr>
+  <#assign origObjAlias = modelbase.get_object_sql_alias(attr.parent)>
+  <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
+    ${origObjAlias}.${attr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
+</#list>
   </sql>
   
-  <#-- WHERE -->
   <sql id="where${java.nameType(extension.name)}">
-<#list extension.attributes as attr> 
-  <#if !attr.isLabelled("original")><#continue></#if>
-  <#--  <#if !attr.persistenceName??><#continue></#if>  -->
-  <#assign origObj = model.findObjectByName(attr.getLabelledOption("original", "object"))>
-  <#if !origObj.getAttribute(attr.getLabelledOption("original", "attribute"))??><#continue></#if>
-  <#assign origAttr = origObj.getAttribute(attr.getLabelledOption("original", "attribute"))>
-  <#if !origAttr.persistenceName??><#continue></#if>
+<#list columnedAttrs as attr> 
+  <#assign origObj = attr.parent>
+  <#assign origAttr = attr>
   <#if origAttr.type.custom>
     <!-- 【${modelbase.get_attribute_label(attr)}】 -->
     <if test = "${modelbase.get_attribute_sql_name(attr)} != null">
@@ -129,53 +141,6 @@
     </if>
   </#if>
 </#list>
-<#-- 处理集合属性的子查询 -->
-<#list extension.attributes as attr>
-  <#if !origAttr.type.collection><#continue></#if>
-  <#assign inMap = "in" + java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr)))>
-  <#assign collObj = model.findObjectByName(origAttr.type.componentType.name)>
-  <#list collextension.attributes as collObjAttr>
-    <#if collObjorigAttr.type.name == extension.name>
-      <#assign refAttrInCollObj = collObjAttr>
-    </#if>
-  </#list>
-  <#if !refAttrInCollObj??><#continue></#if>
-  <#if !refAttrInCollextension.persistenceName??><#continue></#if>
-    <if test = "!${inMap}.isEmpty()">
-    and ${modelbase.get_object_sql_alias(idorigObj)}.${idorigAttr.persistenceName} in (
-      select ${refAttrInCollextension.persistenceName} from ${collextension.persistenceName} ${modelbase.get_object_sql_alias(collObj)} 
-  <#-- LEFT JOIN IN SUB-QUERY -->
-  <#list collextension.attributes as collObjAttr>  
-    <#if !collObjorigAttr.type.custom || collObjorigAttr.type.name == extension.name><#continue></#if> 
-    <#if !collObjorigAttr.persistenceName??><#continue></#if>
-    <#assign collObjAttrRefObj = model.findObjectByName(collObjorigAttr.type.name)> 
-    <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
-      left join ${collObjAttrRefextension.persistenceName} ${modelbase.get_object_sql_alias(collObjAttrRefObj)} on ${modelbase.get_object_sql_alias(collObjAttrRefObj)}.${collObjAttrRefObjIdorigAttr.persistenceName} = ${modelbase.get_object_sql_alias(collObj)}.${collObjorigAttr.persistenceName}
-  </#list>
-  <#-- WHERE IN SUB-QUERY -->
-      where 1 = 1
-  <#list collextension.attributes as collObjAttr>
-    <#if !collObjorigAttr.persistenceName??><#continue></#if>
-    <#if collObjorigAttr.name == "state" || !modelbase.is_attribute_system(collObjAttr)>
-      <if test = "${inMap}.${modelbase.get_attribute_sql_name(collObjAttr)} != null">
-      and ${modelbase.get_object_sql_alias(collObj)}.${collObjorigAttr.persistenceName} = ${r"#{"}${inMap}.${modelbase.get_attribute_sql_name(collObjAttr)}}
-      </if>  
-    </#if>  
-  </#list>  
-  <#list collextension.attributes as collObjAttr>  
-    <#if !collObjorigAttr.type.custom || collObjorigAttr.type.name == extension.name><#continue></#if> 
-      <#assign collObjAttrRefObj = model.findObjectByName(collObjorigAttr.type.name)> 
-      <#assign collObjAttrRefObjIdAttr = modelbase.get_id_attributes(collObjAttrRefObj)[0]>
-      <#list collObjAttrRefextension.attributes as collObjAttrRefObjAttr>
-        <#if !collObjAttrRefObjorigAttr.isLabelled("listable")><#continue></#if>
-      <if test = "${inMap}.${modelbase.get_attribute_sql_name(collObjAttrRefObjAttr)} != null">  
-      and ${modelbase.get_object_sql_alias(collObjAttrRefObj)}.${collObjAttrRefObjorigAttr.persistenceName} like concat('%', ${r"#{"}${inMap}.${modelbase.get_attribute_sql_name(collObjAttrRefObjAttr)}}, '%')
-      </if>
-      </#list>
-  </#list>
-    )
-    </if>  
-</#list>   
   </sql>
   
   <sql id="orderBy${java.nameType(extension.name)}">
@@ -183,5 +148,11 @@
   
   <select id="select${java.nameType(extension.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(extension.name)}Query" 
           resultType="${namespace}.${app.name}.dto.payload.${java.nameType(extension.name)}Query">
+    select <include refid="column${java.nameType(extension.name)}"/>
+  <#assign origObj = model.findObjectByName(flow.types[0].name)>
+    from <#if databaseName??>${databaseName}.</#if>${origObj.persistenceName} "${modelbase.get_object_sql_alias(origObj)}"
+    <include refid="join${java.nameType(extension.name)}"/>
+    where 1 = 1
+    <include refid="where${java.nameType(extension.name)}"/>          
   </select>
 </mapper>
