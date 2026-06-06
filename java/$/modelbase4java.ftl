@@ -467,18 +467,36 @@ ${""?left_pad(indent)}}
   protected AbstractQuery ${java.nameVariable(referenceName)};
     </#if>
   </#list>
-  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
-  <#-- 自定义对象作为主键，也就是一对一情况，或者是属性被标记为主动加载 -->
-  <#list obj.attributes as attr>
-    <#if attr.type.custom && (attr.constraint.identifiable || attr.isLabelled("eager"))>
-      <#local refObj = model.findObjectByName(attr.type.name)>
-      <#if attr.name == refObj.name>
+  <#if modelbase.get_id_attributes(obj)?size == 1><#-- 实体对象 -->
+    <#list obj.attributes as attr>
+      <#if attr.type.custom && (attr.constraint.identifiable || attr.isLabelled("eager"))>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#if attr.name == refObj.name>
 <@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true />       
-      <#else>
+        <#else>
 <@print_object_query_members obj=refObj processedAttrs=processedAttrs excludingColls=true prefix=attr.name /> 
-      </#if>     
-    </#if>
-  </#list>  
+        </#if>     
+      </#if>
+    </#list>  
+  <#elseif modelbase.get_id_attributes(obj)?size == 0><#-- 聚合对象 -->
+    <#list obj.attributes as attr>
+      <#if attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#list refObj.attributes as refObjAttr>
+          <#if refObjAttr.type.custom>
+
+  protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)};
+  
+  protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0;
+  
+  protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}1;       
+
+  protected final List<${modelbase4java.type_attribute_primitive(refObjAttr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(refObjAttr, prefix))} = new ArrayList<>();   
+          </#if>
+        </#list>    
+      </#if>
+    </#list>
+  </#if>
 </#macro>
 
 <#-- Query Setters and Getters -->
@@ -582,18 +600,61 @@ ${""?left_pad(indent)}}
   }
     </#if>
   </#list>
-  <#if modelbase.get_id_attributes(obj)?size != 1><#return></#if>
-  <#list obj.attributes as attr>
-    <#if attr.constraint.identifiable && attr.type.custom>
-      <#local refObj = model.findObjectByName(attr.type.name)> 
-      <#if attr.name == refObj.name>
+  <#if modelbase.get_id_attributes(obj)?size == 1><#-- 实体对象 -->
+    <#list obj.attributes as attr>
+      <#if attr.constraint.identifiable && attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)> 
+        <#if attr.name == refObj.name>
 <@print_object_query_xetters obj=refObj processedAttrs=processedAttrs /> 
-      <#else>
+        <#else>
 <@print_object_query_xetters obj=refObj processedAttrs=processedAttrs prefix=attr.name /> 
+        </#if>
+      <#elseif attr.type.custom>   
       </#if>
-    <#elseif attr.type.custom>   
-    </#if>
-  </#list>
+    </#list>
+  <#elseif modelbase.get_id_attributes(obj)?size == 0><#-- 聚合对象 -->
+    <#list obj.attributes as attr>
+      <#if attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#list refObj.attributes as refObjAttr>
+          <#if refObjAttr.type.custom>
+
+  public ${modelbase4java.type_attribute_primitive(refObjAttr)} get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)};
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}(${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}) {
+    this.${modelbase.get_attribute_sql_name(refObjAttr, prefix)} = ${modelbase.get_attribute_sql_name(refObjAttr, prefix)};
+  }
+  
+  public ${modelbase4java.type_attribute_primitive(refObjAttr)} get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}0() {
+    return ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0;
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}0(${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0) {
+    this.${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0 = ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0;
+  }
+  
+  public ${modelbase4java.type_attribute_primitive(refObjAttr)} get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}1() {
+    return ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}1;
+  }
+  
+  public void set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}1(${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}1) {
+    this.${modelbase.get_attribute_sql_name(refObjAttr, prefix)}1 = ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}1;
+  }  
+
+  public void add${java.nameType(refObjAttr.name)}(${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}) {
+    ${inflector.pluralize(modelbase.get_attribute_sql_name(refObjAttr, prefix))}.add(${modelbase.get_attribute_sql_name(refObjAttr, prefix)});
+  }
+
+  public List<${modelbase4java.type_attribute_primitive(refObjAttr)}> get${java.nameType(inflector.pluralize(refObjAttr.name))}() {
+    return ${inflector.pluralize(modelbase.get_attribute_sql_name(refObjAttr, prefix))};
+  }
+          </#if>
+        </#list>    
+      </#if>
+    </#list>
+  </#if>
 </#macro>
 
 <#--  -->
