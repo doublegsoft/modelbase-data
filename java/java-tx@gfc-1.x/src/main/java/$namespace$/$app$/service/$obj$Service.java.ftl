@@ -217,6 +217,7 @@ public interface ${typename}Service {
     </#if>
   </#list>
   <#if one2many == false>
+    <#if !model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])??><#continue></#if>
     <#assign collObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
     <#assign collObjIdAttrs = modelbase.get_id_attributes(collObj)>
   </#if>

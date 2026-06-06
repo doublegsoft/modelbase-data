@@ -184,7 +184,8 @@
         <#assign otherRefAttrInCollObj = collObjAttr>
       </#if>
     </#list>
-    <#if !refAttrInCollObj??>
+    <#if !refAttrInCollObj??>>
+      <#if !model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])??><#continue></#if>
       <#assign collObj = model.findObjectByName(attr.getLabelledOptions("conjunction")["name"])>
       <#list collObj.attributes as collObjAttr>
         <#if collObjAttr.type.name == obj.name>

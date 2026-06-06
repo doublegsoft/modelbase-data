@@ -30,7 +30,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <@modelbase4java.print_object_query_xetters obj=obj processedAttrs=processedAttrs />   
 <@modelbase4java.print_object_query_to_query obj=obj root=obj />
 <#-- pivot的master可以不定义 -->
-
 <#if obj.isLabelled("pivot") || obj.isLabelled("meta") || obj.isLabelled("extension")>
   <#if obj.isLabelled("pivot")>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
@@ -55,7 +54,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   <#elseif obj.isLabelled("extension")>
     <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>
     <#assign detailObjNames = obj.getLabelledOptions("extension")["details"]!"">
-  </#if>  
+  </#if>
   
   public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
     ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
@@ -163,6 +162,18 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     </#list>
   </#if><#-- detailObjNames != "" -->
 </#if>
+<#list obj.attributes as attr>
+  <#if !attr.type.collection><#continue></#if>
+  <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+  public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
+    return ${modelbase.get_attribute_sql_name(attr)};
+  }
+
+  public void from${java.nameType(collObj.name)}Queries(List<${java.nameType(collObj.name)}Query> queries) {
+    ${modelbase.get_attribute_sql_name(attr)}.clear();
+    ${modelbase.get_attribute_sql_name(attr)}.addAll(queries);
+  }
+</#list>  
 
   public Map<String,Object> toMap() {
     Map<String,Object> retVal = new HashMap<>();

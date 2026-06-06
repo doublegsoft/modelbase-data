@@ -427,6 +427,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
     </#if>
   <#elseif typeRefType == "CREF">
+    <#assign dataObj = model.findObjectByName(typeObj.name)>
     List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
     for (${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.variable)}Query : ${java.nameVariable(typeObj.variable)}Queries) {
       ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
