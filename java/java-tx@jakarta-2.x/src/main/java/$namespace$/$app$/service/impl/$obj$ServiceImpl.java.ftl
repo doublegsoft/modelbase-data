@@ -178,17 +178,17 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   </#if>  
 </#list>
-  <#if typeDef.persistence>
-    <#------------------------------------------------------>
-    <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
-    <#------------------------------------------------------>
+<#if typeDef.persistence>
+  <#------------------------------------------------------>
+  <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
+  <#------------------------------------------------------>
     ${java.nameVariable(typeDef.name)} = ${java.nameType(typeDef.name)}Assembler.assemble${java.nameType(typeDef.name)}FromQuery(query);
     if (!existing) {
       ${java.nameVariable(typeDef.name)}DataAccess.insert${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});
     } else {
       ${java.nameVariable(typeDef.name)}DataAccess.updatePartial${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});      
     }
-  </#if>
+</#if>
     return query;   
   }
   
