@@ -64,6 +64,11 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
  */
 @Named("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
 public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerService implements ${java.nameType(typeDef.name)}Service {
+<#if obj.isLabelled("composite")>
+
+  @Inject
+  private ${java.nameType(obj.name)}DataAccess ${java.nameVariable(obj.name)}DataAccess;
+</#if>
 <#list flow.types as typeObj>
   <#if existings[typeObj.variable]??><#continue></#if>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
@@ -83,7 +88,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   private ${java.nameType(typeObj.name)}Service ${java.nameVariable(typeObj.variable)}Service;
   </#if>
   <#assign existings += {typeObj.variable: typeObj}>
-</#list>   
+</#list>
 
   @Transactional(rollbackOn = Exception.class)
   public void save${java.nameType(modelbase.get_object_plural(obj))}(List<${java.nameType(obj.name)}Query> queries) throws ServiceException {
@@ -294,6 +299,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr, typeObj.variable)}());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
+  <#elseif typeRefType == "PREF">  
   </#if>
 </#list>
     return retVal;
