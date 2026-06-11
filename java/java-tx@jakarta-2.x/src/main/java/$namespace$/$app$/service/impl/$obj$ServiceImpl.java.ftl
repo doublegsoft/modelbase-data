@@ -165,11 +165,18 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#elseif refTypeName == "CREF">
     ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
     ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);
-    <#elseif refTypeName == "OREF">  
-    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
   </#if>
+</#list>
+<#-- 特殊处理OREF，倒序处理 -->
+<#list (flow.types?size-1)..0 as idx>
+  <#assign typeObj = flow.types[idx]>
+  <#assign refTypeName = typeDef.getReferenceType(typeObj)>
+  <#if refTypeName == "OREF">  
+    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
+    query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
+  </#if>  
 </#list>
   <#if typeDef.persistence>
     <#------------------------------------------------------>
