@@ -751,6 +751,17 @@
   <#return ret>
 </#function>
 
+<#function get_attribute_proxy proxyObj attr>
+  <#list proxyObj.attributes as proxyAttr>
+    <#if !proxyAttr.isLabelled("original")><#continue></#if>
+    <#local origObjName = proxyAttr.getLabelledOption("original","object")>
+    <#local origAttrName = proxyAttr.getLabelledOption("original","attribute")>
+    <#if attr.parent.name == origObjName && attr.name == origAttrName>
+      <#return proxyAttr>
+    </#if>
+  </#list>
+</#function>
+
 <#--
  ### Checks the attribute is value attribute for its parent object.
  ###

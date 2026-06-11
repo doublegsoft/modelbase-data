@@ -167,10 +167,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);
     <#elseif refTypeName == "OREF">  
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
-      <#list idAttrs as idAttr>
-    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(query.get${java.nameType(modelbase.get_attribute_sql_name(idAttr))}());
-      </#list>
-    </#if>  
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
+    </#if>
   </#if>
 </#list>
   <#if typeDef.persistence>

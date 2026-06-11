@@ -1,5 +1,7 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4java.ftl" as modelbase4java>
+<#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
+<#assign flow = typeDef.flow>
 <#if license??>
 ${java.license(license)}
 </#if>
@@ -165,6 +167,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <#list obj.attributes as attr>
   <#if !attr.type.collection><#continue></#if>
   <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+
   public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
     return ${modelbase.get_attribute_sql_name(attr)};
   }
@@ -173,7 +176,61 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     ${modelbase.get_attribute_sql_name(attr)}.clear();
     ${modelbase.get_attribute_sql_name(attr)}.addAll(queries);
   }
-</#list>  
+</#list>
+<#assign origObjNames = {}>
+<#list obj.attributes as attr>
+  <#if !attr.isLabelled("original")><#continue></#if>
+  <#assign origObjName = attr.getLabelledOption("original", "object")>
+  <#if origObjNames[origObjName]??><#continue></#if>
+  <#assign origObj = model.findObjectByName(origObjName)>
+
+  public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
+    ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
+  <#list obj.attributes as innerAttr>
+    <#if (innerAttr.getLabelledOption("original", "object")!"") == origObj.name>
+      <#assign origAttr = origObj.getAttribute(innerAttr.getLabelledOption("original", "attribute"))>
+    retVal.${modelbase4java.name_setter(origAttr)}(${modelbase4java.name_getter(innerAttr)}());
+    </#if>
+  </#list>
+  <#list flow.types as typeObj>
+    <#if typeObj.reference??>
+      <#assign predicate = typeObj.reference.joinPredicates[0]>
+      <#assign leftObj = predicate.leftObject>
+      <#assign leftAttr = predicate.leftAttribute>
+      <#assign rightObj = predicate.rightObject>
+      <#assign rightAttr = predicate.rightAttribute>
+      <#if leftObj.name == origObjName && modelbase.get_attribute_proxy(obj,rightAttr)??>
+    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(modelbase.get_attribute_proxy(obj,rightAttr))}());
+        <#break>
+      </#if>
+    </#if>
+  </#list>
+    return retVal;
+  }
+
+  public void from${java.nameType(origObj.name)}Query(${java.nameType(origObj.name)}Query query) {
+  <#list obj.attributes as innerAttr>
+    <#if (innerAttr.getLabelledOption("original", "object")!"") == origObj.name>
+      <#assign origAttr = origObj.getAttribute(innerAttr.getLabelledOption("original", "attribute"))>
+    ${modelbase4java.name_setter(innerAttr)}(query.${modelbase4java.name_getter(origAttr)}());
+    </#if>
+  </#list>  
+  <#list flow.types as typeObj>
+    <#if typeObj.reference??>
+      <#assign predicate = typeObj.reference.joinPredicates[0]>
+      <#assign leftObj = predicate.leftObject>
+      <#assign leftAttr = predicate.leftAttribute>
+      <#assign rightObj = predicate.rightObject>
+      <#assign rightAttr = predicate.rightAttribute>
+      <#if leftObj.name == origObjName && modelbase.get_attribute_proxy(obj,rightAttr)??>
+    ${modelbase4java.name_setter(modelbase.get_attribute_proxy(obj,rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+        <#break>
+      </#if>
+    </#if>
+  </#list>
+  }
+  <#assign origObjNames += {origObjName:origObjName}>
+</#list>
 
   public Map<String,Object> toMap() {
     Map<String,Object> retVal = new HashMap<>();

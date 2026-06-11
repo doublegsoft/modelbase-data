@@ -3,18 +3,7 @@
 <#if license??>
 ${java.license(license)}
 </#if>
-<#assign obj = persistence>
-<#macro print_reference_assemble attr objname attrname indent>
-  <#local refObj = model.findObjectByName(attr.type.name)>
-  <#local idAttrs = modelbase.get_id_attributes(refObj)>
-${""?left_pad(indent)}${java.nameType(refObj.name)} ${java.nameVariable(refObj.name)} = new ${java.nameType(refObj.name)}();
-${""?left_pad(indent)}${objname}.set${java.nameType(attr.name)}(${java.nameVariable(refObj.name)});  
-  <#if idAttrs[0].type.custom>
-<@print_reference_assemble attr=idAttrs[0] objname=java.nameVariable(refObj.name) attrname=attrname indent=indent />  
-  <#else>
-${""?left_pad(indent)}${java.nameVariable(refObj.name)}.set${java.nameType(idAttrs[0].name)}(${attrname});  
-  </#if>
-</#macro>
+<#assign obj = composite>
 package <#if namespace??>${namespace}.</#if>${app.name}.dao;
 
 import java.util.List;
