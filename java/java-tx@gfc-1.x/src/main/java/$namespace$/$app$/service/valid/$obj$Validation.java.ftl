@@ -70,13 +70,17 @@ public class ${typename}Validation {
   ${java.nameType(attr.type.componentType.name)}DataAccess ${java.nameVariable(attr.type.componentType.name)}DataAccess;
     </#if>
   </#if>
-  <#if attr.isLabelled("conjunction") && !existingVars[attr.getLabelledOptions("conjunction")["name"]]??>
-    <#assign existingVars += {attr.getLabelledOptions("conjunction")["name"]:""}>
-    <#if !existingDaos[attr.getLabelledOptions("conjunction")["name"]]??>
-      <#assign existingDaos += {attr.getLabelledOptions("conjunction")["name"]: obj}>
+  <#assign conjObjName = attr.getLabelledOptions("conjunction")["name"]!"">
+  <#if conjObjName == "">
+    <#assign conjObjName = attr.getLabelledOptions("conjunction")["object"]!"">
+  </#if>
+  <#if attr.isLabelled("conjunction") && conjObjName != "">
+    <#assign existingVars += {conjObjName:""}>
+    <#if !existingDaos[conjObjName]??>
+      <#assign existingDaos += {conjObjName: obj}>
       
   @Autowired
-  ${java.nameType(attr.getLabelledOptions("conjunction")["name"])}DataAccess ${java.nameVariable(attr.getLabelledOptions("conjunction")["name"])}DataAccess;
+  ${java.nameType(conjObjName)}DataAccess ${js.nameVariable(conjObjName)}DataAccess;
     </#if>
   </#if>
 </#list> 

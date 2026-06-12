@@ -64,7 +64,7 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
  */
 @Named("<#if namespace??>${namespace}.</#if>${app.name}.service.${java.nameType(typeDef.name)}Service") 
 public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerService implements ${java.nameType(typeDef.name)}Service {
-<#if obj.isLabelled("composite")>
+<#if obj.isLabelled("composite")><#-- FIXME: 是不是最好的设计 -->
 
   @Inject
   private ${java.nameType(obj.name)}DataAccess ${java.nameVariable(obj.name)}DataAccess;
@@ -442,7 +442,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
     for (${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.variable)}Query : ${java.nameVariable(typeObj.variable)}Queries) {
       ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-    }  
+    }
   </#if>
 </#list>  
   }

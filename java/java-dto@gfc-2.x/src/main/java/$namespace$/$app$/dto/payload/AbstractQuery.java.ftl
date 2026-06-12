@@ -29,7 +29,7 @@ public abstract class AbstractQuery {
   
   protected final List<AbstractQuery> queries = new ArrayList<>();
   
-  protected final Map<String,Object> results = new HashMap<>();
+  protected final Map<String,Object> queryResults = new HashMap<>();
   
   public List<QueryHandler> getQueryHandlers() {
     return queryHandlers;
@@ -68,10 +68,10 @@ public abstract class AbstractQuery {
   }
   
   public void addResult(String name, Object val) {
-    List arr = (List) results.get(name);
+    List arr = (List) queryResults.get(name);
     if (arr == null) {
       arr = new ArrayList();
-      results.put(name, arr);
+      queryResults.put(name, arr);
     }
     arr.add(val);
   }

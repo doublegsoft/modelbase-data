@@ -101,6 +101,8 @@
       <#else>
         <#return naming.nameVariable(prefix + '_' + attr.name) + "Id">)>
       </#if>
+    <#elseif attr.name?ends_with(refObj.name)>
+      <#return naming.nameVariable(attr.name) + "Id">
     </#if>
     <#assign alias = naming.nameVariable(refObj.name) + naming.nameType(refObjIdAttrs[0].name)>
     <#if alias?lower_case?index_of(naming.nameVariable(attr.name)?lower_case) != -1>

@@ -104,7 +104,7 @@ public class ${typename}Controller extends BaseController {
       return error(cause);
     }
   }
-<#list obj.attributes as attr>
+<#--  <#list obj.attributes as attr>
   <#if !attr.type.collection><#continue></#if>
   <#assign singular = attr.getLabelledOptions("name")["singular"]!attr.type.componentType.name>
   <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
@@ -170,6 +170,6 @@ public class ${typename}Controller extends BaseController {
       return error(cause);
     }
   }
-</#list>  
+</#list>    -->
   
 }

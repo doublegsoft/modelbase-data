@@ -421,15 +421,18 @@ ${""?left_pad(indent)}}
   protected final Map<String,Object> in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))} = new HashMap<>();
     <#else>
       <#local attrname = modelbase.get_attribute_sql_name(attr, prefix)>
+      <#if attr.type.custom>
+        <#local attrname = modelbase.get_attribute_sql_name(attr, attr.name)>
+      </#if>
   
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
   */
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)};
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${attrname};
   
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}0;
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${attrname}0;
   
-  protected ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr, prefix)}1;
+  protected ${modelbase4java.type_attribute_primitive(attr)} ${attrname}1;
     </#if>
     <#---------------------------->
     <#-- 需要集合属性作为查询条件的 -->

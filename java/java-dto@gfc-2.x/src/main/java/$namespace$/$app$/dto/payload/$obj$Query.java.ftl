@@ -239,9 +239,9 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     Map<String,Object> retVal = new HashMap<>();
 <#assign processedAttrs = {}>    
 <@modelbase4java.print_object_query_to_map obj=obj processedAttrs=processedAttrs />    
-    if (!this.results.isEmpty()) {
+    if (!this.queryResults.isEmpty()) {
       Map<String, Object> results = new HashMap<>();
-      for (Map.Entry<String, Object> entry : this.results.entrySet()) {
+      for (Map.Entry<String, Object> entry : this.queryResults.entrySet()) {
         List list = (List) entry.getValue();
         List maps = new ArrayList();
         for (Object obj : list) {

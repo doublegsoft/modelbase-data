@@ -47,6 +47,8 @@ public final class ${typename}Assembler {
     if (${modelbase.get_attribute_sql_name(attr)} != null) {
 <@modelbase4java.print_reference_assemble attr=attr objname="retVal" attrname=modelbase.get_attribute_sql_name(attr) indent=6 />    
     }
+  <#elseif attr.type.collection>
+    // 忽略【${modelbase.get_attribute_label(attr)}】集合属性，通常不会从持久化层中直接拿回集合数据  
   <#else>
     retVal.set${java.nameType(attr.name)}((${modelbase4java.type_attribute_primitive(attr)})persisted.get("${modelbase.get_attribute_sql_name(attr)}"));
   </#if>
@@ -72,6 +74,11 @@ public final class ${typename}Assembler {
     ${modelbase4java.type_attribute_primitive(attr)} ${modelbase.get_attribute_sql_name(attr)} = query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}();
     if (${modelbase.get_attribute_sql_name(attr)} != null) {
 <@modelbase4java.print_reference_assemble attr=attr objname="retVal" attrname=modelbase.get_attribute_sql_name(attr) indent=6 />    
+    }
+  <#elseif attr.type.collection>
+    <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
+    for (${java.nameType(refObj.name)}Query item : query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}()) {
+      retVal.get${java.nameType(attr.name)}().add(${java.nameType(refObj.name)}Assembler.assemble${java.nameType(refObj.name)}FromQuery(item));
     }
   <#else>
     retVal.set${java.nameType(attr.name)}(query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());

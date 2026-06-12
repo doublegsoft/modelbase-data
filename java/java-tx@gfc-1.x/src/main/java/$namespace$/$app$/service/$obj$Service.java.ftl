@@ -203,7 +203,7 @@ public interface ${typename}Service {
 <#---------------->
 <#-- 集合对象属性 -->    
 <#---------------->
-<#list obj.attributes as attr>
+<#--  <#list obj.attributes as attr>
   <#if !attr.type.collection><#continue></#if>
   <#assign singular = attr.getLabelledOptions("name")["singular"]!attr.type.componentType.name>
   <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
@@ -297,7 +297,7 @@ public interface ${typename}Service {
    *        发生任何错误，都抛出此类型异常
    */
   List<${java.nameType(collObj.name)}Query> get${java.nameType(attr.name)}(${java.nameType(obj.name)}Query query) throws ServiceException;
-</#list>
+</#list>  -->
 <#--------------->
 <#-- 可运算属性 -->    
 <#--------------->   
