@@ -706,7 +706,8 @@
   </#if>
 </#list>
   
-  <select id="isExisting${java.nameType(obj.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(obj.name)}Query">
+  <select id="isExisting${java.nameType(obj.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(obj.name)}Query"
+          resultType="java.lang.Boolean">
     select exists (
       select 1 from ${obj.persistenceName} 
       where 1 = 1
