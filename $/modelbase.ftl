@@ -82,6 +82,9 @@
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>
+    <#if attr.type.custom && attr.identifiable>
+      <#return naming.nameVariable(attr.parent.name) + 'Id'>
+    </#if>
     <#if prefix?ends_with(attr.parent.name)>
       <#return naming.nameVariable(prefix) + 'Id'>
     <#elseif prefix != "">
@@ -111,54 +114,14 @@
       <#return naming.nameVariable(attr.name) + naming.nameType(refObj.name) + naming.nameType(refObjIdAttrs[0].name)>
     </#if>
   </#if>
-  <#if attr.name == 'code'>
+  <#if attr.name == 'name' || attr.name == 'type' || attr.name == 'text' || attr.name == 'group' || attr.name == 'code'>
     <#if attr.parent.name?starts_with("$")>
-      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Code'>
+      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + java.nameType(attr.name)>
     </#if>
     <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Code'>
+      <#return naming.nameVariable(attr.parent.name) + java.nameType(attr.name)>
     <#else>
-      <#return naming.nameVariable(prefix) + 'Code'>  
-    </#if>
-  </#if>
-  <#if attr.name == 'name'>
-    <#if attr.parent.name?starts_with("$")>
-      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Name'>
-    </#if>
-    <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Name'>
-    <#else>
-      <#return naming.nameVariable(prefix) + 'Name'>  
-    </#if>
-  </#if>
-  <#if attr.name == 'type'>
-    <#if attr.parent.name?starts_with("$")>
-      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Type'>
-    </#if>
-    <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Type'>
-    <#else>
-      <#return naming.nameVariable(prefix) + 'Type'>  
-    </#if>
-  </#if>
-  <#if attr.name == 'text'>
-    <#if attr.parent.name?starts_with("$")>
-      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Text'>
-    </#if>
-    <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Text'>
-    <#else>
-      <#return naming.nameVariable(prefix) + 'Text'>  
-    </#if>
-  </#if>
-  <#if attr.name == 'group'>
-    <#if attr.parent.name?starts_with("$")>
-      <#return naming.nameVariable(attr.getLabelledOptions("original")["object"]) + 'Group'>
-    </#if>
-    <#if prefix == "" || attr.name?starts_with(prefix)>
-      <#return naming.nameVariable(attr.parent.name) + 'Group'>
-    <#else>
-      <#return naming.nameVariable(prefix) + 'Group'>  
+      <#return naming.nameVariable(prefix) + java.nameType(attr.name)>  
     </#if>
   </#if>
   <#if attr.type.primitive>

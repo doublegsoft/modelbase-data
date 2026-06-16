@@ -576,7 +576,7 @@ ${""?left_pad(indent)}}
     this.${modelbase.get_attribute_sql_name(attr, prefix)}2 = ${modelbase.get_attribute_sql_name(attr, prefix)}2;
   }
     </#if>    
-    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr):attr}>
+    <#local processedAttrs += {modelbase.get_attribute_sql_name(attr,prefix):attr}>
     <#local processedAttrs += {attr.name:attr}>
   </#list>
   <#-- REFERENCE -->

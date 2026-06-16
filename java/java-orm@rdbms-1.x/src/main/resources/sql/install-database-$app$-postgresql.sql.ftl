@@ -18,7 +18,12 @@ create table ${obj.persistenceName} (
     <#list attrIds as attr>
       <#assign domaintype = attr.constraint.domainType.name>
       <#if domaintype?index_of('&') == 0>
+        <#assign privTypeName = modelbase.type_attribute_primitive(attr)>
+        <#if privTypeName == "string">
   ${attr.persistenceName?right_pad(24)} ${r"varchar(64)"?right_pad(24)} not null,
+        <#else>
+  ${attr.persistenceName?right_pad(24)} ${r"bigint"?right_pad(24)} not null,      
+        </#if>
       <#else>
   ${attr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!'varchar(64)')?right_pad(24)} not null,
       </#if>
@@ -26,7 +31,12 @@ create table ${obj.persistenceName} (
     <#list attrNids as attr>
       <#assign domaintype = attr.constraint.domainType.toString()>
       <#if domaintype?index_of('&') == 0>
+        <#assign privTypeName = modelbase.type_attribute_primitive(attr)>
+        <#if privTypeName == "string">
   ${attr.persistenceName?right_pad(24)} varchar(64)<#if attr?index != attrNids?size - 1>,</#if>
+        <#else>
+  ${attr.persistenceName?right_pad(24)} bigint<#if attr?index != attrNids?size - 1>,</#if>      
+        </#if>
       <#else>
   ${attr.persistenceName?right_pad(24)} ${(typebase.typename(domaintype, "sql")!domaintype)}<#if attr?index != attrNids?size - 1>,</#if>
       </#if>

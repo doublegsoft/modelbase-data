@@ -173,7 +173,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>
   </#if>
 </#list>
+<#-- FIXME: 此处逻辑可以设计得更好 -->
 <#-- 特殊处理OREF，倒序处理 -->
+<#if typeDef.definition.attributes[0].isLabelled("original")>
 <#list (flow.types?size-1)..0 as idx>
   <#assign typeObj = flow.types[idx]>
   <#assign refTypeName = typeDef.getReferenceType(typeObj)>
@@ -183,6 +185,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   </#if>  
 </#list>
+</#if>
 <#if typeDef.persistence>
   <#------------------------------------------------------>
   <#-- 4. 插入或者更新主要对象的数据，方法末尾才调用对自身的保存 -->
