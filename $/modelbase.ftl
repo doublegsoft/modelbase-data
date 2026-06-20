@@ -79,6 +79,9 @@
   <#if prefix == attr.parent.name>
     <#local prefix = "">
   </#if>
+  <#if attr.parent.name?starts_with(prefix)><#-- prefix是object name的简称，开头或者结尾的单词，就忽略-->
+    <#local prefix = "">
+  </#if>
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>

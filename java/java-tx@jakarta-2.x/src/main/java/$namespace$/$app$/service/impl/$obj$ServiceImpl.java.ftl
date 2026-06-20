@@ -174,17 +174,16 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   </#if>
 </#list>
 <#-- FIXME: 此处逻辑可以设计得更好 -->
-<#-- 特殊处理OREF，倒序处理 -->
+<#-- 特殊处理OREF，倒序处理，此处的设计不够好 -->
 <#if typeDef.definition.attributes[0].isLabelled("original")>
-<#list (flow.types?size-1)..0 as idx>
-  <#assign typeObj = flow.types[idx]>
-  <#assign refTypeName = typeDef.getReferenceType(typeObj)>
-  <#if refTypeName == "OREF">  
+  <#list (flow.types?size-1)..0 as idx>
+    <#assign typeObj = flow.types[idx]>
+    <#assign refTypeName = typeDef.getReferenceType(typeObj)>
+    <#if refTypeName != "OREF"><#continue></#if>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
     ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
-  </#if>  
-</#list>
+  </#list>
 </#if>
 <#if typeDef.persistence>
   <#------------------------------------------------------>
@@ -196,6 +195,15 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     } else {
       ${java.nameVariable(typeDef.name)}DataAccess.updatePartial${java.nameType(typeDef.name)}(${java.nameVariable(typeDef.name)});      
     }
+</#if>
+<#if typeDef.definition.attributes[0].isLabelled("original")>
+  <#list (flow.types?size-1)..0 as idx>
+    <#assign typeObj = flow.types[idx]>
+    <#assign refTypeName = typeDef.getReferenceType(typeObj)>
+    <#if refTypeName != "CREF"><#continue></#if>
+    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.variable))}(${java.nameVariable(typeObj.variable)}Queries);
+  </#list>
 </#if>
     return query;   
   }
@@ -252,7 +260,6 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     <#else>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
-    <#--  ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());  -->
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
@@ -302,7 +309,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr, typeObj.variable)}());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
-  <#elseif typeRefType == "PREF">  
+  <#elseif typeRefType == "CREF">  
+    // TODO
   </#if>
 </#list>
     return retVal;
