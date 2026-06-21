@@ -85,6 +85,9 @@
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>
+    <#if prefix != "" && prefix != "id">
+      <#return naming.nameVariable(prefix) + "Id">
+    </#if>
     <#if attr.type.custom && attr.identifiable>
       <#return naming.nameVariable(attr.parent.name) + 'Id'>
     </#if>
@@ -98,7 +101,11 @@
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)!''>
     <#assign refObjIdAttrs = get_id_attributes(refObj)>
-    <#if refObjIdAttrs?size == 0>
+    <#if attr.name == "id">
+      <#return naming.nameVariable(refObj.name) + "Id">
+    </#if>
+    <#return naming.nameVariable(attr.name) + "Id">
+    <#--  <#if refObjIdAttrs?size == 0>
       <#return naming.nameVariable(attr.name) + 'Id'>
     </#if>
     <#if refObjIdAttrs[0].name?starts_with(refObj.name)>
@@ -115,7 +122,7 @@
       <#return alias>
     <#else>
       <#return naming.nameVariable(attr.name) + naming.nameType(refObj.name) + naming.nameType(refObjIdAttrs[0].name)>
-    </#if>
+    </#if>  -->
   </#if>
   <#if attr.name == 'name' || attr.name == 'type' || attr.name == 'text' || attr.name == 'group' || attr.name == 'code'>
     <#if attr.parent.name?starts_with("$")>
@@ -448,7 +455,8 @@
     <#return typebase.typename(attr.type.name, language, 'String')>
   <#elseif attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
-    <#return type_attribute_primitive(attr.directRelationship.targetAttribute)>
+    <#return type_attribute_primitive(refObj.getIdentifiableAttribute())>
+    <#--  <#return type_attribute_primitive(attr.directRelationship.targetAttribute)>  -->
   <#elseif attr.type.domain>
     <#assign exprDomain = attr.type.toString()>
     <#if exprDomain?index_of('&') == 0>
