@@ -79,9 +79,10 @@
   <#if prefix == attr.parent.name>
     <#local prefix = "">
   </#if>
-  <#if attr.parent.name?starts_with(prefix)><#-- prefix是object name的简称，开头或者结尾的单词，就忽略-->
+  <#-- prefix是object name的简称，开头或者结尾的单词，就忽略-->
+  <#--  <#if attr.parent.name?starts_with(prefix)>
     <#local prefix = "">
-  </#if>
+  </#if>  -->
   <#if attr == ''><#return 'UNKNOWN'></#if>
   <#local naming = java>
   <#if attr.name == 'id'>
@@ -146,6 +147,15 @@
   <#else>
     <#return naming.nameVariable(prefix + '_' + attr.name)>  
   </#if>
+</#function>
+
+<#function match_aggregate_attribute aggObj dataAttr>
+  <#list aggObj.attributes as aggAttr>
+    <#if !aggAttr.type.custom><#continue></#if>
+    <#if aggAttr.type.name == dataAttr.parent.name>
+      <#return aggAttr>
+    </#if>
+  </#list>
 </#function>
 
 <#--

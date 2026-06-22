@@ -247,7 +247,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   <#elseif typeRefType == "AREF">
     <#assign idAttrs = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first)}());
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first, typeObj.variable)}());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   <#elseif typeRefType == "PREF">
@@ -267,7 +267,12 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
     <#assign rightAttr = typeObj.getRightAttributeFromReference()>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    <#-- 注意此处这个补丁 -->
+    <#if modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)??>
+      <#assign leftAttr = modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)>
+    </#if>  
     ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+    
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.variable))}(${java.nameVariable(typeObj.variable)}Query).getData();
     retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
   </#if>
@@ -446,7 +451,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       ${java.nameVariable(typeObj.variable)}Service.delete${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);  
     }  
     <#else>
-    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr)}());
+    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.${modelbase4java.name_getter(idAttr, typeObj.variable)}());
     </#if>
   <#elseif typeRefType == "CREF">
     <#assign dataObj = model.findObjectByName(typeObj.name)>
