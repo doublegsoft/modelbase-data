@@ -456,6 +456,9 @@ ${""?left_pad(indent)}}
     </#if>
     <#local processedAttrs += {modelbase.get_attribute_sql_name(attr, prefix):attr}>
     <#local processedAttrs += {attr.name:attr}>
+    <#if attr.type.custom>
+      <#local processedAttrs += {modelbase.get_attribute_sql_name(attr, attr.name):attr}>
+    </#if>
   </#list>
   <#-- REFERENCE -->
   <#list obj.attributes as attr>
@@ -486,8 +489,9 @@ ${""?left_pad(indent)}}
       <#if attr.type.custom>
         <#local refObj = model.findObjectByName(attr.type.name)>
         <#list refObj.attributes as refObjAttr>
+          <#if processedAttrs[modelbase.get_attribute_sql_name(refObjAttr, prefix)]??><#continue></#if>
           <#if refObjAttr.type.custom>
-
+  
   protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)};
   
   protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0;
@@ -620,6 +624,7 @@ ${""?left_pad(indent)}}
       <#if attr.type.custom>
         <#local refObj = model.findObjectByName(attr.type.name)>
         <#list refObj.attributes as refObjAttr>
+          <#if processedAttrs[modelbase.get_attribute_sql_name(refObjAttr, prefix)]??><#continue></#if>
           <#if refObjAttr.type.custom>
 
   public ${modelbase4java.type_attribute_primitive(refObjAttr)} get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}() {

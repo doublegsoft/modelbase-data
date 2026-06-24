@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.ArrayList;
-<#--  import <#if namespace??>${namespace}.</#if>${app.name}.util.*;  -->
 <#list modelbase4java.get_imports(obj)?sort as imp>
 import ${imp};
 </#list>
