@@ -158,18 +158,26 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#---------------------------------------------------------------------------------------->
     <#-- 次对象和主对象的关系来确定，采用什么方式处理 -->
     <#if refTypeName == "PREF">
+      <#assign refObj = model.findObjectByName(typeObj.name)>
+      <#assign refObjIdAttr = refObj.getIdentifiableAttribute()>
     ${java.nameVariable(typeObj.variable)}Query = query.get${java.nameType(typeObj.variable)}();
     if (${java.nameVariable(typeObj.variable)}Query != null) {
       ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+      query.${modelbase4java.name_setter(refObjIdAttr, typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_getter(refObjIdAttr)}());
     }
     <#elseif refTypeName == "AREF">
+      <#assign refObj = model.findObjectByName(typeObj.name)>
+      <#assign refObjIdAttr = refObj.getIdentifiableAttribute()>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
     if (${java.nameVariable(typeObj.variable)}Query != null) {
       ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
+      query.${modelbase4java.name_setter(refObjIdAttr, typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_getter(refObjIdAttr)});
     }
-    <#elseif refTypeName == "CREF">
+    <#-- 集合对象应该在主对象保存后才保存 -->
+    <#--  <#elseif refTypeName == "CREF">
+      <#asssign collObj = model.findObjectByName(typeObj.name)>
     ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);  -->
     </#if>
   </#if>
 </#list>
