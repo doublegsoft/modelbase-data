@@ -32,7 +32,7 @@ data class Pagination<T>(
 /**
  * 【${modelbase.get_object_label(obj)}】传输对象。
  */
-data class ${java.nameType(obj.name)}Query(
+data class ${java.nameType(obj.name)}(
   <#list obj.attributes as attr>
   val ${modelbase.get_attribute_sql_name(attr)}: ${modelbase4kotlin.type_attribute(attr)}? = null,
   </#list>
