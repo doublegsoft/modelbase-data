@@ -4,6 +4,8 @@
 ${java.license(license)}
 </#if>
 <#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
+<#assign rootObj = typeDef.definition>
+<#assign detailObjs = []>
 <#assign flow = typeDef.flow>
 <#assign idAttrs = typeDef.getIdentifiableAttributes()>
 <#assign existings = {}>
@@ -49,6 +51,7 @@ import jakarta.inject.*;
 import jakarta.transaction.*;
 
 import org.apache.ibatis.session.RowBounds;
+import com.github.pagehelper.Page;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.poco.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.orm.assembler.*;
@@ -112,7 +115,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#------------------->      
     boolean existing = true;
 <@print_variables flow />    
-<#list flow.types as typeObj>
+<#list flow.types?reverse as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
     <#------------------------------------------------------------------------------------------------>
@@ -171,18 +174,22 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
     if (${java.nameVariable(typeObj.variable)}Query != null) {
       ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-      query.${modelbase4java.name_setter(refObjIdAttr, typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_getter(refObjIdAttr)});
+      query.${modelbase4java.name_setter(refObjIdAttr, typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_getter(refObjIdAttr)}());
     }
-    <#-- 集合对象应该在主对象保存后才保存 -->
-    <#--  <#elseif refTypeName == "CREF">
-      <#asssign collObj = model.findObjectByName(typeObj.name)>
-    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.plural)}(${java.nameVariable(typeObj.variable)}Queries);  -->
-    </#if>
+    </#if>  
   </#if>
 </#list>
-<#-- FIXME: 此处逻辑可以设计得更好 -->
+<#-- 最后处理集合属性 -->
+<#list flow.types as typeObj>
+  <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+  <#if typeRefType != "CREF"><#continue></#if>
+    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Queries);
+</#list>
+<#---------------------------------------->
+<#-- FIXME: 此处逻辑可以设计得更好          -->
 <#-- 特殊处理OREF，倒序处理，此处的设计不够好 -->
+<#---------------------------------------->
 <#if typeDef.definition.attributes[0].isLabelled("original")>
   <#list (flow.types?size-1)..0 as idx>
     <#assign typeObj = flow.types[idx]>
@@ -228,6 +235,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameType(typeDef.name)}Query retVal = new ${java.nameType(typeDef.name)}Query();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
+<#if rootObj.isLabelled("composite")>
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    if (data.isEmpty()) {
+      throw new ServiceException(404, "没有找到满足条件的${modelbase.get_object_label(rootObj)}数据");
+    }
+    retVal = data.get(0);
+</#if>
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
@@ -300,6 +314,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameType(typeDef.name)}Query retVal = new ${java.nameType(typeDef.name)}Query();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
+<#if rootObj.isLabelled("composite")>
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    if (data.isEmpty()) {
+      return null;
+    }
+    retVal = data.get(0);
+</#if>
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
@@ -343,6 +364,11 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     Pagination<${java.nameType(typeDef.name)}Query> retVal = new Pagination<>();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
+<#if rootObj.isLabelled("composite")>
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    retVal.setTotal(((Page<${java.nameType(rootObj.name)}Query>) data).getTotal());
+    retVal.getData().addAll(data);
+</#if>
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
@@ -367,7 +393,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#else>
       <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     </#if>
-    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.name)}Service.find${java.nameType(typeObj.definition.plural)}(${java.nameVariable(typeObj.variable)}Query).getData();
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(typeObj.definition.plural)}(${java.nameVariable(typeObj.variable)}Query).getData();
     <#if typeObj?index == 0>
       <#list flow.types as innerTypeObj>
         <#if innerTypeObj?index == 0><#continue></#if>

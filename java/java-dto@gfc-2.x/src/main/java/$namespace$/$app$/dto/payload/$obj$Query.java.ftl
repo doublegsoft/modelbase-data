@@ -1,10 +1,11 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4java.ftl" as modelbase4java>
-<#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
-<#assign flow = typeDef.flow>
 <#if license??>
 ${java.license(license)}
 </#if>
+<#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
+<#assign rootObj = typeDef.definition>
+<#assign flow = typeDef.flow>
 package ${namespace}.${app.name}.dto.payload;
 
 import java.io.Serializable;
@@ -29,149 +30,81 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <@modelbase4java.print_object_query_members obj=obj processedAttrs=processedAttrs />    
 <#assign processedAttrs = {}>
 <@modelbase4java.print_object_query_xetters obj=obj processedAttrs=processedAttrs />   
-<@modelbase4java.print_object_query_to_query obj=obj root=obj />
-<#-- pivot的master可以不定义 -->
-<#if obj.isLabelled("pivot") || obj.isLabelled("meta") || obj.isLabelled("extension")>
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-    <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
-    <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
-    <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
-    <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
-  <#elseif obj.isLabelled("meta")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("meta")["master"])>
-    <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("meta")["detail"])>
-    <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])??>
-      <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])>
-    <#else>
-      <#assign keyAttr = model.findAttributeByNames(detailObj.name, "property_name")>
-    </#if>
-    <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])??>
-      <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])>
-    <#else>
-      <#assign valAttr = model.findAttributeByNames(detailObj.name, "property_value")>
-    </#if>
-    <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
-  <#elseif obj.isLabelled("extension")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>
-    <#assign detailObjNames = obj.getLabelledOptions("extension")["details"]!"">
+<#--  <@modelbase4java.print_object_query_to_query obj=obj root=obj />  -->
+<#------------------------------------------------------------------------------>
+<#-- PIVOT、META、EXTENSION对象通常都是可持久化的，同时PIVOT可以不定义MASTER，自身就是 -->
+<#------------------------------------------------------------------------------>
+<#if obj.isLabelled("pivot")>
+  <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("pivot")["detail"])>
+  <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["key"])>
+  <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("pivot")["value"])>
+  <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
+<#elseif obj.isLabelled("meta")>
+  <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("meta")["master"])>
+  <#assign detailObj = model.findObjectByName(obj.getLabelledOptions("meta")["detail"])>
+  <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])??>
+    <#assign keyAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["key"])>
   <#else>
-    <#assign masterObj = model.findObjectByName(obj.attributes[0].getLabelledOptions("original")["object"])>
+    <#assign keyAttr = model.findAttributeByNames(detailObj.name, "property_name")>
   </#if>
-  
-  public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
-    ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
-  <#list masterObj.attributes as attr>
-    <#if attr.type.collection>
-    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
-    <#else>
-    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
-    </#if>
-  </#list>  
-    return retVal;
-  }
+  <#if model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])??>
+    <#assign valAttr = model.findAttributeByNames(detailObj.name, obj.getLabelledOptions("meta")["value"])>
+  <#else>
+    <#assign valAttr = model.findAttributeByNames(detailObj.name, "property_value")>
+  </#if>
+  <#assign masterObjIdAttr = modelbase.get_id_attributes(masterObj)?first>
+<#elseif obj.isLabelled("extension")>
+  <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("extension")["master"])>
+  <#assign detailObjNames = obj.getLabelledOptions("extension")["details"]!"">
+<#-------------------------------------------------------------------------->
+<#-- COMPOSITE、AGGREGATE对象本身通常都是不持久化的，它的属性按照各自所属对象持久化 -->
+<#-------------------------------------------------------------------------->
+<#elseif obj.isLabelled("aggregate")>
+  <#list obj.attributes as attr>
+    <#if !attr.type.custom><#continue></#if>
+    <#assign refObj = model.findObjectByName(attr.type.name)>
 
-  public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
-  <#list masterObj.attributes as attr>
-    if (query.${modelbase4java.name_getter(attr)}() != null) {
-      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
+  public ${java.nameType(refObj.name)}Query to${java.nameType(refObj.name)}Query() {
+    ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();
+    <#list flow.types as typeObj>
+      <#if typeObj.reference??>
+        <#assign predicate = typeObj.reference.joinPredicates[0]>
+        <#assign leftObj = predicate.leftObject>
+        <#assign leftAttr = predicate.leftAttribute>
+        <#assign rightObj = predicate.rightObject>
+        <#assign rightAttr = predicate.rightAttribute>
+        <#if leftObj.name == refObj.name && leftAttr.type.custom>
+        <#-- 正向引用 A->B -->
+    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(rightAttr, typeObj.variable)}());
+    if (get${java.nameType(typeObj.variable)}() != null) {
+      retVal.${modelbase4java.name_setter(leftAttr)}(get${java.nameType(typeObj.variable)}().${modelbase4java.name_getter(rightAttr)}());
+      retVal.set${java.nameType(leftAttr.name)}(get${java.nameType(typeObj.variable)}());
     }
-  </#list>  
-  }
-  <#if detailObj??>
-
-  public List<${java.nameType(detailObj.name)}Query> to${java.nameType(detailObj.name)}Queries() {
-    List<${java.nameType(detailObj.name)}Query> retVal = new ArrayList<>();
-    ${java.nameType(detailObj.name)}Query item = null;
-    <#list obj.attributes as attr>
-      <#if !attr.isLabelled("redefined")><#continue></#if>
-      <#if attr.type.collection>
-    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
-      <#else>
-    item = new ${java.nameType(detailObj.name)}Query();
-        <#list detailObj.attributes as detailAttr>
-          <#if detailAttr.type.name == masterObj.name>
-    item.${modelbase4java.name_setter(detailAttr)}(${modelbase.get_attribute_sql_name(masterObjIdAttr)});   
-            <#break>
-          </#if>
-        </#list>
-    item.${modelbase4java.name_setter(keyAttr)}("${attr.name?upper_case}");
-        <#if attr.type.name == "date">
-    item.${modelbase4java.name_setter(valAttr)}(Dates.format(${modelbase.get_attribute_sql_name(attr)}, "yyyy-MM-dd"));
-        <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
-    item.${modelbase4java.name_setter(valAttr)}(Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
-        <#else>
-    item.${modelbase4java.name_setter(valAttr)}(${modelbase.get_attribute_sql_name(attr)});
         </#if>
-    ${java.nameType(detailObj.name)}Query.setDefaultValues(item, true);
-    retVal.add(item);
       </#if>
-    </#list>  
-    return retVal;
-  }
-
-  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
-    <#list obj.attributes as attr>
-      <#if !attr.isLabelled("redefined")><#continue></#if>
-    if ("${attr.name?upper_case}".equals(query.${modelbase4java.name_getter(keyAttr)}())) {
-      <#if attr.type.name == "date">
-      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Dates.parseDate(query.${modelbase4java.name_getter(valAttr)}(), "yyyy-MM-dd"));
-      <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
-      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(query.${modelbase4java.name_getter(valAttr)}()));
-      <#else>
-      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(query.${modelbase4java.name_getter(valAttr)}());
-      </#if>
-    }
-    </#list>  
-  }
-
-  public void from${java.nameType(detailObj.name)}Queries(List<${java.nameType(detailObj.name)}Query> queries) {
-    if (queries == null || queries.isEmpty()) {
-      return;
-    }
-    for (${java.nameType(detailObj.name)}Query row : queries) {
-      from${java.nameType(detailObj.name)}Query(row);
-    }
-  }
-  </#if><#-- detailObj?? -->
-  <#if detailObjNames?? && detailObjNames != "">
-    <#list detailObjNames?split(";") as detailObjName>
-      <#if detailObjName?contains("(")>
-        <#assign objName = detailObjName?substring(0, detailObjName?index_of("("))>
-        <#assign detailObj = model.findObjectByName(objName)>
-      <#else>  
-        <#assign detailObj = model.findObjectByName(detailObjName)>
-      </#if>
-
-  public ${java.nameType(detailObj.name)}Query to${java.nameType(detailObj.name)}Query() {
-    ${java.nameType(detailObj.name)}Query retVal = new ${java.nameType(detailObj.name)}Query();
-      <#list detailObj.attributes as attr>
-        <#if attr.type.collection>
-    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
-        <#else>
-    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
-        </#if>
-      </#list>  
-    return retVal;
-  }
-
-  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
-      <#list detailObj.attributes as attr>
-    if (query.${modelbase4java.name_getter(attr)}() != null) {
-      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
-    }
-      </#list>  
-  }
     </#list>
-  </#if><#-- detailObjNames != "" -->
-<#else>
+    return retVal;
+  }
+
+  public void from${java.nameType(refObj.name)}Query(${java.nameType(refObj.name)}Query query) {
+    
+  }
+  </#list>
+<#else><#-- 没有任何标注的任意对象 -->  
   <#assign origObjNames = {}>
   <#list obj.attributes as attr>
-    <#if !attr.isLabelled("original")><#continue></#if>
-    <#assign origObjName = attr.getLabelledOption("original", "object")>
-    <#if origObjNames[origObjName]??><#continue></#if>
-    <#assign origObj = model.findObjectByName(origObjName)>
+    <#if attr.isLabelled("original")>
+      <#assign origObjName = attr.getLabelledOption("original", "object")>
+      <#if origObjNames[origObjName]??><#continue></#if>
+      <#assign origObj = model.findObjectByName(origObjName)>
+    <#else>
+      <#continue>
+    </#if>
+    <#if !origObj??><#continue></#if>
+    <#assign origObjNames += {origObjName:origObj}>
 
+  // hello original
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
     <#list obj.attributes as innerAttr>
@@ -217,14 +150,129 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       </#if>
     </#list>
   }
-  <#assign origObjNames += {origObjName:origObjName}>
+    <#assign origObjNames += {origObjName:origObjName}>
   </#list>
 </#if>
+<#if masterObj??>
+
+  public ${java.nameType(masterObj.name)}Query to${java.nameType(masterObj.name)}Query() {
+    ${java.nameType(masterObj.name)}Query retVal = new ${java.nameType(masterObj.name)}Query();
+  <#list masterObj.attributes as attr>
+    <#if attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
+    <#else>
+    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
+    </#if>
+  </#list>  
+    return retVal;
+  }
+
+  public void from${java.nameType(masterObj.name)}Query(${java.nameType(masterObj.name)}Query query) {
+  <#list masterObj.attributes as attr>
+    if (query.${modelbase4java.name_getter(attr)}() != null) {
+      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
+    }
+  </#list>  
+  }
+</#if>
+<#if detailObj??>
+
+  public List<${java.nameType(detailObj.name)}Query> to${java.nameType(detailObj.name)}Queries() {
+    List<${java.nameType(detailObj.name)}Query> retVal = new ArrayList<>();
+    ${java.nameType(detailObj.name)}Query item = null;
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    <#if attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
+    <#else>
+    item = new ${java.nameType(detailObj.name)}Query();
+      <#list detailObj.attributes as detailAttr>
+        <#if detailAttr.type.name == masterObj.name>
+    item.${modelbase4java.name_setter(detailAttr)}(${modelbase.get_attribute_sql_name(masterObjIdAttr)});   
+          <#break>
+        </#if>
+      </#list>
+    item.${modelbase4java.name_setter(keyAttr)}("${attr.name?upper_case}");
+      <#if attr.type.name == "date">
+    item.${modelbase4java.name_setter(valAttr)}(Dates.format(${modelbase.get_attribute_sql_name(attr)}, "yyyy-MM-dd"));
+      <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
+    item.${modelbase4java.name_setter(valAttr)}(Safe.safeString(${modelbase.get_attribute_sql_name(attr)}));
+      <#else>
+    item.${modelbase4java.name_setter(valAttr)}(${modelbase.get_attribute_sql_name(attr)});
+      </#if>
+    ${java.nameType(detailObj.name)}Query.setDefaultValues(item, true);
+    retVal.add(item);
+    </#if>
+  </#list>  
+    return retVal;
+  }
+
+  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("redefined")><#continue></#if>
+    if ("${attr.name?upper_case}".equals(query.${modelbase4java.name_getter(keyAttr)}())) {
+    <#if attr.type.name == "date">
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Dates.parseDate(query.${modelbase4java.name_getter(valAttr)}(), "yyyy-MM-dd"));
+    <#elseif modelbase4java.type_attribute_primitive(attr) != "String">
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(query.${modelbase4java.name_getter(valAttr)}()));
+    <#else>
+      set${java.nameType(modelbase.get_attribute_sql_name(attr))}(query.${modelbase4java.name_getter(valAttr)}());
+    </#if>
+    }
+  </#list>  
+  }
+
+  public void from${java.nameType(detailObj.name)}Queries(List<${java.nameType(detailObj.name)}Query> queries) {
+    if (queries == null || queries.isEmpty()) {
+      return;
+    }
+    for (${java.nameType(detailObj.name)}Query row : queries) {
+      from${java.nameType(detailObj.name)}Query(row);
+    }
+  }
+</#if><#-- detailObj?? -->
+<#if detailObjNames?? && detailObjNames != ""><#-- 多个详细对象 -->
+  <#assign origObjNames = {}>
+  <#list detailObjNames?split(";") as detailObjName>
+    <#if detailObjName?contains("(")>
+      <#assign objName = detailObjName?substring(0, detailObjName?index_of("("))>
+      <#assign detailObj = model.findObjectByName(objName)>
+    <#else>  
+      <#assign detailObj = model.findObjectByName(detailObjName)>
+    </#if>
+  
+  public ${java.nameType(detailObj.name)}Query to${java.nameType(detailObj.name)}Query() {
+    ${java.nameType(detailObj.name)}Query retVal = new ${java.nameType(detailObj.name)}Query();
+    <#list detailObj.attributes as attr>
+      <#if attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(${modelbase4java.name_getter(attr)}());
+      <#else>
+    retVal.${modelbase4java.name_setter(attr)}(${modelbase4java.name_getter(attr)}());
+      </#if>
+    </#list>  
+    return retVal;
+  }
+
+  public void from${java.nameType(detailObj.name)}Query(${java.nameType(detailObj.name)}Query query) {
+    <#list detailObj.attributes as attr>
+    if (query.${modelbase4java.name_getter(attr)}() != null) {
+      ${modelbase4java.name_setter(attr)}(query.${modelbase4java.name_getter(attr)}());
+    }
+    </#list>  
+  }
+  </#list>
+</#if><#-- detailObjNames != "" -->
+<#--------------------->
+<#-- 集合属性的单独处理 -->
+<#--------------------->
 <#list obj.attributes as attr>
   <#if !attr.type.collection><#continue></#if>
   <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
 
   public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
+    ${modelbase.get_attribute_sql_name(attr)}.forEach(q -> {
+      
+    });
     return ${modelbase.get_attribute_sql_name(attr)};
   }
 

@@ -491,7 +491,8 @@ ${""?left_pad(indent)}}
         <#list refObj.attributes as refObjAttr>
           <#if processedAttrs[modelbase.get_attribute_sql_name(refObjAttr, prefix)]??><#continue></#if>
           <#if refObjAttr.type.custom>
-  
+            <#local processedAttrs += {modelbase.get_attribute_sql_name(refObjAttr, prefix):refObjAttr}>
+
   protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)};
   
   protected ${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}0;
@@ -626,9 +627,10 @@ ${""?left_pad(indent)}}
         <#list refObj.attributes as refObjAttr>
           <#if processedAttrs[modelbase.get_attribute_sql_name(refObjAttr, prefix)]??><#continue></#if>
           <#if refObjAttr.type.custom>
-
+            <#local processedAttrs += {modelbase.get_attribute_sql_name(refObjAttr, prefix):refObjAttr}>
+            
   public ${modelbase4java.type_attribute_primitive(refObjAttr)} get${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}() {
-    return ${modelbase.get_attribute_sql_name(attr, prefix)};
+    return ${modelbase.get_attribute_sql_name(refObjAttr, prefix)};
   }
   
   public void set${java.nameType(modelbase.get_attribute_sql_name(refObjAttr, prefix))}(${modelbase4java.type_attribute_primitive(refObjAttr)} ${modelbase.get_attribute_sql_name(refObjAttr, prefix)}) {
