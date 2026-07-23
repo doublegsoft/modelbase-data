@@ -115,7 +115,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#------------------->      
     boolean existing = true;
 <@print_variables flow />    
-<#list flow.types?reverse as typeObj>
+<#list flow.sortTypes() as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
     <#------------------------------------------------------------------------------------------------>
@@ -242,7 +242,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal = data.get(0);
 </#if>
-<#list flow.types as typeObj>
+<#list flow.sortTypes() as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
     boolean areAllIdsEmpty = true;
