@@ -30,7 +30,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <@modelbase4java.print_object_query_members obj=obj processedAttrs=processedAttrs />    
 <#assign processedAttrs = {}>
 <@modelbase4java.print_object_query_xetters obj=obj processedAttrs=processedAttrs />   
-<#--  <@modelbase4java.print_object_query_to_query obj=obj root=obj />  -->
 <#------------------------------------------------------------------------------>
 <#-- PIVOT、META、EXTENSION对象通常都是可持久化的，同时PIVOT可以不定义MASTER，自身就是 -->
 <#------------------------------------------------------------------------------>
@@ -68,7 +67,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   public ${java.nameType(refObj.name)}Query to${java.nameType(refObj.name)}Query() {
     ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();
     <#list flow.types as typeObj>
-
       <#if typeObj.reference??>
         <#assign predicate = typeObj.reference.joinPredicates[0]>
         <#assign leftObj = predicate.leftObject>
@@ -77,13 +75,14 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
         <#assign rightAttr = predicate.rightAttribute>
         <#if leftObj.name == refObj.name && leftAttr.type.custom>
         <#-- 正向引用 A->B -->
-    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(rightAttr, typeObj.variable)}());
+    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(rightAttr, predicate.rightObjectAlias)}());
     if (get${java.nameType(typeObj.variable)}() != null) {
       retVal.${modelbase4java.name_setter(leftAttr)}(get${java.nameType(typeObj.variable)}().${modelbase4java.name_getter(rightAttr)}());
       retVal.set${java.nameType(leftAttr.name)}(get${java.nameType(typeObj.variable)}());
+    }
         <#elseif rightObj.name == refObj.name && rightAttr.type.custom> 
         <#-- 反向引用 B->A -->
-    retVal.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, typeObj.variable)}());
+    retVal.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
     if (get${java.nameType(typeObj.variable)}() != null) {
       retVal.${modelbase4java.name_setter(rightAttr)}(get${java.nameType(typeObj.variable)}().${modelbase4java.name_getter(leftAttr)}());
     }
@@ -273,11 +272,20 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <#--------------------->
 <#list flow.types as typeObj>
   <#if !typeObj.collection><#continue></#if>
+  <#if obj.isLabelled("meta") || obj.isLabelled("pivot")><#continue></#if>
   <#assign collObj = typeObj.definition>
+  <#if processedAttrs[collObj.name]??><#continue></#if>
 
   public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
     ${java.nameVariable(typeObj.variable)}.forEach(q -> {
-      // TODO
+  <#if typeObj.reference??>
+    <#assign predicate = typeObj.reference.joinPredicates[0]>
+    <#assign leftObj = predicate.leftObject>
+    <#assign leftAttr = predicate.leftAttribute>
+    <#assign rightObj = predicate.rightObject>
+    <#assign rightAttr = predicate.rightAttribute>
+      q.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
+  </#if>
     });
     return ${java.nameVariable(typeObj.variable)};
   }

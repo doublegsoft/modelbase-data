@@ -196,7 +196,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#assign refTypeName = typeDef.getReferenceType(typeObj)>
     <#if refTypeName != "OREF"><#continue></#if>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   </#list>
 </#if>
@@ -217,7 +217,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#assign refTypeName = typeDef.getReferenceType(typeObj)>
     <#if refTypeName != "CREF"><#continue></#if>
     ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.variable))}(${java.nameVariable(typeObj.variable)}Queries);
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Queries);
   </#list>
 </#if>
     return query;   
@@ -295,7 +295,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>  
     ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
     
-    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.variable))}(${java.nameVariable(typeObj.variable)}Query).getData();
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
     retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
   </#if>
 </#list>
