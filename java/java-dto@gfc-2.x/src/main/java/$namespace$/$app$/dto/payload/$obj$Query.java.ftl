@@ -68,6 +68,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   public ${java.nameType(refObj.name)}Query to${java.nameType(refObj.name)}Query() {
     ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();
     <#list flow.types as typeObj>
+
       <#if typeObj.reference??>
         <#assign predicate = typeObj.reference.joinPredicates[0]>
         <#assign leftObj = predicate.leftObject>
@@ -80,8 +81,14 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     if (get${java.nameType(typeObj.variable)}() != null) {
       retVal.${modelbase4java.name_setter(leftAttr)}(get${java.nameType(typeObj.variable)}().${modelbase4java.name_getter(rightAttr)}());
       retVal.set${java.nameType(leftAttr.name)}(get${java.nameType(typeObj.variable)}());
+        <#elseif rightObj.name == refObj.name && rightAttr.type.custom> 
+        <#-- 反向引用 B->A -->
+    retVal.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, typeObj.variable)}());
+    if (get${java.nameType(typeObj.variable)}() != null) {
+      retVal.${modelbase4java.name_setter(rightAttr)}(get${java.nameType(typeObj.variable)}().${modelbase4java.name_getter(leftAttr)}());
     }
         </#if>
+      <#else>
       </#if>
     </#list>
     return retVal;
@@ -104,7 +111,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     <#if !origObj??><#continue></#if>
     <#assign origObjNames += {origObjName:origObj}>
 
-  // hello original
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
     <#list obj.attributes as innerAttr>
@@ -265,20 +271,20 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 <#--------------------->
 <#-- 集合属性的单独处理 -->
 <#--------------------->
-<#list obj.attributes as attr>
-  <#if !attr.type.collection><#continue></#if>
-  <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
+<#list flow.types as typeObj>
+  <#if !typeObj.collection><#continue></#if>
+  <#assign collObj = typeObj.definition>
 
   public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
-    ${modelbase.get_attribute_sql_name(attr)}.forEach(q -> {
-      
+    ${java.nameVariable(typeObj.variable)}.forEach(q -> {
+      // TODO
     });
-    return ${modelbase.get_attribute_sql_name(attr)};
+    return ${java.nameVariable(typeObj.variable)};
   }
 
   public void from${java.nameType(collObj.name)}Queries(List<${java.nameType(collObj.name)}Query> queries) {
-    ${modelbase.get_attribute_sql_name(attr)}.clear();
-    ${modelbase.get_attribute_sql_name(attr)}.addAll(queries);
+    ${java.nameVariable(typeObj.variable)}.clear();
+    ${java.nameVariable(typeObj.variable)}.addAll(queries);
   }
 </#list>
 
