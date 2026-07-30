@@ -348,9 +348,22 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
   <#elseif typeRefType == "AREF">
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    <#if typeObj.reference??>
+      <#assign predicate = typeObj.reference>
+      <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+      <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
+    <#else>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    </#if>
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
-    retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);  
+    retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
+    <#if flow.types[0].name == typeObj.name>
+    if (${java.nameVariable(typeObj.variable)}Query == null) {
+      return null;
+    }
+    </#if>  
   <#elseif typeRefType == "PREF">
     <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
@@ -358,7 +371,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
   <#elseif typeRefType == "CREF">  
-    // TODO
+    // TODO: CREF
   </#if>
 </#list>
     return retVal;
