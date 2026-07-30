@@ -267,9 +267,23 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal = ${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(results.get(0));
   <#elseif typeRefType == "AREF">
-    <#assign idAttrs = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))>
+    <#-- FIXME: 这个是直接引用可以这么处理，如果间接引用该怎么办 -->
+    <#if flow.types[0].definition.name == typeObj.name>
+      <#assign idAttrs = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))>
+      <#assign leftAttr = idAttrs?first>
+      <#assign rightAttr = idAttrs?first>
+    <#else>
+      <#assign idAttrs = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))>
+      <#assign predicate = typeObj.reference>
+      <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+      <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+    </#if>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
-    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(idAttrs?first))}(query.${modelbase4java.name_getter(idAttrs?first, typeObj.variable)}());
+    <#if predicate??>
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
+    <#else>
+    ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr, typeObj.variable)}());
+    </#if>
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   <#elseif typeRefType == "PREF">
