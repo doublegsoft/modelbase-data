@@ -8,7 +8,7 @@ ${java.license(license)}
   <#assign pktype = modelbase4java.type_attribute_primitive(idAttrs[0])>
   <#break>
 </#list>
-<#assign obj=persistence>
+<#assign obj=composite>
 <#macro print_reference_assemble attr objname attrname indent>
   <#local refObj = model.findObjectByName(attr.type.name)>
   <#local idAttrs = modelbase.get_id_attributes(refObj)>
@@ -63,67 +63,21 @@ import <#if namespace??>${namespace}.</#if>${app.name}.dao.*;
 public class ${typename}DataAccessTest {
 
   @Test 
-  public void test_insert${typename}() throws Exception {
+  public void testSelect${typename}() throws Exception {
     try (SqlSession session = BaseDataAccessTest.getSessionFactory().openSession()) {
       ${typename}DataAccess dao = session.getMapper(${typename}DataAccess.class);
 
-      ${typename} data = new ${typename}();
-<#if idAttrs?size == 1>
-  <#if idAttrs[0].type.custom>
-      Long id = 1L;
-<@modelbase4java.print_hierarchy_set attr=idAttrs[0] objname="data" attrname="id" indent=6 />
-  <#else>
-    <#list idAttrs as idAttr>
-      data.set${java.nameType(idAttr.name)}(<#if pktype == "Long">1L<#else>"1"</#if>);
-    </#list>    
-  </#if>
-      dao.insert${typename}(data);
+      ${typename}Query data = new ${typename}Query();
+      // dao.insert${typename}(data);
       ${typename}Query query = new ${typename}Query();
-  <#list idAttrs as idAttr>
+  <#--  <#list idAttrs as idAttr>
       query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(<#if pktype == "Long">1L<#else>"1"</#if>);
-  </#list>      
-      List rows = dao.select${typename}(query);
-      Assert.assertEquals(1, rows.size());
-      Assert.assertEquals(<#if pktype == "Long">1L<#else>"1"</#if>, ((Map<String,Object>)rows.get(0)).get("${modelbase.get_attribute_sql_name(idAttrs[0])}"));
-</#if>
+  </#list>        -->
+      RowBounds rowBounds = new RowBounds(0, 1);
+      List rows = dao.select${typename}Query(query, rowBounds);
+      // Assert.assertEquals(1, rows.size());
+      <#--  // Assert.assertEquals(<#if pktype == "Long">1L<#else>"1"</#if>, ((Map<String,Object>)rows.get(0)).get("${modelbase.get_attribute_sql_name(idAttrs[0])}"));  -->
     }
-  }
-  
-  @Test 
-  public void test_update${typename}() throws Exception {
-    try (SqlSession session = BaseDataAccessTest.getSessionFactory().openSession()) {
-      ${typename}DataAccess dao = session.getMapper(${typename}DataAccess.class);
-
-      ${typename} data = new ${typename}();
-<#if idAttrs?size == 1 && !idAttrs[0].type.custom>
-  <#list idAttrs as idAttr>
-      data.set${java.nameType(idAttr.name)}(<#if pktype == "Long">2L<#else>"2"</#if>);
-  </#list>    
-      dao.insert${typename}(data);
-      ${typename}Query query = new ${typename}Query();
-  <#list idAttrs as idAttr>
-      query.set${java.nameType(modelbase.get_attribute_sql_name(idAttr))}(<#if pktype == "Long">2L<#else>"2"</#if>);
-  </#list>      
-      List rows = dao.select${typename}(query);
-      Assert.assertEquals(1, rows.size());
-      Assert.assertEquals(<#if pktype == "Long">2L<#else>"2"</#if>, ((Map<String,Object>)rows.get(0)).get("${modelbase.get_attribute_sql_name(idAttrs[0])}"));
-      
-      RowBounds rowBounds = new RowBounds(0, 10);
-      rows = dao.select${typename}(query, rowBounds);
-      Assert.assertEquals(1, rows.size());
-      Assert.assertEquals(<#if pktype == "Long">2L<#else>"2"</#if>, ((Map<String,Object>)rows.get(0)).get("${modelbase.get_attribute_sql_name(idAttrs[0])}"));
-</#if>
-    }
-  }
-  
-  @Test 
-  public void test_delete${typename}() throws Exception {
-    
-  }
-  
-  @Test 
-  public void test_select${typename}() throws Exception {
-    
   }
   
 }

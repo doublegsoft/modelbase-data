@@ -3,6 +3,7 @@
 <#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", composite, model)>
 <#assign flow = typeDef.flow>
 <#assign idAttrs = typeDef.getIdentifiableAttributes()>
+<#assign obj = composite>
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC 
   "-//mybatis.org//DTD Mapper 3.0//EN"
@@ -17,28 +18,35 @@
     <#assign leftAttr = predicate.leftAttribute>
     <#assign rightObj = predicate.rightObject>
     <#assign rightAttr = predicate.rightAttribute>
-    left join ${rightObj.persistenceName} ${modelbase.get_object_sql_alias(rightObj)} on ${modelbase.get_object_sql_alias(leftObj)}.${leftAttr.persistenceName} = ${modelbase.get_object_sql_alias(rightObj)}.${rightAttr.persistenceName} 
+    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj)}".${rightAttr.persistenceName} 
   </#if>
 </#list>
   </sql>
 
 <#assign columnedAttrs = []>
 <#assign existingAttrs = {}>  
-<#list flow.types as typeObj>
-  <#assign origObj = model.findObjectByName(typeObj.name)>
-  <#list origObj.attributes as attr>
-    <#if !attr.isLabelled("persistence")><#continue></#if>
-    <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
-    <#if existingAttrs[attrSqlName]??><#continue></#if>
-    <#assign existingAttrs += {attrSqlName: attr}>
-    <#assign columnedAttrs += [attr]>
+<#if obj.isLabelled("composite")>
+  <#list obj.attributes as attr>
+    <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], attr.getLabelledOptions("original")["attribute"])>
+    <#assign columnedAttrs += [origAttr]>
   </#list>
-</#list>    
+<#else>
+  <#list flow.types as typeObj>
+    <#assign origObj = model.findObjectByName(typeObj.name)>
+    <#list origObj.attributes as attr>
+      <#if !attr.isLabelled("persistence")><#continue></#if>
+      <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
+      <#if existingAttrs[attrSqlName]??><#continue></#if>
+      <#assign existingAttrs += {attrSqlName: attr}>
+      <#assign columnedAttrs += [attr]>
+    </#list>
+  </#list>    
+</#if>
   <sql id="column${java.nameType(composite.name)}">
 <#list columnedAttrs as attr>
   <#assign origObjAlias = modelbase.get_object_sql_alias(attr.parent)>
   <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
-    ${origObjAlias}.${attr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
+    "${origObjAlias}".${attr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
 </#list>
   </sql>
   
@@ -146,7 +154,7 @@
   <sql id="orderBy${java.nameType(composite.name)}">
   </sql>
   
-  <select id="select${java.nameType(composite.name)}" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(composite.name)}Query" 
+  <select id="select${java.nameType(composite.name)}Query" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(composite.name)}Query" 
           resultType="${namespace}.${app.name}.dto.payload.${java.nameType(composite.name)}Query">
     select <include refid="column${java.nameType(composite.name)}"/>
   <#assign origObj = model.findObjectByName(flow.types[0].name)>

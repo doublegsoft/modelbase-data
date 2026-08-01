@@ -434,12 +434,16 @@ ${""?left_pad(indent)}}
   
   protected ${modelbase4java.type_attribute_primitive(attr)} ${attrname}1;
     </#if>
+    <#if attr.isLabelled("original")>
+      <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], attr.getLabelledOptions("original")["attribute"])>
+    </#if>
     <#---------------------------->
     <#-- 需要集合属性作为查询条件的 -->
     <#---------------------------->
     <#if attr.constraint.identifiable ||
          attr.type.custom ||
          attr.constraint.domainType.name?starts_with("enum") ||
+         (origAttr?? && origAttr.identifiable) ||
          modelbase.is_masterless_detail_reference_attribute(attr)> 
        
   protected final List<${modelbase4java.type_attribute_primitive(attr)}> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))} = new ArrayList<>();

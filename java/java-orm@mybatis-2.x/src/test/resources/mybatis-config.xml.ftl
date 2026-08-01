@@ -23,7 +23,7 @@
   </environments>
   <mappers>
 <#list model.objects as obj>  
-  <#if !obj.persistenceName??><#continue></#if>
+  <#if !obj.persistenceName?? && !obj.isLabelled("composite")><#continue></#if>
     <mapper resource="orm/${java.nameType(obj.name)}.xml" />
 </#list>    
   </mappers>

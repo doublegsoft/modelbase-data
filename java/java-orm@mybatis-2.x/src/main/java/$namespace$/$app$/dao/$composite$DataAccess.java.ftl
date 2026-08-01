@@ -29,6 +29,6 @@ import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
 @Mapper 
 public interface ${java.nameType(composite.name)}DataAccess {
   
-  List<${java.nameType(composite.name)}Query> select${java.nameType(composite.name)}Query(${java.nameType(composite.name)}Query query);
+  List<${java.nameType(composite.name)}Query> select${java.nameType(composite.name)}Query(${java.nameType(composite.name)}Query query, RowBounds rowBounds);
   
 }

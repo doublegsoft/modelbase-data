@@ -236,7 +236,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#if rootObj.isLabelled("composite")>
-    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    RowBounds rowBounds = new RowBounds(query.getStart(), 1);
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     if (data.isEmpty()) {
       throw new ServiceException(404, "没有找到满足条件的${modelbase.get_object_label(rootObj)}数据");
     }
@@ -329,7 +330,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#if rootObj.isLabelled("composite")>
-    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    RowBounds rowBounds = new RowBounds(query.getStart(), 1);
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     if (data.isEmpty()) {
       return null;
     }
@@ -392,7 +394,8 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#if rootObj.isLabelled("composite")>
-    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query);
+    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() == -1 ? Integer.MAX_VALUE : query.getLimit());
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     retVal.setTotal(((Page<${java.nameType(rootObj.name)}Query>) data).getTotal());
     retVal.getData().addAll(data);
 </#if>
