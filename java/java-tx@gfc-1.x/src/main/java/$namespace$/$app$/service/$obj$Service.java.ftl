@@ -121,7 +121,11 @@ public interface ${typename}Service {
    * @throws ServiceException
    *        发生任何错误，都抛出此类型异常  
    */
-  Pagination<${typename}Query> find${inflector.pluralize(typename)}(${typename}Query query) throws ServiceException;
+  default Pagination<${typename}Query> find${inflector.pluralize(typename)}(${typename}Query query) throws ServiceException {
+    return find${inflector.pluralize(typename)}(query, true);
+  }
+
+  Pagination<${typename}Query> find${inflector.pluralize(typename)}(${typename}Query query, boolean findingReference) throws ServiceException;
   
   /**
    * 查询【${modelbase.get_object_label(obj)}】列表对象，但只取第一个，也就是唯一

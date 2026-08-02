@@ -51,7 +51,6 @@ import jakarta.inject.*;
 import jakarta.transaction.*;
 
 import org.apache.ibatis.session.RowBounds;
-import com.github.pagehelper.Page;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.poco.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.orm.assembler.*;
@@ -256,7 +255,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       throw new ServiceException(400, "缺少必要的参数：${idAttrs?map(att->modelbase.get_attribute_sql_name(att))?join(",")}");
     }
     try {
-      results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);  
+      results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query);
     } catch (Throwable cause) {
       throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
     }
@@ -386,7 +385,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    *        查询条件
    * @return 符合条件的【${typeDef.label!""}】对象实例列表
    */
-  public Pagination<${java.nameType(typeDef.name)}Query> find${java.nameType(inflector.pluralize(typeDef.name))}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
+  public Pagination<${java.nameType(typeDef.name)}Query> find${java.nameType(inflector.pluralize(typeDef.name))}(${java.nameType(typeDef.name)}Query query, boolean findingReference) throws ServiceException {
     <#------------------->    
     <#-- 涉及到的变量定义 -->
     <#------------------->
@@ -394,17 +393,20 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     List<Map<String, Object>> results = null;
 <@print_variables flow />
 <#if rootObj.isLabelled("composite")>
-    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() == -1 ? Integer.MAX_VALUE : query.getLimit());
+    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
-    retVal.setTotal(((Page<${java.nameType(rootObj.name)}Query>) data).getTotal());
+    long total = ${java.nameVariable(rootObj.name)}DataAccess.selectCountOf${java.nameType(rootObj.name)}Query(query);
+    retVal.setTotal(total);
     retVal.getData().addAll(data);
 </#if>
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "SREF">
-    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() == -1 ? Integer.MAX_VALUE : query.getLimit());
+    long total = 0;
+    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     try {
       results = ${java.nameVariable(obj.name)}DataAccess.select${java.nameType(obj.name)}(query, rowBounds);  
+      total = ${java.nameVariable(obj.name)}DataAccess.selectCountOf${java.nameType(obj.name)}(query);
     } catch (Throwable cause) {
       throw new ServiceException(500, "查询${typeDef.label!""}失败", cause);
     }
@@ -414,6 +416,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     for (Map<String, Object> row : results) {
       retVal.getData().add(${java.nameType(obj.name)}QueryAssembler.assemble${java.nameType(obj.name)}Query(row));   
     }
+    retVal.setTotal(total);
   <#elseif typeRefType == "AREF">
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
     <#if typeObj.reference??>
@@ -446,19 +449,33 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>
   <#elseif typeRefType == "PREF">
     <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>
-    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
-    for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
+    if (findingReference) {
+      ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
       for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
         <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
         <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-        if (row.${modelbase4java.name_getter(rightAttr)}().equals(retRow.${modelbase4java.name_getter(leftAttr)}())) {
-          retRow.set${java.nameType(typeObj.variable)}(row);
-          break;
+        ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(retRow.${modelbase4java.name_getter(leftAttr)}());
+      }
+      ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+      for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
+        for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
+          <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+          <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+          if (row.${modelbase4java.name_getter(rightAttr)}().equals(retRow.${modelbase4java.name_getter(leftAttr)}())) {
+            retRow.set${java.nameType(typeObj.variable)}(row);
+            break;
+          }
         }
       }
     }
   <#elseif typeRefType == "CREF" && typeDef.definition.isLabelled("meta")>
-    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
+      <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+      <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+      ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(retRow.${modelbase4java.name_getter(leftAttr)}());
+    }
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query, false).getData();
     for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
       for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
         <#assign leftAttr = typeObj.getLeftAttributeFromReference()>

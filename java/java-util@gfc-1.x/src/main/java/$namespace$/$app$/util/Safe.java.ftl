@@ -52,6 +52,13 @@ public class Safe {
     return val.toString();
   }
 
+  public static String safeString(String val) {
+    if (val == null) {
+      return null;
+    }
+    return val;
+  }
+
   public static Integer safeInteger(String val) {
     try {
       return Integer.valueOf(val);

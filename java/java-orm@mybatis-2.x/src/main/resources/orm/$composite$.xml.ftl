@@ -163,4 +163,12 @@
     where 1 = 1
     <include refid="where${java.nameType(composite.name)}"/>          
   </select>
+
+  <select id="selectCountOf${java.nameType(composite.name)}Query" parameterType="${namespace}.${app.name}.dto.payload.${java.nameType(composite.name)}Query" resultType="long">
+    select count(*)
+    from <#if databaseName??>${databaseName}.</#if>${origObj.persistenceName} "${modelbase.get_object_sql_alias(origObj)}"
+    <include refid="join${java.nameType(composite.name)}"/>
+    where 1 = 1
+    <include refid="where${java.nameType(composite.name)}"/>
+  </select>
 </mapper>
