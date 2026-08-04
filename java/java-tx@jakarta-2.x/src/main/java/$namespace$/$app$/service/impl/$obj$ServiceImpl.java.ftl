@@ -148,7 +148,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#-- 3. 根据数据模型定义，设置默认值并且校验数据的合法性 --> 
     <#------------------------------------------------->
     ${java.nameType(typeObj.name)}Query.setDefaultValues(query, !existing); 
-    ValidationResult res = ${java.nameVariable(typeObj.variable)}Validation.validate(query, !existing);
+    ValidationResult res = ${java.nameVariable(typeObj.name)}Validation.validate(query, !existing);
     if (!res.isValid()) {
       throw new ServiceException(res.getCode(), res.getMessage());
     }
