@@ -392,16 +392,23 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     Pagination<${java.nameType(typeDef.name)}Query> retVal = new Pagination<>();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
-<#if rootObj.isLabelled("composite")>
+<#--  <#if rootObj.isLabelled("composite")>
     RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     long total = ${java.nameVariable(rootObj.name)}DataAccess.selectCountOf${java.nameType(rootObj.name)}Query(query);
     retVal.setTotal(total);
     retVal.getData().addAll(data);
-</#if>
+</#if>  -->
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
-  <#if typeRefType == "SREF">
+  <#if typeRefType == "OREF">
+    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
+    List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
+    long total = ${java.nameVariable(rootObj.name)}DataAccess.selectCountOf${java.nameType(rootObj.name)}Query(query);
+    retVal.setTotal(total);
+    retVal.getData().addAll(data);
+    <#break>
+  <#elseif typeRefType == "SREF">
     long total = 0;
     RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     try {
@@ -418,34 +425,24 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal.setTotal(total);
   <#elseif typeRefType == "AREF">
-    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    <#--  ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();  -->
     <#if typeObj.reference??>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-      <#-- TODO: 继续查询 -->
     <#else>
       <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     </#if>
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(typeObj.definition.plural)}(${java.nameVariable(typeObj.variable)}Query).getData();
-    <#if typeObj?index == 0>
-      <#list flow.types as innerTypeObj>
-        <#if innerTypeObj?index == 0><#continue></#if>
-    ${java.nameVariable(innerTypeObj.variable)}Query = new ${java.nameType(innerTypeObj.name)}Query();    
-      </#list>
+    <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
+    ${java.nameVariable(childTypeObj.variable)}Query = new ${java.nameType(childTypeObj.name)}Query();
+    </#list>
+    <#if flow.getParentsAndSiblings(typeObj)?size != 0>
     for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
-      <#list flow.types as innerTypeObj>
-        <#if innerTypeObj?index == 0><#continue></#if>
-        <#assign innerTypeObjIdAttr = modelbase.get_id_attributes(model.findObjectByName(innerTypeObj.name))?first>
-        <#if innerTypeObj.reference??>
-          <#assign innerTypeObjLeftAttr = innerTypeObj.getLeftAttributeFromReference()>
-          <#assign innerTypeObjRightAttr = innerTypeObj.getRightAttributeFromReference()>
-      ${java.nameVariable(innerTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(innerTypeObjRightAttr))}(row.${modelbase4java.name_getter(innerTypeObjLeftAttr)}());
-        <#else>
-      ${java.nameVariable(innerTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(innerTypeObjIdAttr))}(row.${modelbase4java.name_getter(innerTypeObjIdAttr)}());
-        </#if>
+      <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
+        <#assign childTypeObjIdAttr = modelbase.get_id_attributes(model.findObjectByName(childTypeObj.name))?first>
+      ${java.nameVariable(childTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(childTypeObjIdAttr))}(row.${modelbase4java.name_getter(childTypeObjIdAttr)}());
       </#list>
     }
-      <#-- TODO: 继续查询 -->
     </#if>
   <#elseif typeRefType == "PREF">
     <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>

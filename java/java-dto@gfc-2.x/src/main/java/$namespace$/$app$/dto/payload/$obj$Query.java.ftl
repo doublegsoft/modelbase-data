@@ -65,7 +65,11 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     <#assign refObj = model.findObjectByName(attr.type.name)>
 
   public ${java.nameType(refObj.name)}Query to${java.nameType(refObj.name)}Query() {
-    ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();
+    <#--  ${java.nameType(refObj.name)}Query retVal = new ${java.nameType(refObj.name)}Query();  -->
+    ${java.nameType(refObj.name)}Query retVal = get${java.nameType(attr.name)}();
+    if (retVal == null) {
+      retVal = new ${java.nameType(refObj.name)}Query();
+    }
     <#list flow.types as typeObj>
       <#if typeObj.reference??>
         <#assign predicate = typeObj.reference.joinPredicates[0]>
