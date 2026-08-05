@@ -12,14 +12,14 @@
   <sql id="join${java.nameType(composite.name)}">
 <#list flow.types as typeObj>
   <#assign origObj = model.findObjectByName(typeObj.name)>
-  <#if typeObj.reference??>
-    <#assign predicate = typeObj.reference.joinPredicates[0]>
+  <#list typeObj.references as reference>
+    <#assign predicate = reference.joinPredicates[0]>
     <#assign leftObj = predicate.leftObject>
     <#assign leftAttr = predicate.leftAttribute>
     <#assign rightObj = predicate.rightObject>
     <#assign rightAttr = predicate.rightAttribute>
     left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj)}".${rightAttr.persistenceName} 
-  </#if>
+  </#list>
 </#list>
   </sql>
 
@@ -27,8 +27,8 @@
 <#assign existingAttrs = {}>  
 <#if obj.isLabelled("composite")>
   <#list obj.attributes as attr>
-    <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], attr.getLabelledOptions("original")["attribute"])>
-    <#assign columnedAttrs += [origAttr]>
+    <#--  <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], attr.getLabelledOptions("original")["attribute"])>  -->
+    <#assign columnedAttrs += [attr]>
   </#list>
 <#else>
   <#list flow.types as typeObj>
@@ -44,16 +44,31 @@
 </#if>
   <sql id="column${java.nameType(composite.name)}">
 <#list columnedAttrs as attr>
-  <#assign origObjAlias = modelbase.get_object_sql_alias(attr.parent)>
-  <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
-    "${origObjAlias}".${attr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
+  <#assign origObj = model.findObjectByName(attr.getLabelledOptions("original")["object"])>
+  <#assign origObjAlias = modelbase.get_object_sql_alias(origObj)>
+  <#assign origAttrName = attr.getLabelledOptions("original")["attribute"]!"">
+  <#if origAttrName != "">
+    <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], origAttrName)>
+  </#if>
+  <#if origAttr??>
+    <#assign attrSqlName = modelbase.get_attribute_sql_name(attr)>
+      "${origObjAlias}".${origAttr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
+  <#else>
+    <#assign attrSqlName = modelbase.get_attribute_sql_name(origAttr, attr.name)>
+      "${origObjAlias}".${attr.persistenceName} ${attrSqlName}<#if attr?index != columnedAttrs?size - 1>,</#if>
+  </#if>
 </#list>
   </sql>
   
   <sql id="where${java.nameType(composite.name)}">
 <#list columnedAttrs as attr> 
-  <#assign origObj = attr.parent>
-  <#assign origAttr = attr>
+  <#assign origObj = model.findObjectByName(attr.getLabelledOptions("original")["object"])>
+  <#assign origObjAlias = modelbase.get_object_sql_alias(origObj)>
+  <#assign origAttrName = attr.getLabelledOptions("original")["attribute"]!"">
+  <#if origAttrName != "">
+    <#assign origAttr = origObj.getAttribute(origAttrName)>
+    <#assign attr = origAttr>
+  </#if>
   <#if origAttr.type.custom>
     <!-- 【${modelbase.get_attribute_label(attr)}】 -->
     <if test = "${modelbase.get_attribute_sql_name(attr)} != null">
