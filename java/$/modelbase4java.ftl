@@ -71,10 +71,17 @@
     <#if exprDomain?index_of("&") == 0>
       <#assign refObj = model.findObjectByName(attr.type.name)>
       <#return java.nameType(refObj.name)>
-    <#else>
-      <#return typebase.typename(attr.type.name, "java", "String")>
+    <#--  <#else>
+      <#return typebase.typename(attr.type.name, "java", "String")>  -->
     </#if>
   </#if>
+  <#list model.objects as obj>
+    <#list obj.attributes as objAttr>
+      <#if modelbase.get_attribute_sql_name(objAttr) == modelbase.get_attribute_sql_name(attr)>
+        <#return typebase.typename(objAttr.type.name, "java", "String")>
+      </#if>
+    </#list>
+  </#list>
   <#return typebase.typename(attr.type.name, "java", "String")>
 </#function>
 

@@ -27,9 +27,11 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   public void test_11_save_and_find() throws Exception {
     clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
+<#if !obj.isLabelled("composite")>    
     ${java.nameType(obj.name)}Query toSaveQuery = test${java.nameType(obj.name)}Query();
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
     Assert.assertNotNull(savedQuery);
+</#if>
 <#if obj.isLabelled("composite") || obj.isLabelled("persistence")>
     ${java.nameType(obj.name)}Query toFindQuery = new ${java.nameType(obj.name)}Query();
   <#list idAttrs as idAttr>

@@ -392,22 +392,23 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     Pagination<${java.nameType(typeDef.name)}Query> retVal = new Pagination<>();
     List<Map<String, Object>> results = null;
 <@print_variables flow />
-<#--  <#if rootObj.isLabelled("composite")>
+<#-- FIXME：为什么会这样 -->
+<#if rootObj.isLabelled("composite")>
     RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     long total = ${java.nameVariable(rootObj.name)}DataAccess.selectCountOf${java.nameType(rootObj.name)}Query(query);
     retVal.setTotal(total);
     retVal.getData().addAll(data);
-</#if>  -->
+</#if>
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
   <#if typeRefType == "OREF">
-    RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
+    <#--  RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
     List<${java.nameType(rootObj.name)}Query> data = ${java.nameVariable(rootObj.name)}DataAccess.select${java.nameType(rootObj.name)}Query(query, rowBounds);
     long total = ${java.nameVariable(rootObj.name)}DataAccess.selectCountOf${java.nameType(rootObj.name)}Query(query);
     retVal.setTotal(total);
     retVal.getData().addAll(data);
-    <#break>
+    <#break>  -->
   <#elseif typeRefType == "SREF">
     long total = 0;
     RowBounds rowBounds = new RowBounds(query.getStart(), query.getLimit() <= 0 ? Integer.MAX_VALUE : query.getLimit());
