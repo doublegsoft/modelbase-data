@@ -30,7 +30,11 @@
     <#return typebase.typename(attr.type.name, "java", "String")>
   <#elseif attr.type.collection>
     <#local fakeAttr = {"type": attr.type.componentType}>
-    <#return "List<" + type_attribute(fakeAttr) + ">">
+    <#if suffix == "">
+      <#return "List<" + type_attribute(fakeAttr) + ">">
+    <#else>
+      <#return "List<" + type_attribute(fakeAttr) + java.nameType(suffix) + ">">
+    </#if>
   <#elseif attr.type.domain>
     <#local exprDomain = attr.type.toString()>
     <#if exprDomain?index_of("&") == 0>
