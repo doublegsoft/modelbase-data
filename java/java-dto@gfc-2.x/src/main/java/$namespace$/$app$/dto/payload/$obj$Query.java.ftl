@@ -356,6 +356,40 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     }
     return retVal;
   }
+
+  public boolean equals(${java.nameType(obj.name)}Query another) {
+    if (another == null) {
+      return false;
+    }
+<#list obj.attributes as attr>
+  <#if attr.type.collection><#continue></#if>
+  <#if !attr.identifiable><#continue></#if>
+    if (${modelbase.get_attribute_sql_name(attr)} == null && another.${modelbase4java.name_getter(attr)}() != null) {
+      return false;
+    }
+    if (${modelbase.get_attribute_sql_name(attr)} != null && !${modelbase.get_attribute_sql_name(attr)}.equals(another.${modelbase4java.name_getter(attr)}())) {
+      return false;
+    }
+</#list>
+    return equalsWithoutId(another);
+  }
+
+  public boolean equalsWithoutId(${java.nameType(obj.name)}Query another) {
+    if (another == null) {
+      return false;
+    }
+<#list obj.attributes as attr>
+  <#if attr.type.collection><#continue></#if>
+  <#if attr.identifiable><#continue></#if>
+    if (${modelbase.get_attribute_sql_name(attr)} == null && another.${modelbase4java.name_getter(attr)}() != null) {
+      return false;
+    }
+    if (${modelbase.get_attribute_sql_name(attr)} != null && !${modelbase.get_attribute_sql_name(attr)}.equals(another.${modelbase4java.name_getter(attr)}())) {
+      return false;
+    }
+</#list>
+    return true;
+  }
   
   public static void setDefaultValues(${java.nameType(obj.name)}Query query, boolean isCreating) {
 <@modelbase4java.print_query_default_setters obj=obj varname="query" indent=4 />     

@@ -534,6 +534,15 @@ ${""?left_pad(indent)}}
     <#else>
     
   public ${modelbase4java.type_attribute_primitive(attr)} get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}() {
+      <#if attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#local refObjIdAttrs = modelbase.get_id_attributes(refObj)>
+    if (${modelbase.get_attribute_sql_name(attr, prefix)} == null) {
+      if (${java.nameVariable(attr.name)} != null) {
+        return ${java.nameVariable(attr.name)}.${modelbase4java.name_getter(refObjIdAttrs?first, prefix)}();
+      }
+    }
+      </#if>
     return ${modelbase.get_attribute_sql_name(attr, prefix)};
   }
   

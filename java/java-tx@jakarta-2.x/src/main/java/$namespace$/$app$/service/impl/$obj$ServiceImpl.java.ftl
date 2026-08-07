@@ -178,13 +178,6 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>  
   </#if>
 </#list>
-<#-- 最后处理集合属性 -->
-<#list flow.types as typeObj>
-  <#assign typeRefType = typeDef.getReferenceType(typeObj)>
-  <#if typeRefType != "CREF"><#continue></#if>
-    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
-    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Queries);
-</#list>
 <#---------------------------------------->
 <#-- FIXME: 此处逻辑可以设计得更好          -->
 <#-- 特殊处理OREF，倒序处理，此处的设计不够好 -->
@@ -219,6 +212,31 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Queries);
   </#list>
 </#if>
+<#-------------------------->
+<#-- 永远都是最后处理集合属性 -->
+<#-------------------------->
+<#list flow.types as typeObj>
+  <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+  <#if typeRefType != "CREF"><#continue></#if>
+  <#assign collObj = model.findObjectByName(typeObj.definition.name)>
+  <#-- 如果这个集合对象的属性中，非集合对象的属性引用了在这个方法中存在的 -->
+    ${java.nameVariable(typeObj.variable)}Queries = query.to${java.nameType(typeObj.name)}Queries();
+  <#list collObj.attributes as collAttr>
+    <#if !collAttr.type.custom><#continue></#if>
+    <#list flow.types as innerTypeObj>
+      <#if !innerTypeObj.collection || innerTypeObj.name != collAttr.type.name><#continue></#if>
+    for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
+      for (${java.nameType(innerTypeObj.name)}Query item : ${java.nameVariable(innerTypeObj.variable)}Queries) {
+        if (item.equalsWithoutId(row.get${java.nameType(collAttr.name)}())) {
+          row.set${java.nameType(collAttr.name)}(item);
+          break;
+        }
+      }
+    }
+    </#list>
+  </#list>
+    ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Queries);
+</#list>
     return query;   
   }
   
