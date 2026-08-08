@@ -23,6 +23,7 @@
     <#else>
     left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}".${rightAttr.persistenceName} 
     </#if>
+    <#break>
   </#list>
 </#list>
   </sql>
