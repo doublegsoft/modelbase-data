@@ -48,6 +48,8 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   <#if attr.constraint.defaultValue??><#continue></#if>
   <#if attr.name == "state">
     retVal.setState("E");
+  <#elseif attr.type.name == "datetime">
+    retVal.${modelbase4java.name_setter(attr)}(Safe.safeTimestamp(${modelbase4java.test_json_value(attr)}));
   <#else>
     retVal.${modelbase4java.name_setter(attr)}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(${modelbase4java.test_json_value(attr)}));
   </#if>
