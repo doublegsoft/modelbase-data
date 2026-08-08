@@ -15,7 +15,11 @@
     <#return (java.nameType(attr.type.name) + suffix)>
   <#elseif attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
-    <#return java.nameType(refObj.name)>
+    <#if suffix == "">
+      <#return java.nameType(refObj.name)>
+    <#else>
+      <#return java.nameType(refObj.name) + java.nameType(suffix)>
+    </#if>
   <#elseif attr.constraint?? && attr.constraint.domainType?? && attr.constraint.domainType.name == "id">
     <#return "Long">    
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
