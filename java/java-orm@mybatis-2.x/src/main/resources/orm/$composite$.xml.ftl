@@ -18,7 +18,11 @@
     <#assign leftAttr = predicate.leftAttribute>
     <#assign rightObj = predicate.rightObject>
     <#assign rightAttr = predicate.rightAttribute>
-    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj)}".${rightAttr.persistenceName} 
+    <#if leftObj.name == rightObj.name>
+    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj, rightAttr.name)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj, rightAttr.name)}".${rightAttr.persistenceName} 
+    <#else>
+    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}".${rightAttr.persistenceName} 
+    </#if>
   </#list>
 </#list>
   </sql>

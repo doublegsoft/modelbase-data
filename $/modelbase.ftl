@@ -258,7 +258,7 @@
   <#return attr.name>
 </#function>
 
-<#function get_object_sql_alias obj>
+<#function get_object_sql_alias obj varname="">
   <#assign lastIndex = obj.persistenceName?last_index_of('_')>
   <#if lastIndex == -1>
     <#return obj.persistenceName>
@@ -267,7 +267,7 @@
   <#if ret == "check">
     <#return "chk">
   </#if>
-  <#return ret>
+  <#return varname + ret>
 </#function>
 
 <#function get_attribute_sql_initial_var attr>
