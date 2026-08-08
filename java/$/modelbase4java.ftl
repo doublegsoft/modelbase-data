@@ -60,10 +60,8 @@
     <#return "Long">  
   <#elseif attr.constraint.domainType?? && attr.constraint.domainType.name == "uuid">
     <#return "String">    
-  <#elseif attr.type.name == "date" || attr.type.name == "time">
+  <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
     <#return "Date">  
-  <#elseif attr.type.name == "datetime">
-    <#return "Timestamp">
   <#elseif attr.type.name == "long">
     <#return "Long">    
   <#elseif attr.type.name == "int" || attr.type.name == "integer">
