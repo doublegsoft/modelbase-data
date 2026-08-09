@@ -10,6 +10,7 @@
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="${namespace}.${app.name}.dao.${java.nameType(composite.name)}DataAccess">
   <sql id="join${java.nameType(composite.name)}">
+<#assign existingNames = {}>
 <#list flow.types as typeObj>
   <#assign origObj = model.findObjectByName(typeObj.name)>
   <#list typeObj.references as reference>
@@ -18,10 +19,16 @@
     <#assign leftAttr = predicate.leftAttribute>
     <#assign rightObj = predicate.rightObject>
     <#assign rightAttr = predicate.rightAttribute>
-    <#if leftObj.name == rightObj.name>
-    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj, rightAttr.name)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj, rightAttr.name)}".${rightAttr.persistenceName} 
+    <#if leftObj.name == rightObj.name><#-- 树结构关联 -->
+      <#assign rightAlias = modelbase.get_object_sql_alias(rightObj, rightAttr.name)>
+      <#if existingNames[rightAlias]??><#continue></#if>
+    left join ${rightObj.persistenceName} "${rightAlias}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${rightAlias}".${rightAttr.persistenceName} 
+      <#assign existingNames += {rightAlias: rightAlias}>
     <#else>
-    left join ${rightObj.persistenceName} "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)}".${rightAttr.persistenceName} 
+      <#assign rightAlias = modelbase.get_object_sql_alias(rightObj, predicate.rightObjAlias)>
+      <#if existingNames[rightAlias]??><#continue></#if>
+    left join ${rightObj.persistenceName} "${rightAlias}" on "${modelbase.get_object_sql_alias(leftObj)}".${leftAttr.persistenceName} = "${rightAlias}".${rightAttr.persistenceName}
+      <#assign existingNames += {rightAlias: rightAlias}> 
     </#if>
   </#list>
 </#list>
