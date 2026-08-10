@@ -56,7 +56,12 @@
   <sql id="column${java.nameType(composite.name)}">
 <#list columnedAttrs as attr>
   <#assign origObj = model.findObjectByName(attr.getLabelledOptions("original")["object"])>
-  <#assign origObjAlias = modelbase.get_object_sql_alias(origObj)>
+  <#-- FIXME -->
+  <#if attr.name?starts_with("parent")>
+    <#assign origObjAlias = modelbase.get_object_sql_alias(origObj, "parent")>
+  <#else>
+    <#assign origObjAlias = modelbase.get_object_sql_alias(origObj)>
+  </#if>
   <#assign origAttrName = attr.getLabelledOptions("original")["attribute"]!"">
   <#if origAttrName != "">
     <#assign origAttr = model.findAttributeByNames(attr.getLabelledOptions("original")["object"], origAttrName)>
@@ -165,7 +170,8 @@
     and "${modelbase.get_object_sql_alias(origObj)}".${origAttr.persistenceName} like concat('%', ${r"#{"}${modelbase.get_attribute_sql_name(attr)}2}, '%')
     </if>
   </#if> 
-  <#if origAttr.identifiable || origAttr.type.custom ||
+  <#-- 树结构不参与进来 -->
+  <#if origAttr.identifiable || (origAttr.type.custom && origAttr.type.name != origAttr.parent.name) ||
        modelbase.is_masterless_detail_reference_attribute(attr)>
     <if test = "${inflector.pluralize(modelbase.get_attribute_sql_name(attr))} != null and ${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}.size() > 0">
     and "${modelbase.get_object_sql_alias(origObj)}".${origAttr.persistenceName} in
