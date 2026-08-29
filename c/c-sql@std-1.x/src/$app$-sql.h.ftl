@@ -9,6 +9,7 @@ ${c.license(license)}
 
 #include <stdlib.h>
 #include "${app.name}-poco.h"
+#include "${app.name}-query.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -40,8 +41,8 @@ ${namespace}_sql_match_e;
 ** 【${modelbase.get_object_label(obj)}】的语句。
 */
 #define ${namespace?upper_case}_SQL_${obj.name?upper_case}_INSERT     "" \
-    "insert into ${obj.persistenceName} (<#list persistAttrs as attr><#if attr?index != 0>,</#if>${attr.persistenceName}</#list>)" \
-    "values (<#list obj.attributes as attr><#if attr?index != 0>,</#if>?</#list>);"
+    "insert into ${obj.persistenceName} (<#list persistAttrs as attr><#if attr.isLabelled("redefined")><#continue></#if><#if attr?index != 0>,</#if>${attr.persistenceName}</#list>)" \
+    "values (<#list persistAttrs as attr><#if attr?index != 0>,</#if>?</#list>);"
 
 #define ${namespace?upper_case}_SQL_${obj.name?upper_case}_DELETE     "" \
     "delete from ${obj.persistenceName} " \
@@ -111,65 +112,6 @@ ${namespace}_table_result_set_value(${namespace}_table_result_p, int row, int co
 */
 void
 ${namespace}_table_result_free(${namespace}_table_result_p);
-<#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
-
-/*!
-** 【${modelbase.get_object_label(obj)}】查询对象。
-*/
-struct ${namespace}_${obj.name}_query_s
-{
-  <#list obj.attributes as attr>
-    <#if attr.type.custom>
-      <#assign refObj = model.findObjectByName(attr.type.name)>
-      <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>  
-  char* ${modelbase4c.name_attribute(refObjIdAttr)};  
-  char* ${modelbase4c.name_attribute(refObjIdAttr)}0;
-  char* ${modelbase4c.name_attribute(refObjIdAttr)}1;
-  char* ${modelbase4c.name_attribute(refObjIdAttr)}2;
-  char* ${modelbase4c.name_attribute_as_primitive_plural(attr)};
-    <#elseif attr.constraint.identifiable>
-  char* ${modelbase4c.name_attribute_as_primitive(attr)};
-  char* ${modelbase4c.name_attribute_as_primitive(attr)}0;
-  char* ${modelbase4c.name_attribute_as_primitive(attr)}1;
-  char* ${modelbase4c.name_attribute_as_primitive(attr)}2;  
-  char* ${modelbase4c.name_attribute_as_primitive_plural(attr)};
-    <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  char* ${modelbase4c.name_attribute_as_primitive(attr)};
-  char* ${modelbase4c.name_attribute_as_primitive_plural(attr)};
-    <#elseif attr.type.name == "string">
-  char* ${modelbase4c.name_attribute(attr)};
-  char* ${modelbase4c.name_attribute(attr)}0;
-  char* ${modelbase4c.name_attribute(attr)}1;
-  char* ${modelbase4c.name_attribute(attr)}2;
-    <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  char* ${modelbase4c.name_attribute(attr)};
-  char* ${modelbase4c.name_attribute(attr)}0;
-  char* ${modelbase4c.name_attribute(attr)}1;
-    <#elseif attr.type.name == "bool">
-  char* ${modelbase4c.name_attribute(attr)};
-    <#elseif attr.type.name == "int" || attr.type.name == "long">
-  char* ${modelbase4c.name_attribute(attr)};
-  char* ${modelbase4c.name_attribute(attr)}0;
-  char* ${modelbase4c.name_attribute(attr)}1;
-    <#elseif attr.type.name == 'state'>
-  char* ${modelbase4c.name_attribute(attr)};
-    <#else>
-  char* ${modelbase4c.name_attribute(attr)};
-    </#if>
-  </#list>
-  int   start;
-  int   limit;
-};
-</#list>
-<#list model.objects as obj>
-
-/*!
-** 【${modelbase.get_object_label(obj)}】查询对象。
-*/
-typedef struct ${namespace}_${obj.name}_query_s      ${namespace}_${obj.name}_query_t;
-typedef        ${namespace}_${obj.name}_query_t*     ${namespace}_${obj.name}_query_p;
-</#list>
 
 /*!
 ** 把以逗号“，”分隔的由多个值构成的字符串转换成in-statement形式的SQL语句。
@@ -202,32 +144,21 @@ ${namespace}_sql_str2like_l(const char* str);
 */
 char*
 ${namespace}_sql_str2like_g(const char* str);
-<#list model.objects as obj>
-
-/*!
-** 获得【${modelbase.get_object_label(obj)}】的SELECT SQL语句。
-*/
-int
-${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p, char*, int*);
-
-/*!
-** 创建【${modelbase.get_object_label(obj)}】查询对象。
-*/
-${namespace}_${obj.name}_query_p
-${namespace}_sql_${obj.name}_query_init(void);
-
-/*!
-** 释放【${modelbase.get_object_label(obj)}】查询对象。
-*/
-void
-${namespace}_sql_${obj.name}_query_free(${namespace}_${obj.name}_query_p ${obj.name});
-</#list>
 
 /*!
 ** 获取对象或者字段对应的持久化名称。如果字段名称为NULL，则返回对象的持久化名称。
 */
 int
 ${namespace}_sql_persistence_name(const char* objname, const char* attrname, char* persistence_name);
+<#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
+
+/*!
+** 获得【${modelbase.get_object_label(obj)}】的SELECT SQL语句。
+*/
+int
+${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p ${obj.name}, char* sql_select, int* bind_count);
+</#list>
 
 #ifdef __cplusplus
 }

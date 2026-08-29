@@ -1,5 +1,17 @@
+<#import "/$/modelbase.ftl" as modelbase>
 <#--
- ### get re-assembling attribute type object.
+ ###############################################################################
+ ### 获取属性的 C/C++ 目标类型 (Get Attribute Type for C/C++)
+ ### 
+ ### 根据属性（attribute）的定义，分析并返回其映射到 C 语言的目标类型对象。
+ ### 返回的哈希（Hash）对象中可能包含：
+ ###   - name   : C 数据类型名称 (String)
+ ###   - length : 字符数组的固定长度 (Integer) [可选]
+ ###   - array  : 标识是否为集合/指针数组 (Boolean) [可选]
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的 C 目标类型哈希对象 (Hash)
+ ###############################################################################
  -->
 <#function type_attribute attr>
   <#if attr.type.collection>
@@ -14,7 +26,7 @@
     <#return {"name": "char","length":pairs[0].code?length}>
   <#elseif attr.type.name == "string">
     <#if attr.constraint.maxSize?? && attr.constraint.maxSize != 0>
-      <#return {"name": "char", "length":attr.constraint.maxSize}>
+      <#return {"name": "char", "length": attr.constraint.maxSize}>
     <#else>
       <#return {"name": "char*"}>
     </#if>
@@ -22,10 +34,12 @@
     <#return {"name": "int"}>
   <#elseif attr.type.name == "long">
     <#return {"name": "long"}>  
+  <#elseif attr.type.name == "number">
+    <#return {"name": "double"}>    
   <#elseif attr.type.name == "date" || attr.type.name == "time" || attr.type.name == "datetime">
-    <#return {"name": "char*"}>
+    <#return {"name": "char", "length": 20}>
   <#elseif attr.type.name == "bool">
-    <#return {"name": "char"}>
+    <#return {"name": "char", "length": 2}>
   <#elseif attr.type.custom>
     <#return {"name": namespace + "_" + attr.type.name + "_p"}>  
   </#if>
@@ -33,20 +47,75 @@
 </#function>
 
 <#--
- ### get struct field name of attribute.
+ ###############################################################################
+ ### 获取属性的基础/原始目标类型 (Get Primitive Target Type for Attribute)
+ ### 
+ ### 分析属性（attribute）的定义，返回其最终映射的最底层原始/基础数据类型。
+ ### 递归处理逻辑如下：
+ ###   - 若为自定义关联对象 (custom) -> 递归解析该目标对象的主键（ID）属性并返回
+ ###   - 若为普通基础数据类型         -> 调用 type_attribute(attr) 返回其目标类型
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的基础/原始目标类型映射结果 (Hash/String)
+ ###############################################################################
+ -->
+<#function type_attribute_primitive attr>
+  <#if attr.type.custom>
+    <#local refObj = model.findObjectByName(attr.type.name)>
+    <#local refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+    <#return type_attribute_primitive(refObjIdAttr)>
+  </#if>
+  <#return type_attribute(attr)>
+</#function>
+
+<#--
+ ###############################################################################
+ ### 获取属性的目标变量名称 (Get Variable Name for Attribute)
+ ### 
+ ### 根据属性（attribute）的定义，分析并返回其映射到代码中的目标变量名称。
+ ### 逻辑如下：
+ ###   - 若为自定义关联对象 (custom) -> 直接返回其原始属性名称 (attr.name)
+ ###   - 其他基础类型                 -> 获取其 SQL 字段名并转换为代码变量名格式
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的代码变量名称字符串 (String)
+ ###############################################################################
  -->
 <#function name_attribute attr>
   <#if attr.type.custom>
     <#return attr.name>  
   </#if>
-  <#return c.nameVariable(attr.name)>
-</#function>
-
-<#function name_attribute_as_primitive attr>
   <#return c.nameVariable(modelbase.get_attribute_sql_name(attr))>
 </#function>
 
-<#function name_attribute_as_primitive_plural attr>
+<#--
+ ###############################################################################
+ ### 获取属性的基础/原始变量名称 (Get Primitive Variable Name for Attribute)
+ ### 
+ ### 绕过自定义对象的特殊命名逻辑，强制返回属性在物理数据库底层字段对应的
+ ### 代码变量名称。通常用于获取主键/外键在底层物理存储上的变量名。
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的基础物理字段变量名称字符串 (String)
+ ###############################################################################
+ -->
+<#function name_attribute_primitive attr>
+  <#return c.nameVariable(modelbase.get_attribute_sql_name(attr))>
+</#function>
+
+<#--
+ ###############################################################################
+ ### 获取属性的基础/原始复数变量名称 (Get Primitive Plural Variable Name for Attribute)
+ ### 
+ ### 分析属性（attribute）的定义，并返回其映射到物理数据库底层复数形式（Plural）
+ ### 的基础变量名称。通常用于处理一对多关系、集合字段，或复数化命名的物理字段，
+ ### 并将其规范化为代码变量命名格式。
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的基础复数物理字段变量名称字符串 (String)
+ ###############################################################################
+ -->
+<#function name_attribute_primitive_plural attr>
   <#return c.nameVariable(modelbase.get_attribute_plural_as_primitive(attr))>
 </#function>
 

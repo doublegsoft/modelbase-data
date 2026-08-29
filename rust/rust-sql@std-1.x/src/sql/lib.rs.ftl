@@ -12,7 +12,7 @@ pub mod sql {
 #[allow(dead_code)]
 pub struct ${rust.nameType(obj.name)}Query {
 <#list obj.attributes as attr>  
-  pub ${modelbase4rust.name_attribute_as_primitive(attr)}: Option<String>,
+  pub ${modelbase4rust.name_attribute_primitive(attr)}: Option<String>,
 </#list>  
 }
 
@@ -22,7 +22,7 @@ impl ${rust.nameType(obj.name)}Query {
   pub fn new() -> Self {
     Self {
 <#list obj.attributes as attr>  
-      ${modelbase4rust.name_attribute_as_primitive(attr)}: Option::None,
+      ${modelbase4rust.name_attribute_primitive(attr)}: Option::None,
 </#list>        
     }
   }
@@ -46,12 +46,12 @@ mod tests {
     let mut query = ${rust.nameType(obj.name)}Query::new();
 <#list obj.attributes as attr>
     <#if attr.type.name == "string">
-    query.${modelbase4rust.name_attribute_as_primitive(attr)} = Some(String::from("hello, 中国"));
+    query.${modelbase4rust.name_attribute_primitive(attr)} = Some(String::from("hello, 中国"));
     </#if>
 </#list>  
 <#list obj.attributes as attr>
     <#if attr.type.name == "string">
-    query.${modelbase4rust.name_attribute_as_primitive(attr)} = Some(String::from("hello, 世界"));
+    query.${modelbase4rust.name_attribute_primitive(attr)} = Some(String::from("hello, 世界"));
     </#if>
 </#list>  
   }

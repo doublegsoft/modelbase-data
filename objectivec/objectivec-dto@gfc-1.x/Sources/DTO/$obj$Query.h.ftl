@@ -32,11 +32,11 @@ ${objc.license(license)}
 </#if>
 <#if attr.constraint.domainType.name?starts_with("enum") || attr.identifiable  || attr.type.custom>
   <#if attrtype == "BOOL" || attrtype == "NSInteger">
-- (NSMutableArray<NSNumber*>*)${modelbase4objc.name_attribute_as_primitive_plural(attr)};
-- (void)set${objc.nameType(modelbase4objc.name_attribute_as_primitive_plural(attr))}:(NSMutableArray<NSNumber*>*)new${objc.nameType(modelbase4objc.name_attribute_as_primitive_plural(attr))};  
+- (NSMutableArray<NSNumber*>*)${modelbase4objc.name_attribute_primitive_plural(attr)};
+- (void)set${objc.nameType(modelbase4objc.name_attribute_primitive_plural(attr))}:(NSMutableArray<NSNumber*>*)new${objc.nameType(modelbase4objc.name_attribute_primitive_plural(attr))};  
   <#else>
-- (NSMutableArray<${attrtype}>*)${modelbase4objc.name_attribute_as_primitive_plural(attr)};
-- (void)set${objc.nameType(modelbase4objc.name_attribute_as_primitive_plural(attr))}:(NSMutableArray<${attrtype}>*)new${objc.nameType(modelbase4objc.name_attribute_as_primitive_plural(attr))};
+- (NSMutableArray<${attrtype}>*)${modelbase4objc.name_attribute_primitive_plural(attr)};
+- (void)set${objc.nameType(modelbase4objc.name_attribute_primitive_plural(attr))}:(NSMutableArray<${attrtype}>*)new${objc.nameType(modelbase4objc.name_attribute_primitive_plural(attr))};
   </#if>
 </#if>
 <#if attr.type.custom>

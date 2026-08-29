@@ -177,7 +177,7 @@ ${objc.license(license)}
     <#if attrtype == "NSInteger">
   if (data.${modelbase.get_attribute_sql_name(idAttr)} != NSIntegerMin) {  
     <#else>
-  if (data.${modelbase4objc.name_attribute_as_primitive(idAttr)} != nil) {
+  if (data.${modelbase4objc.name_attribute_primitive(idAttr)} != nil) {
     </#if>
     sql = [sql stringByAppendingString:@"and ${idAttr.persistenceName} = ? "];
     primaryKeyCount++;
@@ -250,10 +250,10 @@ ${objc.license(license)}
     <#assign attrtype = modelbase4objc.type_attribute_primitive(idAttr)>
     <#if attrtype == "NSInteger">
   if (data.${modelbase.get_attribute_sql_name(idAttr)} != NSIntegerMin) {  
-    sqlite3_bind_int64(stmt, paramIndex + 1, data.${modelbase4objc.name_attribute_as_primitive(idAttr)});
+    sqlite3_bind_int64(stmt, paramIndex + 1, data.${modelbase4objc.name_attribute_primitive(idAttr)});
     <#else>
-  if (data.${modelbase4objc.name_attribute_as_primitive(idAttr)} != nil) {
-    sqlite3_bind_text(stmt, paramIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(idAttr)} UTF8String], -1, SQLITE_STATIC);   
+  if (data.${modelbase4objc.name_attribute_primitive(idAttr)} != nil) {
+    sqlite3_bind_text(stmt, paramIndex + 1, [data.${modelbase4objc.name_attribute_primitive(idAttr)} UTF8String], -1, SQLITE_STATIC);   
     </#if>
     paramIndex++;
   }
@@ -284,7 +284,7 @@ ${objc.license(license)}
     <#if attrtype == "NSInteger">
   if (data.${modelbase.get_attribute_sql_name(idAttr)} != NSIntegerMin) {  
     <#else>
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)} != nil) {
+  if (data.${modelbase4objc.name_attribute_primitive(attr)} != nil) {
     </#if>
     sql = [sql stringByAppendingString:@"and ${attr.persistenceName} = ? "];
     paramCount++;
@@ -319,10 +319,10 @@ ${objc.license(license)}
     <#assign attrtype = modelbase4objc.type_attribute_primitive(attr)>
     <#if attrtype == "NSInteger">
   if (data.${modelbase.get_attribute_sql_name(idAttr)} != NSIntegerMin) {  
-    sqlite3_bind_int64(stmt, paramIndex + 1, data.${modelbase4objc.name_attribute_as_primitive(attr)});
+    sqlite3_bind_int64(stmt, paramIndex + 1, data.${modelbase4objc.name_attribute_primitive(attr)});
     <#else>
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)} != nil) {
-    sqlite3_bind_text(stmt, paramIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);
+  if (data.${modelbase4objc.name_attribute_primitive(attr)} != nil) {
+    sqlite3_bind_text(stmt, paramIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);
     </#if>
     paramIndex++;
   }  
@@ -368,104 +368,104 @@ ${objc.license(license)}
   <#list obj.attributes as attr>
     <#if !attr.persistenceName??><#continue></#if>
     <#if attr.type.custom>
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)} != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}0 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}0 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}1 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}1 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}2 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}2 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }    
     <#elseif attr.constraint.identifiable>
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)} != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}0 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}0 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}1 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}1 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)}2 != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)}2 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }  
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (data.${modelbase4objc.name_attribute_as_primitive(attr)} != nil) 
+  if (data.${modelbase4objc.name_attribute_primitive(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }  
     <#elseif attr.type.name == "string">
   if (data.${modelbase4objc.name_attribute(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
   if (data.${modelbase4objc.name_attribute(attr)}0 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
   if (data.${modelbase4objc.name_attribute(attr)}1 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
   if (data.${modelbase4objc.name_attribute(attr)}2 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}2 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
   if (data.${modelbase4objc.name_attribute(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
   if (data.${modelbase4objc.name_attribute(attr)}0 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
   if (data.${modelbase4objc.name_attribute(attr)}1 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);   
     bindIndex++;
   }
     <#elseif attr.type.name == "int" || attr.type.name == "long">
   if (data.${modelbase4objc.name_attribute(attr)} != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)} UTF8String], -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)} UTF8String], -1, SQLITE_STATIC);
     bindIndex++;
   }  
   if (data.${modelbase4objc.name_attribute(attr)}0 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}0 UTF8String], -1, SQLITE_STATIC);
     bindIndex++;
   }  
   if (data.${modelbase4objc.name_attribute(attr)}1 != nil) 
   {
-    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_as_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, bindIndex + 1, [data.${modelbase4objc.name_attribute_primitive(attr)}1 UTF8String], -1, SQLITE_STATIC);
     bindIndex++;
   }  
     </#if>

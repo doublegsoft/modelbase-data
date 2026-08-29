@@ -166,9 +166,9 @@ ${objc.license(license)}
   }
   </#if>
 <#-- 
-  if (${objc.nameVariable(obj.name)}.${modelbase4objc.name_attribute_as_primitive_plural(attr)} != nil)
+  if (${objc.nameVariable(obj.name)}.${modelbase4objc.name_attribute_primitive_plural(attr)} != nil)
   {
-    NSString* in = [${namespace!""}${objc.nameType(app.name)}SQL str2in:_${modelbase4objc.name_attribute_as_primitive_plural(attr)}];
+    NSString* in = [${namespace!""}${objc.nameType(app.name)}SQL str2in:_${modelbase4objc.name_attribute_primitive_plural(attr)}];
     sql = [sql stringByAppendingString:@"and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in ("];
     sql = [sql stringByAppendingString:in];
     sql = [sql stringByAppendingString:@")"];

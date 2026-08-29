@@ -76,21 +76,21 @@ ${namespace}_mysql_${obj.name}_insert(MYSQL* conn, ${namespace}_${obj.name}_quer
     <#assign typename = modelbase4c.type_attribute(attr).name>
   // 【${modelbase.get_attribute_label(attr)}】
     <#if attr.type.custom>
-  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};
+  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};
     <#elseif attr.name == "state">
-  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};  
+  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};  
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};    
+  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};    
     <#elseif attr.type.name == "string">
-  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};
+  lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+  params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+  params[${attr?index}].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time"> 
   lengths[${attr?index}] = ${obj.name}->${modelbase4c.name_attribute(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute(attr)}) : 0;
   params[${attr?index}].buffer_type = ${obj.name}->${modelbase4c.name_attribute(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
@@ -142,7 +142,7 @@ ${namespace}_mysql_${obj.name}_update(MYSQL* conn, ${namespace}_${obj.name}_quer
     <#if attr.constraint.identifiable><#continue></#if>
     <#assign typename = modelbase4c.type_attribute(attr).name>
     <#if attr.name == "state">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
     if (update_column_count) strcat(sql, ", ");
     strcat(sql, "${attr.persistenceName} = ?");
@@ -152,21 +152,21 @@ ${namespace}_mysql_${obj.name}_update(MYSQL* conn, ${namespace}_${obj.name}_quer
   if (update_column_count) strcat(sql, ", ");
   strcat(sql, "${attr.persistenceName} = current_timestamp");
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
     if (update_column_count) strcat(sql, ", ");
     strcat(sql, "${attr.persistenceName} = ?");
     update_column_count++;    
   }
     <#elseif typename == "char*">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
     if (update_column_count) strcat(sql, ", ");
     strcat(sql, "${attr.persistenceName} = ?");
     update_column_count++;    
   }
     <#elseif typename == "int" || typename == "long">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
     if (update_column_count) strcat(sql, ", ");
     strcat(sql, "${attr.persistenceName} = ?");
@@ -180,7 +180,7 @@ ${namespace}_mysql_${obj.name}_update(MYSQL* conn, ${namespace}_${obj.name}_quer
   strcat(sql, " where 1 = 1 ");   
 
   <#list idAttrs as idAttr>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(idAttr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(idAttr)} != NULL) 
   {
     strcat(sql, "and ${idAttr.persistenceName} = ? ");
     pk_found++;
@@ -208,21 +208,21 @@ ${namespace}_mysql_${obj.name}_update(MYSQL* conn, ${namespace}_${obj.name}_quer
     <#if attr.constraint.identifiable><#continue></#if>
     <#assign typename = modelbase4c.type_attribute(attr).name>
     <#if attr.name == "state">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};
+    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};
     params[params_index].length = &lengths[params_index];
     params[params_index].is_null = 0;
     params_index++;
   }
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};
+    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};
     params[params_index].length = &lengths[params_index];
     params[params_index].is_null = 0;
     params_index++;
@@ -230,19 +230,19 @@ ${namespace}_mysql_${obj.name}_update(MYSQL* conn, ${namespace}_${obj.name}_quer
     <#elseif attr.name == "last_modified_time">
       <#continue>
     <#elseif typename == "char*">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}) : 0;
-    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
-    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)};
+    lengths[params_index] = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)}) : 0;
+    params[params_index].buffer_type = ${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL ? MYSQL_TYPE_STRING : MYSQL_TYPE_NULL;
+    params[params_index].buffer = (char *) ${obj.name}->${modelbase4c.name_attribute_primitive(attr)};
     params[params_index].length = &lengths[params_index];
     params[params_index].is_null = 0;
     params_index++;
   }
     <#elseif typename == "int" || typename == "long">
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[params_index] = strlen(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)});
+    lengths[params_index] = strlen(${obj.name}->${modelbase4c.name_attribute_primitive(attr)});
     params[params_index].buffer_type = MYSQL_TYPE_STRING;
     params[params_index].buffer = (char*) &${obj.name}->${modelbase4c.name_attribute(attr)};
     params[params_index].length = &lengths[params_index];
@@ -284,10 +284,10 @@ ${namespace}_mysql_${obj.name}_delete(MYSQL* conn, ${namespace}_${obj.name}_quer
   int pk_found = 0; 
   strcpy(sql, ${namespace?upper_case}_SQL_${obj.name?upper_case}_DELETE);
   <#list idAttrs as idAttr>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(idAttr)} != NULL) 
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(idAttr)} != NULL) 
   {
     strcat(sql, "and ${idAttr.persistenceName} = '");
-    strcat(sql, ${obj.name}->${modelbase4c.name_attribute_as_primitive(idAttr)});
+    strcat(sql, ${obj.name}->${modelbase4c.name_attribute_primitive(idAttr)});
     strcat(sql, "' ");
     pk_found++;
   }
@@ -329,19 +329,19 @@ ${namespace}_mysql_${obj.name}_select(MYSQL* conn, ${namespace}_${obj.name}_quer
   <#list obj.attributes as attr>
     <#if attr.type.custom>
 
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}, EXACT);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}0 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}0, PREFIX);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}1 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}1, SUFFIX);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}2 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}2, GLOBAL);      
+  const char* ${modelbase4c.name_attribute_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}, EXACT);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}0 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}0, PREFIX);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}1 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}1, SUFFIX);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}2 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}2, GLOBAL);      
     <#elseif attr.constraint.identifiable>
 
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}, EXACT);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}0 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}0, PREFIX);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}1 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}1, SUFFIX);  
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)}2 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}2, GLOBAL);      
+  const char* ${modelbase4c.name_attribute_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}, EXACT);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}0 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}0, PREFIX);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}1 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}1, SUFFIX);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)}2 = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}2, GLOBAL);      
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
     
-  const char* ${modelbase4c.name_attribute_as_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_as_primitive(attr)}, EXACT);  
+  const char* ${modelbase4c.name_attribute_primitive(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute_primitive(attr)}, EXACT);  
     <#elseif attr.type.name == "string">
     
   const char* ${modelbase4c.name_attribute(attr)} = ${namespace}_mysql_escape_string(query->${modelbase4c.name_attribute(attr)}, EXACT);  
@@ -370,85 +370,85 @@ ${namespace}_mysql_${obj.name}_select(MYSQL* conn, ${namespace}_${obj.name}_quer
 
   <#list obj.attributes as attr>
     <#if attr.type.custom>
-  if (${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)});
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)});
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)};
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)};
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}0 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}0 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}0);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}0);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}0;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}0;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}1 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}1 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}1);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}1);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}1;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}1;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}2 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}2 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}2);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}2);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}2;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}2;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }    
     <#elseif attr.constraint.identifiable>
-  if (${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)});
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)});
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)};
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)};
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}0 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}0 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}0);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}0);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}0;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}0;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}1 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}1 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}1);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}1);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}1;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}1;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }
-  if (${modelbase4c.name_attribute_as_primitive(attr)}2 != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)}2 != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)}2);
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)}2);
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)}2;
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)}2;
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;
   }  
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (${modelbase4c.name_attribute_as_primitive(attr)} != NULL) 
+  if (${modelbase4c.name_attribute_primitive(attr)} != NULL) 
   {
-    lengths[param_index] = strlen(${modelbase4c.name_attribute_as_primitive(attr)});
+    lengths[param_index] = strlen(${modelbase4c.name_attribute_primitive(attr)});
     params[param_index].buffer_type = MYSQL_TYPE_STRING;
-    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_as_primitive(attr)};
+    params[param_index].buffer = (char *) ${modelbase4c.name_attribute_primitive(attr)};
     params[param_index].length = &lengths[param_index];
     params[param_index].is_null = 0;
     param_index++;

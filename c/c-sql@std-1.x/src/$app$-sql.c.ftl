@@ -164,116 +164,56 @@ ${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p ${obj.name}
   );
 <#list obj.attributes as attr>
   <#if !attr.persistenceName??><#continue></#if>
-  <#if attr.type.custom>
-    <#assign refObj = model.findObjectByName(attr.type.name)>
-    <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)} != NULL)
+  <#assign attrType = modelbase4c.type_attribute_primitive(attr)>
+  <#if attrType.length?? || attrType.name == "char*">
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
     (*bind_count)++;
   }
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}0 != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}0 != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
     (*bind_count)++;
   }
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}1 != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}1 != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
     (*bind_count)++;
   }
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}2 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-  {
-    char* in = ${namespace}_sql_str2in(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in (");
-    strcat(sql_select, in);
-    strcat(sql_select, ") ");
-    (*bind_count)++;
-    free(in);
-  }
-  <#elseif attr.constraint.identifiable>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}0 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}1 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}2 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-  {
-    char* in = ${namespace}_sql_str2in(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in (");
-    strcat(sql_select, in);
-    strcat(sql_select, ") ");
-    (*bind_count)++;
-    free(in);
-  }
-  <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-  {
-    char* in = ${namespace}_sql_str2in(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} in (");
-    strcat(sql_select, in);
-    strcat(sql_select, ") ");
-    (*bind_count)++;
-    free(in);
-  }
-  <#elseif attr.type.name == "string">
-  if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}0 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}1 != NULL)
-  {
-    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
-    (*bind_count)++;
-  }
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}2 != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}2 != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} like ? ");
     (*bind_count)++;
   }
   <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
     (*bind_count)++;
   }
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}0 != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}0 != NULL)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} >= ? ");
     (*bind_count)++;
   }
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}1 != NULL)
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}1 != NULL)
+  {
+    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} <= ? ");
+    (*bind_count)++;
+  }
+  <#else>
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)} != 0)
+  {
+    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} = ? ");
+    (*bind_count)++;
+  }
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}0 != 0)
+  {
+    strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} >= ? ");
+    (*bind_count)++;
+  }
+  if (${obj.name}->${modelbase4c.name_attribute_primitive(attr)}1 != 0)
   {
     strcat(sql_select, "and ${modelbase.get_object_sql_alias(obj)}.${attr.persistenceName} <= ? ");
     (*bind_count)++;
@@ -281,120 +221,6 @@ ${namespace}_sql_${obj.name}_select(${namespace}_${obj.name}_query_p ${obj.name}
   </#if>
 </#list>  
   return ${namespace?upper_case}_SQL_ERROR_SUCCESS;
-}
-
-/*!
-** 创建【${modelbase.get_object_label(obj)}】查询对象。
-*/
-${namespace}_${obj.name}_query_p
-${namespace}_sql_${obj.name}_query_init(void)
-{
-  ${namespace}_${obj.name}_query_p ret = (${namespace}_${obj.name}_query_p)malloc(sizeof(${namespace}_${obj.name}_query_t));
-  <#list obj.attributes as attr>
-    <#if !attr.persistenceName??><#continue></#if>
-    <#if attr.type.custom>
-      <#assign refObj = model.findObjectByName(attr.type.name)>
-      <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>  
-  ret->${modelbase4c.name_attribute(refObjIdAttr)}  = NULL;
-  ret->${modelbase4c.name_attribute(refObjIdAttr)}0 = NULL;
-  ret->${modelbase4c.name_attribute(refObjIdAttr)}1 = NULL;
-  ret->${modelbase4c.name_attribute(refObjIdAttr)}2 = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive_plural(attr)} = NULL;
-    <#elseif attr.constraint.identifiable>
-  ret->${modelbase4c.name_attribute_as_primitive(attr)} = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive(attr)}0 = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive(attr)}1 = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive(attr)}2 = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive_plural(attr)} = NULL;
-    <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  ret->${modelbase4c.name_attribute_as_primitive(attr)} = NULL;
-  ret->${modelbase4c.name_attribute_as_primitive_plural(attr)} = NULL;
-    <#elseif attr.type.name == "string">
-  ret->${modelbase4c.name_attribute(attr)} = NULL;  
-  ret->${modelbase4c.name_attribute(attr)}0 = NULL;  
-  ret->${modelbase4c.name_attribute(attr)}1 = NULL;  
-  ret->${modelbase4c.name_attribute(attr)}2 = NULL;  
-    <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  ret->${modelbase4c.name_attribute(attr)} = NULL;  
-  ret->${modelbase4c.name_attribute(attr)}0 = NULL;  
-  ret->${modelbase4c.name_attribute(attr)}1 = NULL;  
-    <#elseif attr.type.name == "bool">
-  ret->${modelbase4c.name_attribute(attr)} = NULL;  
-    <#elseif attr.type.name == "int" || attr.type.name == "long">
-  ret->${modelbase4c.name_attribute(attr)} = NULL;
-  ret->${modelbase4c.name_attribute(attr)}0 = NULL;
-  ret->${modelbase4c.name_attribute(attr)}1 = NULL;
-    <#elseif attr.type.name == 'state'>
-  ret->${modelbase4c.name_attribute(attr)} = NULL;  
-    </#if>
-  </#list>
-  ret->start = INT_MIN;
-  ret->limit = INT_MIN;
-  return ret;
-}
-
-/*!
-** 释放【${modelbase.get_object_label(obj)}】查询对象。
-*/
-void
-${namespace}_sql_${obj.name}_query_free(${namespace}_${obj.name}_query_p ${obj.name})
-{
-  <#list obj.attributes as attr>
-    <#if attr.type.custom>
-      <#assign refObj = model.findObjectByName(attr.type.name)>
-      <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>  
-  
-    </#if>
-  </#list>
-  <#list obj.attributes as attr>
-    <#if attr.type.custom>
-      <#assign refObj = model.findObjectByName(attr.type.name)>
-      <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>  
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)});
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}0 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}0);
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}1 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}1);
-  if (${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}2 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(refObjIdAttr)}2);      
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});
-    <#elseif attr.constraint.identifiable>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)});  
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}0 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}0);  
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}1 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}1);
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}2 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)}2);
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});      
-    <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive(attr)});  
-  if (${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute_as_primitive_plural(attr)});      
-    <#elseif attr.type.name == "string">
-  if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)});  
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}0 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)}0);  
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}1 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)}1);
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}2 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)}2);  
-    <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)});  
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}0 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)}0);  
-  if (${obj.name}->${modelbase4c.name_attribute(attr)}1 != NULL)
-    free(${obj.name}->${modelbase4c.name_attribute(attr)}1);
-    </#if>
-  </#list>
-  free(${obj.name});
 }
 </#list>
 

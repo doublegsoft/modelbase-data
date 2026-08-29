@@ -25,14 +25,14 @@ ${namespace}_json_${obj.name}_query_assemble(struct json_object* jobj)
   int rc = 0;
   <#list obj.attributes as attr>
     <#if attr.type.custom><#-- Query模式不存在数组对象 -->
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_as_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_as_primitive_plural(attr)});  
+  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
+  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
     <#elseif attr.constraint.identifiable>
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_as_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_as_primitive_plural(attr)});  
+  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
+  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_as_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_as_primitive_plural(attr)});  
+  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
+  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
     <#elseif attr.type.name == "string">
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}0", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
@@ -88,13 +88,13 @@ ${namespace}_json_${obj.name}_assemble(struct json_object* jobj, int* count)
     ret->${modelbase4c.name_attribute(attr)} = ${namespace}_json_${refObj.name}_assemble(jval_${modelbase4c.name_attribute(attr)}, &jval_count);
   }
     <#elseif attr.constraint.domainType.name?starts_with("enum")>    
-  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${modelbase4c.name_attribute_as_primitive(attr)});
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${modelbase4c.name_attribute_primitive(attr)});
     <#elseif attr.type.name == "string">
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
+  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
+  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
     <#elseif attr.type.name == "int" || attr.type.name == "long">
-  rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_as_primitive(attr)});
+  rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
     </#if>
   </#list>  
   return ret;

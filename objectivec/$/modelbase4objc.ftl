@@ -79,10 +79,10 @@
   <#return (namespace!"") + objc.nameType(app.name)>
 </#function>
 
-<#function name_attribute_as_primitive_plural attr>
+<#function name_attribute_primitive_plural attr>
   <#return objc.nameVariable(modelbase.get_attribute_plural_as_primitive(attr))>
 </#function>
 
-<#function name_attribute_as_primitive attr>
+<#function name_attribute_primitive attr>
   <#return objc.nameVariable(modelbase.get_attribute_sql_name(attr))>
 </#function>

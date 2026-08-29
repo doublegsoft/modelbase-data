@@ -38,9 +38,9 @@ test_${namespace}_mysql_${obj.name}(MYSQL* conn)
   ${namespace}_${obj.name}_query_p query = ${namespace}_sql_${obj.name}_query_init();
   <#list obj.attributes as attr>
     <#if attr.type.custom>
-  query->${modelbase4c.name_attribute_as_primitive(attr)} = "0";
+  query->${modelbase4c.name_attribute_primitive(attr)} = "0";
     <#elseif attr.constraint.identifiable>
-  query->${modelbase4c.name_attribute_as_primitive(attr)} = "0";
+  query->${modelbase4c.name_attribute_primitive(attr)} = "0";
     <#elseif attr.constraint.domainType.name?starts_with("enum")>
   query->${modelbase4c.name_attribute(attr)} = "0";
     <#elseif attr.type.name == "string">
