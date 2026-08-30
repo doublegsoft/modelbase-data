@@ -8,23 +8,7 @@ TEST(${c.nameType(namespace)}_poco_${c.nameType(obj.name)}, init) {
   
   ASSERT_NE(obj, nullptr);
   EXPECT_STREQ(obj->type_name, "${namespace}_${obj.name}_p");
-
-  <#--
-  // Verify raw pointer strings (char*) are initialized to NULL
-  EXPECT_EQ(obj->meta_prop_a, nullptr);
-  EXPECT_EQ(obj->metable_object_name, nullptr);
-
-  // Verify fixed-length string buffers are empty
-  EXPECT_STREQ(obj->meta_prop_b, "");
-  EXPECT_STREQ(obj->meta_prop_c, "");
-  EXPECT_STREQ(obj->state, "");
-
-  // Verify numerical fields default to INT_MIN
-  EXPECT_EQ(obj->metable_object_id, INT_MIN);
-
-  // Verify custom single-relation references are NULL
-  EXPECT_EQ(obj->category, nullptr);  -->
-
+  
   ${namespace}_${obj.name}_free(obj);
 }
 

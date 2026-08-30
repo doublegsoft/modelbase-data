@@ -1,0 +1,11 @@
+.{
+  .name = "${app.name}",
+  .version = "1.0.0",
+  .paths = .{
+    "build.zig",
+    "build.zig.zon",
+    "src",
+    "LICENSE",
+    "README.md",
+  },
+}
