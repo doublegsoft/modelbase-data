@@ -33,7 +33,7 @@ struct ${namespace}_${obj.name}_s
   */
   char type_name[64];
   <#list obj.attributes as attr>
-    <#assign attrtype = modelbase4c.type_attribute(attr)>
+    <#assign attrType = modelbase4c.type_attribute(attr)>
 
   /*!
   ** 【${modelbase.get_attribute_label(attr)}】
@@ -52,10 +52,12 @@ struct ${namespace}_${obj.name}_s
   char  ${modelbase4c.name_attribute(attr)}[16];
     <#elseif attr.name == "state">
   char  state[2];
-    <#elseif attrtype.length??>
-  ${attrtype.name} ${modelbase4c.name_attribute(attr)}[${attrtype.length}];  
+    <#elseif attrType.length??>
+  ${attrType.name} ${modelbase4c.name_attribute(attr)}[${attrType.length}];  
+    <#elseif attr.type.lengthVariable??>
+  ${attrType.name}* ${modelbase4c.name_attribute(attr)};  
     <#else>
-  ${attrtype.name} ${modelbase4c.name_attribute(attr)};
+  ${attrType.name} ${modelbase4c.name_attribute(attr)};
     </#if>
   </#list>
 }; 
@@ -74,7 +76,7 @@ ${namespace}_${obj.name}_init(void);
 void
 ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p);
   <#list obj.attributes as attr>
-    <#assign attrtype = modelbase4c.type_attribute(attr)>
+    <#assign attrType = modelbase4c.type_attribute(attr)>
 
     <#if attr.type.componentType??>
       <#if attr.type.componentType.name == "any[]">
@@ -107,7 +109,7 @@ ${namespace}_${obj.name}_set_${attr.name}(${namespace}_${obj.name}_p, ${namespac
 ** 设置【${modelbase.get_object_label(obj)}】的【${modelbase.get_object_label(attr)}】属性值。
 */
 void
-${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, <#if attrtype.name == "char*">const </#if>${attrtype.name}<#if attrtype.length??>*</#if>);
+${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p, <#if attrType.name == "char*">const </#if>${attrType.name}<#if attrType.length?? || attr.type.lengthVariable??>*</#if>);
     </#if>
   </#list>
 </#list>

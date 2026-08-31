@@ -49,6 +49,8 @@
       <#return {"name":"int"}>
     <#elseif (attr.type.length <= 64)>
       <#return {"name":"long"}>
+    <#else>
+      <#return {"name":"char", "length": attr.type.length / 8}>
     </#if>
   <#elseif attr.type.name == "byte">
     <#if (attr.type.length <= 1)>
@@ -59,6 +61,8 @@
       <#return {"name":"int"}>
     <#elseif (attr.type.length <= 8)>
       <#return {"name":"long"}>
+    <#else>
+      <#return {"name":"char", "length": attr.type.length}>
     </#if>
   <#elseif attr.type.custom>
     <#return {"name": namespace + "_" + attr.type.name + "_p"}>  
@@ -166,20 +170,25 @@
  ###        字节数 (Integer) 或 动态长度引用的 C 代码片段 (String)
  -->
 <#function get_attribute_bytes attr var>
-  <#local attrtype = type_attribute(attr)>
-  <#if attr.type.collection && attr.type.countedName??>
+  <#local attrType = type_attribute(attr)>
+  <#if attr.type.collection && attr.type.lengthVariable??>
     <#local len = get_primitive_bytes(attr.type.componentType.name)>
     <#if len != 0>
-      <#return len?string + " * " + var + "->" + attr.type.countedName>
+      <#return len?string + " * " + var + "->" + attr.type.lengthVariable>
     <#else>
       <#return "0">
     </#if>  
-  <#elseif attrtype.name == 'char'><#-- 定长字节 -->
-    <#return attrtype.length?string>
-  <#elseif attrtype.name == 'char*' && attr.type.lengthName??><#-- 变长字节，某个属性的值就是另一个属性的字节长度 -->
-    <#return var + "->" + attr.type.lengthName>
+  <#elseif attrType.name == "char"><#-- 定长字节 -->
+    <#if attrType.length??>
+      <#return attrType.length?string>
+    <#elseif attr.type.lengthVariable??>
+      <#return var + "->" + attr.type.lengthVariable>
+    </#if>
+    <#return "1">
+  <#elseif attrType.name == "char*" && attr.type.lengthVariable??><#-- 变长字节，某个属性的值就是另一个属性的字节长度 -->
+    <#return var + "->" + attr.type.lengthVariable>
   <#else>
-    <#return get_primitive_bytes(attrtype.name)?string>
+    <#return get_primitive_bytes(attrType.name)?string>
   </#if>
 </#function>
 
@@ -209,6 +218,8 @@
     <#return 1>  
   <#elseif typename == "bool">
     <#return 1>
+  <#elseif typename == "short">
+    <#return 2>
   <#elseif typename == "int" || typename == "integer">
     <#return 4>
   <#elseif typename == "long">
@@ -236,7 +247,7 @@
  ###     int item_count;    // 长度字段
  ###     Item items[0];     // 集合字段 (countedName = "item_count")
  ### }
- ### 调用 get_attribute_counted_name(items) 将返回 "item_count"。
+ ### 调用 get_attribute_length_variable(items) 将返回 "item_count"。
  ###
  ### @param attr
  ###        待解析的属性定义对象 (AttributeDefinition)
@@ -244,12 +255,12 @@
  ### @return
  ###        表示长度的关联字段名称 (String)。若无关联字段，则返回自身名称。
  -->
-<#function get_attribute_counted_name attr>
-  <#if attr.type.collection && attr.type.countedName??>
+<#function get_attribute_length_variable attr>
+  <#if attr.type.lengthVariable??>
     <#local obj = attr.parent>
     <#list obj.attributes as objAttr>
       <#if objAttr.name == attr.type.countedName>
-        <#return get_attribute_counted_name(objAttr)>
+        <#return get_attribute_length_variable(objAttr)>
       </#if>
     </#list>
   </#if>

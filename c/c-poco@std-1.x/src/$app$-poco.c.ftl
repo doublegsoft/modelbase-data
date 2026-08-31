@@ -18,7 +18,7 @@ ${namespace}_${obj.name}_init(void)
   ${namespace}_${obj.name}_p ret = (${namespace}_${obj.name}_p) malloc(sizeof(${namespace}_${obj.name}_t));
   strcpy(ret->type_name, "${namespace}_${obj.name}_p");
 <#list obj.attributes as attr>
-  <#assign attrtype = modelbase4c.type_attribute(attr)>
+  <#assign attrType = modelbase4c.type_attribute(attr)>
   <#if attr.type.componentType??><#-- 优先判断，是否是自定义数组类型的对象 -->
   ret->${modelbase4c.name_attribute(attr)} = NULL;
   ret->count_of_${modelbase4c.name_attribute(attr)} = 0;  
@@ -28,13 +28,15 @@ ${namespace}_${obj.name}_init(void)
   ret->${modelbase4c.name_attribute(attr)}[0] = '\0';
   <#elseif attr.name == "state">
   ret->${modelbase4c.name_attribute(attr)}[0] = '\0';
-  <#elseif attrtype.name == "char*">
+  <#elseif attrType.name == "char*">
   ret->${modelbase4c.name_attribute(attr)} = NULL;
-  <#elseif attrtype.name == "int" || attrtype.name == "long">
+  <#elseif attrType.name == "int" || attrType.name == "long">
   ret->${modelbase4c.name_attribute(attr)} = INT_MIN;
-  <#elseif attrtype.name == "char" && attrtype.length??>
+  <#elseif attrType.name == "char" && attrType.length??>
   ret->${modelbase4c.name_attribute(attr)}[0] = '\0';
-  <#elseif attrtype.name == "char">
+  <#elseif attrType.name == "char" && attr.type.lengthVariable??>
+  ret->${modelbase4c.name_attribute(attr)} = NULL;
+  <#elseif attrType.name == "char">
   ret->${modelbase4c.name_attribute(attr)} = '\0';
   </#if>
 </#list>
@@ -45,7 +47,7 @@ void
 ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p ${obj.name})
 {
 <#list obj.attributes as attr>
-  <#assign attrtype = modelbase4c.type_attribute(attr)>
+  <#assign attrType = modelbase4c.type_attribute(attr)>
   <#-- 忽略掉的几种无需释放内容的属性 -->
   <#if attr.constraint.domainType.name?starts_with("enum") || attr.name == "state"><#continue></#if>
   <#if attr.type.componentType??><#-- 优先判断，是否是自定义数组类型的对象 -->
@@ -55,7 +57,7 @@ ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p ${obj.name})
     <#assign refObj = model.findObjectByName(attr.type.name)>
   if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
     ${namespace}_${refObj.name}_free(${obj.name}->${modelbase4c.name_attribute(attr)});
-  <#elseif attrtype.name == "char*">
+  <#elseif attrType.name == "char*">
   if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL) 
     free(${obj.name}->${modelbase4c.name_attribute(attr)});
   </#if>
@@ -63,7 +65,7 @@ ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p ${obj.name})
   free(${obj.name});
 }
   <#list obj.attributes as attr>
-    <#assign attrtype = modelbase4c.type_attribute(attr)>
+    <#assign attrType = modelbase4c.type_attribute(attr)>
 
     <#if attr.type.componentType??>
       <#if attr.type.componentType.name == "any[]">
@@ -109,7 +111,7 @@ ${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${
 }
     <#else>
 void
-${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p ${obj.name}, <#if attrtype.name == "char*">const </#if>${attrtype.name}<#if attrtype.length??>*</#if> value)
+${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${obj.name}_p ${obj.name}, <#if attrType.name == "char*">const </#if>${attrType.name}<#if attrType.length?? || attr.type.lengthVariable??>*</#if> value)
 {
       <#if attr.name == "state">
   if (value == NULL || strlen(value) == 0) return;
@@ -117,7 +119,7 @@ ${namespace}_${obj.name}_set_${modelbase4c.name_attribute(attr)}(${namespace}_${
       <#elseif attr.constraint.domainType.name?starts_with("enum")>
   if (value == NULL) return;
   strcpy(${obj.name}->${modelbase4c.name_attribute(attr)}, value);
-      <#elseif attrtype.name == "char*" || (attrtype.name == "char" && attrtype.length??)>
+      <#elseif attrType.name == "char*" || (attrType.name == "char" && attrType.length??)>
   if (value == NULL) return;
   int len = strlen(value);
   <#--  ${obj.name}->${modelbase4c.name_attribute(attr)} = (char*)malloc(sizeof(char) * (len + 1));  -->
