@@ -21,7 +21,6 @@ ${namespace}_${obj.name}_init(void)
   <#assign attrType = modelbase4c.type_attribute(attr)>
   <#if attr.type.componentType??><#-- 优先判断，是否是自定义数组类型的对象 -->
   ret->${modelbase4c.name_attribute(attr)} = NULL;
-  ret->count_of_${modelbase4c.name_attribute(attr)} = 0;  
   <#elseif attr.type.custom><#-- 其次判断单个引用自定义类型 -->
   ret->${modelbase4c.name_attribute(attr)} = NULL;  
   <#elseif attr.constraint.domainType.name?starts_with("enum")>

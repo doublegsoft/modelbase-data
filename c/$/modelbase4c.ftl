@@ -19,7 +19,7 @@
     <#if compType.name?contains("*")>
       <#return {"name": "char*", "array": true}>
     <#else>
-      <#return {"name": compType.name + "*", "array": true}>
+      <#return {"name": compType.name, "array": true}>
     </#if>
   <#elseif attr.constraint.domainType?? && attr.constraint.domainType.name?starts_with("enum")>
     <#local pairs = typebase.enumtype(attr.constraint.domainType.name)>
@@ -27,6 +27,8 @@
   <#elseif attr.type.name == "string">
     <#if attr.constraint.maxSize?? && attr.constraint.maxSize != 0>
       <#return {"name": "char", "length": attr.constraint.maxSize}>
+    <#elseif attr.type.lengthVariable??>
+      <#return {"name": "char"}>
     <#else>
       <#return {"name": "char*"}>
     </#if>
@@ -236,16 +238,16 @@
  ### 变长集合（List/Array）通常不能独立存在，它依赖于另一个特定的整型字段来指明其长度。
  ### 
  ### 逻辑流程 (Logic Flow):
- ### 1. 检查当前属性是否为集合类型，并且是否在元数据中显式定义了记录其长度的字段名 (countedName)。
+ ### 1. 检查当前属性是否为集合类型，并且是否在元数据中显式定义了记录其长度的字段名 (lengthVariable)。
  ### 2. 如果满足条件，回溯到当前属性的父对象（Parent Object）。
- ### 3. 遍历父对象的所有属性，寻找与 countedName 匹配的兄弟属性。
+ ### 3. 遍历父对象的所有属性，寻找与 lengthVariable 匹配的兄弟属性。
  ### 4. 【递归】找到长度属性后，对其再次调用本函数（支持多层别名或代理引用的极端场景）。
- ### 5. 【基线条件】如果不是集合、没有定义 countedName，或者递归触底，则直接返回属性自身的名称。
+ ### 5. 【基线条件】如果不是集合、没有定义 lengthVariable，或者递归触底，则直接返回属性自身的名称。
  ###
  ### 示例场景:
  ### struct Message {
  ###     int item_count;    // 长度字段
- ###     Item items[0];     // 集合字段 (countedName = "item_count")
+ ###     Item items[0];     // 集合字段 (lengthVariable = "item_count")
  ### }
  ### 调用 get_attribute_length_variable(items) 将返回 "item_count"。
  ###
@@ -259,7 +261,7 @@
   <#if attr.type.lengthVariable??>
     <#local obj = attr.parent>
     <#list obj.attributes as objAttr>
-      <#if objAttr.name == attr.type.countedName>
+      <#if objAttr.name == attr.type.lengthVariable>
         <#return get_attribute_length_variable(objAttr)>
       </#if>
     </#list>
@@ -267,3 +269,80 @@
   <#return attr.name>
 </#function>
 
+<#--
+ ###############################################################################
+ ### 获取单元测试模拟默认值 (Get Mock Default Value for Unit Testing)
+ ### 
+ ### 根据属性的数据类型生成对应的单元测试模拟初始值（Mock Value）。
+ ### 用于在自动生成测试用例（如编解码测试）时，为各类基础数据类型（数值型、
+ ### 定长字符数组、字符串指针、单字符以及指针/复杂对象）提供合法且具有代表性的测试数据。
+ ### 
+ ### @param attr  属性对象 (Attribute)
+ ### @return      对应的 C 代码字面量测试值字符串 (String)，如 "88", "\"ABCD\"", "'K'", "NULL"
+ ###############################################################################
+ -->
+<#function test_unit_value attr>
+  <#local attrType = type_attribute(attr)>
+  <#if attrType.name == "int" || attrType.name == "integer" || 
+       attrType.name == "long" || attrType.name == "short" || 
+       attrType.name == "double" || attrType.name == "float">
+    <#if is_length_variable(attr)>
+      <#return "3">
+    <#else>    
+      <#return "88">
+    </#if>
+  <#elseif attrType.name == "char" && attr.type.lengthVariable??>
+    <#return '(char*)"ABC"'>
+  <#elseif attrType.name == "char" && attrType.length??>
+    <#return '(char*)"LMN"'>
+  <#elseif attrType.name == "char*" >
+    <#return '(char*)"XYZ"'>
+  <#elseif attrType.name == "char">
+    <#return "'K'">
+  </#if>
+  <#return 'NULL'>
+</#function>
+
+<#--
+ ###############################################################################
+ ### 判断属性是否为长度变量 (Check if Attribute is a Length Variable)
+ ### 
+ ### 检查当前属性是否被所属父对象（结构体/消息体）中的其他同级属性引用为长度标识字段。
+ ### 常用于网络协议编解码（Codec）与二进制序列化场景，用以识别某个整数字段是否专门
+ ### 用来指示后续变长字段（如动态字符串、字节流、变长数组）的数据长度。
+ ### 
+ ### @param attr  待检查的属性对象 (Attribute)
+ ### @return      若当前属性作为其他字段的长度描述变量返回 true，否则返回 false (Boolean)
+ ###############################################################################
+ -->
+<#function is_length_variable attr>
+  <#if attr.parent?? && attr.parent.attributes??>
+    <#list attr.parent.attributes as parentAttr>
+      <#if parentAttr.type.lengthVariable?? && parentAttr.type.lengthVariable == attr.name>
+        <#return true>
+      </#if>
+    </#list>
+  </#if>
+  <#return false>
+</#function>
+
+<#--
+ ###############################################################################
+ ### 根据长度变量名获取绑定的目标属性 (Get Target Attribute Using Specified Length Variable)
+ ### 
+ ### 在指定的数据对象（结构体/消息体）中进行反向查找，定位使用指定长度变量作为其数据
+ ### 长度标识的目标属性。常用于协议编解码与代码生成场景，实现从长度字段（例如：`message_len`）
+ ### 反查其所修饰的动态变长数据字段（例如：`message` 内容载荷）。
+ ### 
+ ### @param obj             包含属性列表的数据对象/模型实体 (Object / Entity)
+ ### @param lengthVariable  长度描述变量的名称标识 (String)
+ ### @return                绑定并使用该长度变量的目标属性对象；若未找到则返回 null (Attribute / null)
+ ###############################################################################
+ -->
+<#function get_attribute_using_length_variable obj lengthVariable>
+  <#list obj.attributes as attr>
+    <#if attr.type.lengthVariable?? && attr.type.lengthVariable == lengthVariable>
+      <#return attr>
+    </#if>
+  </#list>
+</#function>

@@ -8,6 +8,7 @@ ${c.license(license)}
 #include <string.h>
 #include "${app.name}-json.h"
 <#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
 
 ${namespace}_${obj.name}_query_p
 ${namespace}_json_${obj.name}_query_parse(const char* json_string)
@@ -21,30 +22,46 @@ ${namespace}_json_${obj.name}_query_parse(const char* json_string)
 ${namespace}_${obj.name}_query_p
 ${namespace}_json_${obj.name}_query_assemble(struct json_object* jobj)
 {
-  ${namespace}_${obj.name}_query_p ret = ${namespace}_sql_${obj.name}_query_init();
+  ${namespace}_${obj.name}_query_p ret = ${namespace}_${obj.name}_query_init();
   int rc = 0;
   <#list obj.attributes as attr>
-    <#if attr.type.custom><#-- Query模式不存在数组对象 -->
+    <#assign attrType = modelbase4c.type_attribute(attr)>
+    <#if attrType.name == "char*">
+    <#elseif attrType.name == "char" && attrType.length??>
+    <#elseif attrType.name == "char" && attr.type.lengthVariable??>
+    <#elseif attrType.name == "int" || attrType.name == "long" || attrType.name == "short">
+    <#elseif attrType.name == "float" || attrType.name == "double">
+    </#if>
+    <#if attr.constraint.domainType.name?starts_with("enum")>
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
-    <#elseif attr.constraint.identifiable>
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
-    <#elseif attr.constraint.domainType.name?starts_with("enum")>
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
-  rc = ${namespace}_json_get_string(jobj, "${modelbase4c.name_attribute_primitive_plural(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});  
     <#elseif attr.type.name == "string">
+      <#if attr.type.length != 0>
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}0", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}1", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}1);
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}2", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}2);
+      <#else>
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}0", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}1", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}1);
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}2", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}2);
+      </#if>
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}0", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}1", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}1);
-    <#elseif attr.type.name == "int" || attr.type.name == "integer" || attr.type.name == "long">
+    <#elseif attr.type.name == "int" || attr.type.name == "integer">
   rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
+    <#elseif attr.type.name == "long">
+  rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", (int*) &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
     </#if>
+    <#if attr.identifiable || attr.type.custom || attr.constraint.domainType.name?starts_with("enum")>
+      <#if attrType.name == "char*" || attrType.name == "char">
+  rc = ${namespace}_json_get_strings(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});      
+      <#elseif attrType.name == "int" || attrType.name == "long" || attrType.name == "short">
+  rc = ${namespace}_json_get_ints(jobj, "${modelbase.get_attribute_sql_name(attr)}", (int*)ret->${modelbase4c.name_attribute_primitive_plural(attr)});
+      </#if>
+    </#if>     
   </#list>  
   return ret;
 }
@@ -65,6 +82,7 @@ ${namespace}_json_${obj.name}_assemble(struct json_object* jobj, int* count)
   int i = 0;
   ${namespace}_${obj.name}_p ret = ${namespace}_${obj.name}_init();
   <#list obj.attributes as attr>
+    <#assign attrType = modelbase4c.type_attribute(attr)>
     <#if attr.type.componentType??>
       <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
   struct json_object* jval_${modelbase4c.name_attribute(attr)} = json_object_object_get(jobj, "${modelbase4c.name_attribute(attr)}");
@@ -90,11 +108,17 @@ ${namespace}_json_${obj.name}_assemble(struct json_object* jobj, int* count)
     <#elseif attr.constraint.domainType.name?starts_with("enum")>    
   rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${modelbase4c.name_attribute_primitive(attr)});
     <#elseif attr.type.name == "string">
+      <#if attr.type.length != 0>
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${modelbase4c.name_attribute_primitive(attr)});
+      <#else>
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
+      </#if>
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
-  rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
-    <#elseif attr.type.name == "int" || attr.type.name == "long">
+  rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${modelbase4c.name_attribute_primitive(attr)});
+    <#elseif attr.type.name == "int" || attr.type.name == "integer">
   rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
+    <#elseif attr.type.name == "long">
+  rc = ${namespace}_json_get_int(jobj, "${modelbase.get_attribute_sql_name(attr)}", (int*) &ret->${modelbase4c.name_attribute_primitive(attr)});
     </#if>
   </#list>  
   return ret;
@@ -104,7 +128,7 @@ ${namespace}_json_${obj.name}_assemble(struct json_object* jobj, int* count)
 int
 ${namespace}_json_get_string(json_object* jobj, const char* name, char** holder)
 {
-  json_object *jval = json_object_object_get(jobj, name);
+  json_object* jval = json_object_object_get(jobj, name);
 
   if (jval == NULL)
     return ${namespace?upper_case}_JSON_ERROR_NOT_FOUND;
@@ -134,7 +158,7 @@ ${namespace}_json_get_string(json_object* jobj, const char* name, char** holder)
 int
 ${namespace}_json_get_str(json_object* jobj, const char* name, char* holder)
 {
-  json_object *jval = json_object_object_get(jobj, name);
+  json_object* jval = json_object_object_get(jobj, name);
 
   if (jval == NULL)
     return ${namespace?upper_case}_JSON_ERROR_NOT_FOUND;
@@ -155,7 +179,7 @@ ${namespace}_json_get_str(json_object* jobj, const char* name, char* holder)
 int
 ${namespace}_json_get_int(json_object* jobj, const char* name, int* holder)
 {
-  json_object *jval = json_object_object_get(jobj, name);
+  json_object* jval = json_object_object_get(jobj, name);
   enum json_type jtype = json_object_get_type(jval);
 
   if (jtype != json_type_int)
@@ -169,7 +193,7 @@ ${namespace}_json_get_int(json_object* jobj, const char* name, int* holder)
 int
 ${namespace}_json_get_array(json_object* jobj, const char* name, json_object** holder)
 {
-  json_object *jval = json_object_object_get(jobj, name);
+  json_object* jval = json_object_object_get(jobj, name);
   enum json_type jtype = json_object_get_type(jval);
 
   if (jtype != json_type_array)
@@ -178,4 +202,81 @@ ${namespace}_json_get_array(json_object* jobj, const char* name, json_object** h
   *holder = jval;
 
   return ${namespace?upper_case}_JSON_ERROR_SUCCESS;
+}
+
+int 
+${namespace}_json_get_strings(struct json_object* jobj, const char* name, char** holder)
+{
+  struct json_object* arr_obj = NULL;
+  size_t len;
+  size_t i;
+
+  if (jobj == NULL || name == NULL) {
+    return -1;
+  }
+
+  if (!json_object_object_get_ex(jobj, name, &arr_obj)) {
+    return -1;
+  }
+
+  if (json_object_get_type(arr_obj) != json_type_array) {
+    return -1;
+  }
+
+  len = (size_t)json_object_array_length(arr_obj);
+
+  if (holder == NULL) {
+    return (int)len;
+  }
+
+  for (i = 0; i < len; i++) {
+    struct json_object* item = json_object_array_get_idx(arr_obj, i);
+
+    if (item == NULL) {
+      holder[i] = NULL;
+    } else {
+      /* Returns pointer to internal string buffer (valid as long as jobj exists) */
+      holder[i] = (char*)json_object_get_string(item);
+    }
+  }
+
+  return (int)len;
+}
+
+int 
+${namespace}_json_get_ints(struct json_object* jobj, const char* name, int* holder)
+{
+  struct json_object* arr_obj = NULL;
+  size_t len;
+  size_t i;
+
+  if (jobj == NULL || name == NULL) {
+    return -1;
+  }
+
+  if (!json_object_object_get_ex(jobj, name, &arr_obj)) {
+    return -1;
+  }
+
+  if (json_object_get_type(arr_obj) != json_type_array) {
+    return -1;
+  }
+
+  len = (size_t)json_object_array_length(arr_obj);
+
+  if (holder == NULL) {
+    return (int)len;
+  }
+
+  for (i = 0; i < len; i++) {
+    struct json_object* item = json_object_array_get_idx(arr_obj, i);
+
+    if (item == NULL) {
+      holder[i] = 0;
+    } else {
+      holder[i] = json_object_get_int(item);
+    }
+  }
+
+  return (int)len;
 }

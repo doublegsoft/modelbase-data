@@ -9,10 +9,11 @@ ${c.license(license)}
 
 #include "${c.nameFile(app.name)}-codec.h"
 <#list model.objects as obj>
+  <#if !obj.isLabelled("protocol")><#continue></#if>
 
 ${namespace}_${obj.name}_p 
 ${namespace}_${obj.name}_decode(const unsigned char* bytes, 
-${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len)
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
 {
   ${namespace}_${obj.name}_p ret = ${namespace}_${obj.name}_init();
   size_t offset = 0;
@@ -45,39 +46,34 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len)
       </#if>
     <#else>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
-  block_bytes = 0;    
+  block_bytes = 0;
+      <#if attr.type.componentType.custom>
+  ret->${attr.name} = (${attrType.name}*) malloc(ret->${lengthVariable} * sizeof(${attrType.name}));
   for (int i = 0; i < ret->${lengthVariable}; i++) 
-    block_bytes += ret->${attr.type.lengthVariable!"出现在这里就是错误"}[i];  
-  ret->${attr.name} = (${attrType.name})malloc(block_bytes);
-  memcpy((void*)ret->${attr.name}, bytes + offset, block_bytes);
-  offset += block_bytes;  
-    </#if>
+  {
+    block_bytes = 0;
+    ${namespace}_${attr.type.componentType.name}_p row = ${namespace}_${attr.type.componentType.name}_decode(bytes + offset, &block_bytes); 
+    ret->${attr.name}[i] = row;
+    offset += block_bytes;  
+  }
+      </#if>
+  offset += block_bytes; 
+    </#if>  
   </#list>
-
+  *size = offset;
   return ret;
 }
 
 void
 ${namespace}_${obj.name}_encode(const ${namespace}_${obj.name}_p ${obj.name}, 
-${""?left_pad(namespace?length + obj.name?length + 9)}unsigned char** bytes,
-${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
+${""?left_pad(namespace?length + obj.name?length + 7)}unsigned char** bytes,
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
 {
   size_t offset = 0;
-  size_t total_bytes = 0;
   size_t block_bytes = 0;
-  <#-- 计算总字节数 -->
-  <#list obj.attributes as attr>
-    <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, obj.name)?string>
-  // ${attr.name}    
-    <#if lenExpr != "0">  
-  total_bytes += ${lenExpr}; 
-    <#else>
-      <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
-  for (int i = 0; i < ${obj.name}->${lengthVariable}; i++) 
-    total_bytes += ${obj.name}->${attr.type.lengthVariable!"出现在这里就是错误"}[i];  
-    </#if>
-  </#list>
-  *size = total_bytes;
+  size_t total_bytes = 0;
+
+  ${namespace}_${obj.name}_bytes(${obj.name}, &total_bytes);
   *bytes = (unsigned char*)malloc(total_bytes);
   <#list obj.attributes as attr>
     <#assign attrType = modelbase4c.type_attribute(attr)>
@@ -88,12 +84,46 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
   offset += ${lenExpr};
     <#else>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
-  block_bytes = 0;    
   for (int i = 0; i < ${obj.name}->${lengthVariable}; i++) 
-    block_bytes += ${obj.name}->${attr.type.lengthVariable!"出现在这里就是错误"}[i];  
-  memcpy((*bytes) + offset, ${obj.name}->${attr.name}, block_bytes);
-  offset += block_bytes;  
+  {
+    block_bytes = 0;    
+    ${namespace}_${attr.type.componentType.name}_p row = ${obj.name}->${attr.name}[i];
+    if (row != NULL)
+    {
+      ${namespace}_${attr.type.componentType.name}_encode(row, bytes + offset, &block_bytes);
+      offset += block_bytes;
+    }
+  }
     </#if>
   </#list>
+  *size = total_bytes;
+}
+
+void 
+${namespace}_${obj.name}_bytes(const ${namespace}_${obj.name}_p obj, 
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
+{
+  size_t total_bytes = 0;
+  size_t block_bytes = 0;
+  <#list obj.attributes as attr>
+    <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, "obj")?string>
+  // ${attr.name}    
+    <#if lenExpr != "0">  
+  total_bytes += ${lenExpr}; 
+    <#else>
+      <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
+  for (int i = 0; i < obj->${lengthVariable}; i++) 
+  {
+    block_bytes = 0;
+    ${namespace}_${attr.type.componentType.name}_p row = obj->${attr.name}[i];
+    if (row != NULL)
+    {
+      ${namespace}_${attr.type.componentType.name}_bytes(row, &block_bytes);
+      total_bytes += block_bytes;
+    }
+  }
+    </#if>
+  </#list>
+  *size = total_bytes;
 }
 </#list>

@@ -14,6 +14,7 @@ extern "C"
 
 #include "${c.nameFile(app.name)}-poco.h"
 <#list model.objects as obj>
+  <#if !obj.isLabelled("protocol")><#continue></#if>
 
 /*!
 ** Decodes a serialized raw byte buffer into an object instance.
@@ -25,7 +26,7 @@ extern "C"
 */
 ${namespace}_${obj.name}_p 
 ${namespace}_${obj.name}_decode(const unsigned char* buf, 
-${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len);
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
 
 /*!
 ** Serializes (encodes) an object instance into a dynamically allocated byte buffer.
@@ -42,8 +43,23 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t buf_len);
 */
 void 
 ${namespace}_${obj.name}_encode(const ${namespace}_${obj.name}_p obj, 
-${""?left_pad(namespace?length + obj.name?length + 9)}unsigned char** bytes, 
-${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size);
+${""?left_pad(namespace?length + obj.name?length + 7)}unsigned char** bytes, 
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
+
+/*!
+** Calculates the total byte size required to serialize (encode) a ${obj.name} instance.
+** 
+** This function traverses the object hierarchy (including primitive fields, 
+** variable-length payloads, and nested child structures) to compute the exact 
+** memory footprint needed for binary encoding.
+**
+** @param obj  The constant ${namespace}_${obj.name}_p instance to be measured.
+** @param size A pointer to a size_t variable where the function will write 
+**             the total required size (in bytes).
+*/
+void 
+${namespace}_${obj.name}_bytes(const ${namespace}_${obj.name}_p obj, 
+${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
 </#list>
 
 #ifdef __cplusplus

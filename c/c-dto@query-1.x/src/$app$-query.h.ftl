@@ -39,6 +39,7 @@ struct ${namespace}_${obj.name}_query_s
     <#if attr.identifiable || attr.type.custom ||
          attr.constraint.domainType.name?starts_with("enum")>
   ${attrType.name}* ${modelbase4c.name_attribute_primitive_plural(attr)};
+  int count_of_${modelbase4c.name_attribute_primitive_plural(attr)};
     </#if>
   </#list>
   int   start;

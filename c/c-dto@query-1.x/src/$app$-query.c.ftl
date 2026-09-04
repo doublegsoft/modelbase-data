@@ -36,10 +36,11 @@ ${namespace}_${obj.name}_query_init(void)
     <#if attr.identifiable || attr.type.custom ||
          attr.constraint.domainType.name?starts_with("enum")>
   ret->${modelbase4c.name_attribute_primitive_plural(attr)} = NULL;
+  ret->count_of_${modelbase4c.name_attribute_primitive_plural(attr)} = 0;
     </#if>
   </#list>
-  ret->start = INT_MIN;
-  ret->limit = INT_MIN;
+  ret->start = 0;
+  ret->limit = -1;
   return ret;
 }
 

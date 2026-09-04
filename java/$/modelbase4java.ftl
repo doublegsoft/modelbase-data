@@ -150,8 +150,8 @@
  ###        the test value for java language
  #-->
 <#function test_unit_value attr>
-  <#assign val = tatabase.value(attr.constraint.domainType?string, '', language)>
-  <#assign typestr = attr.constraint.domainType?string>
+  <#local val = tatabase.value(attr.constraint.domainType?string, '', language)>
+  <#local typestr = attr.constraint.domainType?string>
   <#if attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] = "id">
     <#return '"123456"'>
   <#elseif typestr == 'lmt'>
@@ -167,14 +167,14 @@
   <#elseif typestr?contains('name')>
     <#return '"测试名称"'>
   <#elseif typestr?contains('string')>
-    <#assign length = 64>
+    <#local length = 64>
     <#if typestr?contains('(')>
-      <#assign length = typestr?replace('string(', '')?replace(')', '')?number>
+      <#local length = typestr?replace('string(', '')?replace(')', '')?number>
     </#if>
     <#if (length > modelbase.get_attribute_label(attr)?length * 2 + 6)>
       <#return '"' + tatabase.string(length / 6) + '"'>
     <#else>
-      <#assign ret = ''>
+      <#local ret = ''>
       <#list 1..length as idx>
         <#assign ret = ret + '0'>
       </#list>
@@ -194,14 +194,14 @@
   <#return 'null'>
 </#function>
 
-<#function test_sql_value attr ttbctx>d
-  <#assign UUID = statics['naming.util.UUID']>
-  <#assign typestr = attr.constraint.domainType?string>
+<#function test_sql_value attr ttbctx>
+  <#local UUID = statics['naming.util.UUID']>
+  <#local typestr = attr.constraint.domainType?string>
   <#if typestr == 'lmt' || typestr == 'now'>
     <#return 'current_timestamp'>
   <#elseif typestr == 'id'>
-    <#assign id = UUID.randomUUID()?string?upper_case>
-    <#assign ttbctx = ttbctx.addObjectId(attr.parent, id)>
+    <#local id = UUID.randomUUID()?string?upper_case>
+    <#local ttbctx = ttbctx.addObjectId(attr.parent, id)>
     <#return "'" + id + "'">
   <#elseif typestr == 'code'>
     <#return "'000'">
