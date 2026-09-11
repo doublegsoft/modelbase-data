@@ -509,3 +509,40 @@ ${namespace}_date_diff_seconds(const struct tm* tm1, const struct tm* tm2)
 
   return ts1 - ts2;
 }
+
+char* 
+${namespace}_file_read(const char* filepath) 
+{
+  FILE* file = fopen(filepath, "rb");
+  if (file == NULL) {
+    perror("Error opening file");
+    return NULL;
+  }
+
+  fseek(file, 0, SEEK_END);
+  long length = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  if (length < 0) {
+    fclose(file);
+    return NULL;
+  }
+
+  char* buffer = (char*)malloc(length + 1);
+  if (buffer == NULL) {
+    perror("Memory allocation failed");
+    fclose(file);
+    return NULL;
+  }
+
+  // 4. Read the file into the buffer
+  size_t bytes_read = fread(buffer, 1, length, file);
+
+  // 5. Always null-terminate the string
+  buffer[bytes_read] = '\0';
+
+  // 6. Close the file handle
+  fclose(file);
+
+  return buffer;
+}

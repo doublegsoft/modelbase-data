@@ -53,7 +53,7 @@ struct ${namespace}_${obj.name}_s
     <#elseif attr.name == "state">
   char  state[2];
     <#elseif attrType.length??>
-  ${attrType.name} ${modelbase4c.name_attribute(attr)}[${attrType.length}];  
+  ${attrType.name} ${modelbase4c.name_attribute(attr)}[${attrType.length?string("0")}] ;  
     <#elseif attr.type.lengthVariable??>
   ${attrType.name}* ${modelbase4c.name_attribute(attr)};  
     <#else>

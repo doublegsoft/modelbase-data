@@ -3017,3 +3017,29 @@ ${""?left_pad(indent)}${line}
   <#local origAttrName = proxyAttr.getLabelledOptions("original")["attribute"]>
   <#return model.findAttributeByNames(origObjName, origAttrName)>
 </#function>
+
+<#--
+ ### 判断对象是否具备“聚合特征”（仅由复杂类型或集合组成）。
+ ### <p>
+ ### 规则：若对象包含任何基础标量字段（如 String、Number 等），则返回 false；
+ ### 只有当所有字段均为自定义类型（Custom）或集合类型（Collection）时，才返回 true。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历目标对象的所有属性（attributes）。
+ ### 2. 发现任一既不是自定义类型、也不是集合类型的属性，立即返回 false。
+ ### 3. 全部属性均符合条件则返回 true。
+ ###
+ ### @param obj
+ ###        待检测的实体/模型对象（需包含 attributes 列表）
+ ###
+ ### @return
+ ###        boolean - 全部为复合类型/集合返回 true，包含基础类型返回 false
+ -->
+<#function is_aggregate_like obj>
+  <#list obj.attributes as attr>
+    <#if !attr.type.custom && !attr.type.collection>
+      <#return false>
+    </#if>
+  </#list>
+  <#return true>
+</#function>

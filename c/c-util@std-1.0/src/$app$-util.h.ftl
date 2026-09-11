@@ -321,6 +321,15 @@ ${namespace}_date_add_days(struct tm* tm_io, int days);
 int64_t 
 ${namespace}_date_diff_seconds(const struct tm* tm1, const struct tm* tm2);
 
+/*!
+** @brief Reads the entire contents of a file into a dynamically allocated string.
+** @param filepath Path to the file to be read.
+** @return Pointer to the null-terminated string buffer, or NULL on failure.
+** @note The caller is responsible for freeing the allocated memory via free().
+*/
+char* 
+${namespace}_file_read(const char* filepath);
+
 #ifdef __cplusplus
 }
 #endif

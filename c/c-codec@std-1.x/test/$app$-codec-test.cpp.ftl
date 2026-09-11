@@ -5,7 +5,7 @@
 <#list model.objects as obj>
   <#if !obj.isLabelled("protocol")><#continue></#if>
 
-TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, encode_decode) {
+TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, memory) {
   unsigned char* bytes = NULL;
   size_t size = 0;
   ${namespace}_${obj.name}_p obj = ${namespace}_${obj.name}_init();
@@ -43,5 +43,8 @@ TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, encode_decode) {
   </#list>
   ${namespace}_${obj.name}_free(obj);
   free(bytes);
+}
+
+TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, file) {
 }
 </#list>
