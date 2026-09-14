@@ -1,13 +1,13 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4java.ftl" as modelbase4java>
-<#assign obj = request>
-package ${namespace}.${java.nameNamespace(app.name)}.http.payload;
+<#assign obj = params>
+package ${namespace}.${java.nameNamespace(app.name)}.service.payload;
 
 import java.util.*;
 import java.math.*;
 
 public class ${java.nameType(obj.name)} implements java.io.Serializable {
-
+  
   private static long serialVersionNumber = -1L;
 <#list obj.attributes as attr>  
 

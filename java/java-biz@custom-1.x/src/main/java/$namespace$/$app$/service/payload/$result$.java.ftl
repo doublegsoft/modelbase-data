@@ -1,7 +1,7 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4java.ftl" as modelbase4java>
-<#assign obj = request>
-package ${namespace}.${java.nameNamespace(app.name)}.http.payload;
+<#assign obj = result>
+package ${namespace}.${java.nameNamespace(app.name)}.service.payload;
 
 import java.util.*;
 import java.math.*;
