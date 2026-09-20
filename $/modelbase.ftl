@@ -737,13 +737,37 @@
   <#return ret>
 </#function>
 
+<#--
+ ### Gets the proxy attribute definition within the given proxy/composite object
+ ### that maps to the specified original attribute.
+ ### <p>
+ ### The mapping is matched based on the "original" label metadata options
+ ### (i.e., "object" and "attribute") configured on the proxy attributes.
+ ###
+ ### @param proxyObj
+ ###        the proxy or composite object definition containing mapped attributes
+ ### @param attr
+ ###        the original attribute definition to match against
+ ###
+ ### @return the mapped proxy attribute definition, or null if not found
+ ###
+ ### @see com.doublegsoft.jcommons.metabean.AttributeDefinition
+ #-->
 <#function get_attribute_proxy proxyObj attr>
   <#list proxyObj.attributes as proxyAttr>
     <#if !proxyAttr.isLabelled("original")><#continue></#if>
     <#local origObjName = proxyAttr.getLabelledOption("original","object")>
     <#local origAttrName = proxyAttr.getLabelledOption("original","attribute")>
-    <#if attr.parent.name == origObjName && attr.name == origAttrName>
+    <#local origObj = model.findObjectByName(origObjName)>
+    <#local origAttr = model.findAttributeByNames(origObjName, origAttrName)>
+    <#if modelbase.get_attribute_sql_name(attr) == modelbase.get_attribute_sql_name(origAttr)>
       <#return proxyAttr>
+    <#elseif attr.type.custom>
+      <#local refObj = model.findObjectByName(attr.type.name)>
+      <#local refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+      <#if modelbase.get_attribute_sql_name(refObjIdAttr) == modelbase.get_attribute_sql_name(origAttr)>
+        <#return proxyAttr>
+      </#if>
     </#if>
   </#list>
 </#function>

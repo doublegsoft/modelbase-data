@@ -56,8 +56,8 @@
   <sql id="column${java.nameType(composite.name)}">
 <#list columnedAttrs as attr>
   <#assign origObj = model.findObjectByName(attr.getLabelledOptions("original")["object"])>
-  <#-- FIXME -->
-  <#if attr.name?starts_with("parent")>
+  <#-- FIXME: 处理父级字段 -->
+  <#if attr.name?starts_with("parent")> <#-- ${modelbase.get_attribute_sql_name(attr)} -->
     <#assign origObjAlias = modelbase.get_object_sql_alias(origObj, "parent")>
   <#else>
     <#assign origObjAlias = modelbase.get_object_sql_alias(origObj)>

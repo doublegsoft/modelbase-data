@@ -243,6 +243,9 @@
     <#return '{}'>
   <#elseif attr.constraint.domainType.name == 'state'>
     <#return '"E"'>
+  <#elseif attr.constraint.domainType.name?starts_with("enum")>
+    <#local opts = typebase.enumtype(attr.constraint.domainType.name)>
+    <#return '"' + opts[0].value + '"'>
   <#elseif attr.isLabelled("reference") && attr.getLabelledOptions("reference")["value"] == "id">
     <#return '"123456"'>  
   <#elseif attr.type.name == 'bool'>
@@ -252,9 +255,9 @@
     <#local scale = attr.type.scale>
     <#return '"' + tatabase.number(0,100)?substring(0, dot) + '"'>
   <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
-    <#return '"36"'>
+    <#return '"' + tatabase.number(0,100,0) + '"'>
   <#elseif attr.type.name == 'long'>
-    <#return '"63"'>
+    <#return '"' + tatabase.number(0,100,0) + '"'>
   <#elseif attr.type.name == 'date'>
     <#return '"' + tatabase.datetime() + '"'>
   <#elseif attr.type.name == 'datetime'>
@@ -272,7 +275,7 @@
     <#elseif (len >= 10)>  
       <#local len = 4>
     <#else>
-      <#local len = 2>
+      <#return '"XX"'>  
     </#if>
     <#return '"' + tatabase.string(len) + '"'>  
   <#else>

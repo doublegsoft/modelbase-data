@@ -116,9 +116,11 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
 
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
+    <#assign setAttrs = {}>
     <#list obj.attributes as innerAttr>
       <#if (innerAttr.getLabelledOption("original", "object")!"") == origObj.name>
         <#assign origAttr = origObj.getAttribute(innerAttr.getLabelledOption("original", "attribute"))>
+        <#assign setAttrs += {modelbase.get_attribute_sql_name(origAttr):origAttr}>
     retVal.${modelbase4java.name_setter(origAttr)}(${modelbase4java.name_getter(innerAttr)}());
       </#if>
     </#list>
@@ -129,8 +131,14 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
         <#assign leftAttr = predicate.leftAttribute>
         <#assign rightObj = predicate.rightObject>
         <#assign rightAttr = predicate.rightAttribute>
-        <#if leftObj.name == origObjName && modelbase.get_attribute_proxy(obj,rightAttr)??>
-    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(modelbase.get_attribute_proxy(obj,rightAttr))}());
+        <#if setAttrs[modelbase.get_attribute_sql_name(leftAttr)]??><#continue></#if><#-- 已经打印了Setter -->
+        <#if !modelbase.get_attribute_proxy(obj,rightAttr)??><#continue></#if><#-- 这个属性在当前的对象中有定义 -->
+        <#assign proxyAttr = modelbase.get_attribute_proxy(obj,rightAttr)>
+        <#if leftObj.name == origObjName>
+    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(proxyAttr)}());
+          <#break>
+        <#elseif rightObj.name == origObj.name && leftAttr.type.name != origObj.name>
+    retVal.${modelbase4java.name_setter(leftAttr)}(${modelbase4java.name_getter(proxyAttr)}());
           <#break>
         </#if>
       </#if>
