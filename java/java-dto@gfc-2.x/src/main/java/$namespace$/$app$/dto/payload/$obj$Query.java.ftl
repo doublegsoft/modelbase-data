@@ -106,6 +106,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   <#list obj.attributes as attr>
     <#if attr.isLabelled("original")>
       <#assign origObjName = attr.getLabelledOption("original", "object")>
+      <#assign origAttrName = attr.getLabelledOption("original", "attribute")>
       <#if origObjNames[origObjName]??><#continue></#if>
       <#assign origObj = model.findObjectByName(origObjName)>
     <#else>
@@ -113,6 +114,11 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     </#if>
     <#if !origObj??><#continue></#if>
     <#assign origObjNames += {origObjName:origObj}>
+
+  public ${java.nameType(origObj.name)}Query to${java.nameType(origAttrName)}() {
+    ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
+    return retVal;
+  }
 
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
