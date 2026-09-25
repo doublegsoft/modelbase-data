@@ -13,6 +13,60 @@
 </#function>
 
 <#--
+ ### 判断指定对象的特定属性是否标记为“关联/连接”（conjunction）。
+ ### <p>
+ ### 首先检查对象中是否存在该属性，若存在则判断其是否包含 "conjunction" 标签；
+ ### 若属性不存在，则默认返回 false。
+ ###
+ ### @param obj
+ ###        包含属性的目标元数据或模型对象
+ ###
+ ### @param attrname
+ ###        待检查的属性名称（字符串类型）
+ ###
+ ### @return 如果属性存在且被打上了 "conjunction" 标签则返回 true；否则返回 false
+ -->
+<#function is_attribute_conjunction obj attrname>
+  <#if obj.getAttribute(attrname)??>
+    <#local attr = obj.getAttribute(attrname)>
+    <#return attr.isLabelled("conjunction")>
+  </#if>
+  <#return false>
+</#function>
+
+<#function match_xref_object obj attrname>
+  <#if obj.getAttribute(attrname)??>
+    <#local attr = obj.getAttribute(attrname)>
+    <#return attr.isLabelled("conjunction")>
+  </#if>
+  <#return false>
+</#function>
+
+<#--
+ ### 在聚合对象中查找并匹配与给定数据属性所属父类型一致的聚合属性。
+ ### <p>
+ ### 遍历聚合对象的所有属性，过滤掉非自定义类型的属性；
+ ### 当聚合属性的类型名称（type.name）与数据属性所属父对象名称（parent.name）匹配时，返回该聚合属性；
+ ### 若遍历结束未找到匹配项，则默认返回空。
+ ###
+ ### @param aggObj
+ ###        聚合根或聚合模型对象（包含属性列表 attributes）
+ ###
+ ### @param dataAttr
+ ###        用于匹配的目标数据属性（通过其 parent.name 获取所属父对象名称）
+ ###
+ ### @return 匹配到的聚合属性定义对象；如果未匹配到则返回空
+ -->
+<#function match_aggregate_attribute aggObj dataAttr>
+  <#list aggObj.attributes as aggAttr>
+    <#if !aggAttr.type.custom><#continue></#if>
+    <#if aggAttr.type.name == dataAttr.parent.name>
+      <#return aggAttr>
+    </#if>
+  </#list>
+</#function>
+
+<#--
  ### Gets programming language type name according to the given type.
  ### <p>
  ### And supports both collection and non-collection types.
@@ -147,15 +201,6 @@
   <#else>
     <#return naming.nameVariable(prefix + '_' + attr.name)>  
   </#if>
-</#function>
-
-<#function match_aggregate_attribute aggObj dataAttr>
-  <#list aggObj.attributes as aggAttr>
-    <#if !aggAttr.type.custom><#continue></#if>
-    <#if aggAttr.type.name == dataAttr.parent.name>
-      <#return aggAttr>
-    </#if>
-  </#list>
 </#function>
 
 <#--

@@ -9,21 +9,40 @@ ${java.license(license)}
 <#assign flow = typeDef.flow>
 <#assign idAttrs = typeDef.getIdentifiableAttributes()>
 <#assign existings = {}>
+<#-- 打印方法体需要的变量 -->
 <#macro print_variables flow>
+  <#-- 查询条件变量 -->
   <#local existings = {}>
   <#list flow.types as typeObj>
+    <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+    <#if typeRefType == "XREF">
+    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)}Query = null;
+      <#continue>
+    </#if>
     <#if existings[typeObj.variable]??><#continue></#if>
     ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.variable)}Query = null;
     <#local existings = {typeObj.variable: typeObj}>
   </#list>
+  <#-- 单个对象数据变量 -->
   <#local existings = {}>
   <#list flow.types as typeObj>
+    <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+    <#if typeRefType == "XREF">
+    ${java.nameType(typeObj.name)}Query ${java.nameVariable(typeObj.name)} = null;
+      <#continue>
+    </#if>
     <#if existings[typeObj.variable]??><#continue></#if>
     ${java.nameType(typeObj.name)} ${java.nameVariable(typeObj.variable)} = null;
     <#local existings = {typeObj.variable: typeObj}>
   </#list>
+  <#-- 集合对象数据变量 -->
   <#local existings = {}>
   <#list flow.types as typeObj>
+    <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+    <#if typeRefType == "XREF">
+    List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.name)}Queries = null;
+      <#continue>
+    </#if>
     <#if existings[typeObj.variable]??><#continue></#if>
     List<${java.nameType(typeObj.name)}Query> ${java.nameVariable(typeObj.variable)}Queries = null;
     <#local existings = {typeObj.variable: typeObj}>
@@ -84,6 +103,11 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 
   @Inject
   private ${java.nameType(typeDef.name)}Validation ${java.nameVariable(typeDef.name)}Validation;
+  <#elseif typeRefType == "XREF">
+
+  @Inject
+  private ${java.nameType(typeObj.name)}Service ${java.nameVariable(typeObj.name)}Service;
+    <#continue>
   <#else>
 
   @Inject
@@ -217,6 +241,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#-------------------------->
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
+  // ${typeObj.name} ${typeRefType}
   <#if typeRefType != "CREF"><#continue></#if>
   <#assign collObj = model.findObjectByName(typeObj.definition.name)>
   <#-- 如果这个集合对象的属性中，非集合对象的属性引用了在这个方法中存在的 -->
@@ -317,18 +342,24 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
-  <#elseif typeRefType == "CREF">
+  <#elseif typeRefType == "CREF" && !modelbase.is_attribute_conjunction(obj, typeObj.variable)>
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
     <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     <#-- 注意此处这个补丁 -->
     <#if modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)??>
       <#assign leftAttr = modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)>
-    </#if>  
+    </#if>
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
-    
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
     retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
+  <#elseif typeRefType == "XREF">
+    <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+    <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+    ${java.nameVariable(typeObj.name)}Query = new ${java.nameType(typeObj.name)}Query();
+    ${java.nameVariable(typeObj.name)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
+    <#-- TODO: 实现查询集合数据 -->
+    // TODO
   </#if>
 </#list>
     return retVal;

@@ -114,11 +114,11 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     </#if>
     <#if !origObj??><#continue></#if>
     <#assign origObjNames += {origObjName:origObj}>
-
+<#--  
   public ${java.nameType(origObj.name)}Query to${java.nameType(origAttrName)}() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
     return retVal;
-  }
+  }  -->
 
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
@@ -293,24 +293,53 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   <#if obj.isLabelled("meta") || obj.isLabelled("pivot")><#continue></#if>
   <#assign collObj = typeObj.definition>
   <#if processedAttrs[collObj.name]??><#continue></#if>
+  <#assign attrVar = obj.getAttribute(typeObj.variable)>
 
   public List<${java.nameType(collObj.name)}Query> to${java.nameType(collObj.name)}Queries() {
+  <#if attrVar.type.componentType.name != collObj.name><#-- conj case -->
+    List<${java.nameType(collObj.name)}Query> retVal = new ArrayList<>();
+    <#if typeObj.reference??>
+      <#assign predicate = typeObj.reference.joinPredicates[0]>
+      <#assign leftObj = predicate.leftObject>
+      <#assign leftAttr = predicate.leftAttribute>
+      <#assign rightObj = predicate.rightObject>
+      <#assign rightAttr = predicate.rightAttribute>
+      <#assign compObj = model.findObjectByName(attrVar.type.componentType.name)>
+      <#assign idAttrCompObj = modelbase.get_id_attributes(compObj)?first>
     ${java.nameVariable(typeObj.variable)}.forEach(q -> {
-  <#if typeObj.reference??>
-    <#assign predicate = typeObj.reference.joinPredicates[0]>
-    <#assign leftObj = predicate.leftObject>
-    <#assign leftAttr = predicate.leftAttribute>
-    <#assign rightObj = predicate.rightObject>
-    <#assign rightAttr = predicate.rightAttribute>
-      q.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
-  </#if>
+      ${java.nameType(collObj.name)}Query row = new ${java.nameType(collObj.name)}Query();
+      row.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
+      row.${modelbase4java.name_setter(idAttrCompObj)}(q.${modelbase4java.name_getter(idAttrCompObj)}());
     });
+    </#if>
+    return retVal;
+  <#else>
+    <#if typeObj.reference??>
+      <#assign predicate = typeObj.reference.joinPredicates[0]>
+      <#assign leftObj = predicate.leftObject>
+      <#assign leftAttr = predicate.leftAttribute>
+      <#assign rightObj = predicate.rightObject>
+      <#assign rightAttr = predicate.rightAttribute>
+      <#assign attrName = modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)>
+      <#if obj.getAttribute(attrName)??>
+    ${java.nameVariable(typeObj.variable)}.forEach(q -> {
+      q.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
+    });
+      </#if>
+    </#if>
     return ${java.nameVariable(typeObj.variable)};
+  </#if>
   }
 
   public void from${java.nameType(collObj.name)}Queries(List<${java.nameType(collObj.name)}Query> queries) {
+    <#if attrVar.type.componentType.name != collObj.name>
+    queries.forEach(q -> {
+      ${java.nameVariable(typeObj.variable)}.add(q.get${java.nameType(attrVar.type.componentType.name)}());
+    });
+    <#else>
     ${java.nameVariable(typeObj.variable)}.clear();
     ${java.nameVariable(typeObj.variable)}.addAll(queries);
+    </#if>
   }
 </#list>
 
