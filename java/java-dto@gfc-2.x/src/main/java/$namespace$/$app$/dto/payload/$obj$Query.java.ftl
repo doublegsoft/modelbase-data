@@ -114,11 +114,6 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
     </#if>
     <#if !origObj??><#continue></#if>
     <#assign origObjNames += {origObjName:origObj}>
-<#--  
-  public ${java.nameType(origObj.name)}Query to${java.nameType(origAttrName)}() {
-    ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
-    return retVal;
-  }  -->
 
   public ${java.nameType(origObj.name)}Query to${java.nameType(origObj.name)}Query() {
     ${java.nameType(origObj.name)}Query retVal = new ${java.nameType(origObj.name)}Query();
@@ -167,6 +162,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
         <#assign rightObj = predicate.rightObject>
         <#assign rightAttr = predicate.rightAttribute>
         <#if leftObj.name == origObjName && modelbase.get_attribute_proxy(obj,rightAttr)??>
+          <#assign proxyAttr = modelbase.get_attribute_proxy(obj,rightAttr)>
     ${modelbase4java.name_setter(modelbase.get_attribute_proxy(obj,rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
           <#break>
         </#if>

@@ -13,20 +13,46 @@
 </#function>
 
 <#--
- ### 判断指定对象的特定属性是否标记为“关联/连接”（conjunction）。
+ ### 判断指定对象的特定属性是否属于“关联/连接”（conjunction）。
  ### <p>
- ### 首先检查对象中是否存在该属性，若存在则判断其是否包含 "conjunction" 标签；
- ### 若属性不存在，则默认返回 false。
+ ### 判定规则如下：
+ ### 1. 若目标对象为类似聚合根（aggregate-like）结构且该属性存在：
+ ###    - 解析首个属性类型对应的根对象（rootObj）与该属性集合组件类型对应的集合对象（collObj）；
+ ###    - 遍历集合对象的属性，若发现其反向引用了根对象，则判定为直接关联，返回 false；
+ ###    - 若不存在反向引用（即集合对象与根对象无直接关联关系），则视为连接关系，返回 true。
+ ### 2. 对于普通对象或未命中上述逻辑的情况：
+ ###    - 若属性存在，则检查其元数据是否被打上了 "conjunction" 标签，并返回检查结果；
+ ###    - 若属性不存在，则默认返回 false。
  ###
  ### @param obj
- ###        包含属性的目标元数据或模型对象
+ ###        包含属性的目标元数据或模型对象（支持普通实体或聚合类对象）
  ###
  ### @param attrname
  ###        待检查的属性名称（字符串类型）
  ###
- ### @return 如果属性存在且被打上了 "conjunction" 标签则返回 true；否则返回 false
+ ### @return 如果符合聚合关联规则或属性被打上了 "conjunction" 标签则返回 true；否则返回 false
  -->
 <#function is_attribute_conjunction obj attrname>
+  <#--  <#if is_aggregate_like(obj) && obj.getAttribute(attrname)??>
+    <#local attr = obj.getAttribute(attrname)>
+    <#local rootObj = model.findObjectByName(obj.attributes?first.type.name)>
+    <#if attr.type.collection>
+      <#local collObj = model.findObjectByName(attr.type.componentType.name)>
+      <#list collObj.attributes as collAttr>
+        <#if collAttr.type.name == rootObj.name>
+          <#return false>
+        </#if>
+      </#list>
+    <#else>
+      <#local refObj = model.findObjectByName(attr.type.name)>
+      <#list refObj.attributes as refAttr>
+        <#if refAttr.type.name == rootObj.name>
+          <#return false>
+        </#if>
+      </#list>
+    </#if>
+    <#return true>
+  </#if>  -->
   <#if obj.getAttribute(attrname)??>
     <#local attr = obj.getAttribute(attrname)>
     <#return attr.isLabelled("conjunction")>
@@ -34,12 +60,56 @@
   <#return false>
 </#function>
 
-<#function match_xref_object obj attrname>
-  <#if obj.getAttribute(attrname)??>
+<#--  <#function match_conjunction_for_attribute obj attrname>
+  <#if is_aggregate_like(obj) && obj.getAttribute(attrname)??>
     <#local attr = obj.getAttribute(attrname)>
-    <#return attr.isLabelled("conjunction")>
+    <#if attr.type.collection>
+      <#local attrObj = model.findObjectByName(attr.type.componentType.name)>
+    <#elseif attr.type.custom>
+      <#local attrObj = model.findObjectByName(attr.type.name)>
+    </#if>
+    <#list obj.attributes as attr>
+      <#if attr?index == 0><#continue></#if>
+      <#if attr.name == attrname><#continue></#if>
+      <#if attr.type.custom>
+        <#local refObj = model.findObjectByName(attr.type.name)>
+        <#list refObj.attributes as refAttr>
+          <#if refAttr.type.name == attrObj.name>
+            <#return attr>
+          </#if>
+        </#list>
+      <#else if attr.type.collection>
+        <#local collObj = model.findObjectByName(attr.type.componentType.name)>
+      </#if>
+    </#list>
   </#if>
-  <#return false>
+</#function>  -->
+
+
+<#--
+ ### 判断对象是否具备“聚合特征”（仅由复杂类型或集合组成）。
+ ### <p>
+ ### 规则：若对象包含任何基础标量字段（如 String、Number 等），则返回 false；
+ ### 只有当所有字段均为自定义类型（Custom）或集合类型（Collection）时，才返回 true。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历目标对象的所有属性（attributes）。
+ ### 2. 发现任一既不是自定义类型、也不是集合类型的属性，立即返回 false。
+ ### 3. 全部属性均符合条件则返回 true。
+ ###
+ ### @param obj
+ ###        待检测的实体/模型对象（需包含 attributes 列表）
+ ###
+ ### @return
+ ###        boolean - 全部为复合类型/集合返回 true，包含基础类型返回 false
+ -->
+<#function is_aggregate_like obj>
+  <#list obj.attributes as attr>
+    <#if !attr.type.custom && !attr.type.collection>
+      <#return false>
+    </#if>
+  </#list>
+  <#return true>
 </#function>
 
 <#--
@@ -797,7 +867,7 @@
  ### @return the mapped proxy attribute definition, or null if not found
  ###
  ### @see com.doublegsoft.jcommons.metabean.AttributeDefinition
- #-->
+ -->
 <#function get_attribute_proxy proxyObj attr>
   <#list proxyObj.attributes as proxyAttr>
     <#if !proxyAttr.isLabelled("original")><#continue></#if>
@@ -3085,30 +3155,4 @@ ${""?left_pad(indent)}${line}
   <#local origObjName = proxyAttr.getLabelledOptions("original")["object"]>
   <#local origAttrName = proxyAttr.getLabelledOptions("original")["attribute"]>
   <#return model.findAttributeByNames(origObjName, origAttrName)>
-</#function>
-
-<#--
- ### 判断对象是否具备“聚合特征”（仅由复杂类型或集合组成）。
- ### <p>
- ### 规则：若对象包含任何基础标量字段（如 String、Number 等），则返回 false；
- ### 只有当所有字段均为自定义类型（Custom）或集合类型（Collection）时，才返回 true。
- ###
- ### 逻辑流程 (Logic Flow):
- ### 1. 遍历目标对象的所有属性（attributes）。
- ### 2. 发现任一既不是自定义类型、也不是集合类型的属性，立即返回 false。
- ### 3. 全部属性均符合条件则返回 true。
- ###
- ### @param obj
- ###        待检测的实体/模型对象（需包含 attributes 列表）
- ###
- ### @return
- ###        boolean - 全部为复合类型/集合返回 true，包含基础类型返回 false
- -->
-<#function is_aggregate_like obj>
-  <#list obj.attributes as attr>
-    <#if !attr.type.custom && !attr.type.collection>
-      <#return false>
-    </#if>
-  </#list>
-  <#return true>
 </#function>

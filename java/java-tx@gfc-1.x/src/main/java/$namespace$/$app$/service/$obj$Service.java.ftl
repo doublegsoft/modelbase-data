@@ -203,7 +203,7 @@ public interface ${typename}Service {
    *        发生任何错误，都抛出此类型异常   
    */
   ${typename}Query find${typename}By<@modelbase4java.print_find_by_unique_name attrs=uniqueAttrs />(<@modelbase4java.print_find_by_unique_parameters attrs=uniqueAttrs />) throws ServiceException;
-</#list> 
+</#list>
 <#---------------->
 <#-- 集合对象属性 -->    
 <#---------------->

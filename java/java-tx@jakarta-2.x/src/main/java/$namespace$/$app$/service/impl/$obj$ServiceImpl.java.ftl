@@ -3,6 +3,7 @@
 <#if license??>
 ${java.license(license)}
 </#if>
+<#assign uniqueGroups = modelbase.group_unique_attributes(obj)>
 <#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
 <#assign rootObj = typeDef.definition>
 <#assign detailObjs = []>
@@ -116,6 +117,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   <#assign existings += {typeObj.variable: typeObj}>
 </#list>
 
+<#----------->
+<#-- 批保存 -->
+<#-----------> 
   @Transactional(rollbackOn = Exception.class)
   public void save${java.nameType(modelbase.get_object_plural(obj))}(List<${java.nameType(obj.name)}Query> queries) throws ServiceException {
     for (${java.nameType(obj.name)}Query query : queries) {
@@ -123,6 +127,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
   }
 
+<#---------->
+<#-- 保存 -->
+<#----------> 
   /**
    * 保存【${typeDef.label!""}】对象实例
    *
@@ -132,10 +139,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
    * @return 保存后的【${typeDef.label!""}】对象查询条件，包含了标识属性等默认值
    */
   @Transactional(rollbackOn = Exception.class)
-  public ${java.nameType(typeDef.name)}Query save${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {
-<#------------------->    
-<#-- 涉及到的变量定义 -->
-<#------------------->      
+  public ${java.nameType(typeDef.name)}Query save${java.nameType(typeDef.name)}(${java.nameType(typeDef.name)}Query query) throws ServiceException {   
     boolean existing = true;
 <@print_variables flow />    
 <#list flow.sortTypes() as typeObj>
@@ -264,7 +268,10 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 </#list>
     return query;   
   }
-  
+
+<#---------->
+<#-- 读取 -->
+<#---------->   
   /**
    * 读取【${typeDef.label!""}】对象实例
    *
@@ -342,17 +349,22 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>
-  <#elseif typeRefType == "CREF" && !modelbase.is_attribute_conjunction(obj, typeObj.variable)>
-    <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
-    <#assign rightAttr = typeObj.getRightAttributeFromReference()>
-    <#-- 注意此处这个补丁 -->
-    <#if modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)??>
-      <#assign leftAttr = modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)>
-    </#if>
+  <#elseif typeRefType == "CREF">
+    <#if modelbase.is_attribute_conjunction(obj, typeObj.variable)>
+    <#-- TODO: 实现有conjunction标记的属性处理逻辑 -->
+    // TODO: 实现有conjunction标记的属性处理逻辑
+    <#else>
+      <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+      <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+      <#-- 注意此处这个补丁 -->
+      <#if modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)??>
+        <#assign leftAttr = modelbase.match_aggregate_attribute(typeDef.definition, leftAttr)>
+      </#if>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.${modelbase4java.name_getter(leftAttr)}());
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
     retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
+    </#if>
   <#elseif typeRefType == "XREF">
     <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
     <#assign rightAttr = typeObj.getRightAttributeFromReference()>
@@ -365,6 +377,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     return retVal;
   }
 
+<#---------->
+<#-- 获取 -->
+<#---------->  
   /**
    * 读取【${typeDef.label!""}】对象实例
    *
@@ -427,6 +442,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     return retVal;
   }
 
+<#---------->
+<#-- 查询 -->
+<#---------->  
   /**
    * 查询符合条件的【${typeDef.label!""}】对象实例列表
    *
@@ -538,6 +556,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     return retVal;
   }
 
+<#---------->
+<#-- 删除 -->
+<#---------->  
   /**
    * 删除【${typeDef.label!""}】对象实例
    *
@@ -590,4 +611,22 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
   </#if>
 </#list>  
   }
+<#-------------------->
+<#-- 业务唯一对象属性 -->
+<#-------------------->  
+<#list uniqueGroups as uniqueAttrs>
+  
+  public ${java.nameType(obj.name)}Query find${java.nameType(obj.name)}By<@modelbase4java.print_find_by_unique_name attrs=uniqueAttrs />(<@modelbase4java.print_find_by_unique_parameters attrs=uniqueAttrs />) throws ServiceException {
+    Pagination<${java.nameType(obj.name)}Query> retVal = new Pagination<>();
+    ${java.nameType(obj.name)}Query query = new ${java.nameType(obj.name)}Query();
+  <#list uniqueAttrs as uniqueAttr>
+    query.${modelbase4java.name_setter(uniqueAttr)}(${modelbase.get_attribute_sql_name(uniqueAttr)});
+  </#list>  
+    retVal = find${java.nameType(inflector.pluralize(obj.name))}(query, false);
+    if (retVal.getData().size() == 0) {
+      return null;
+    }
+    return retVal.getData().get(0);
+  }
+</#list>  
 }
