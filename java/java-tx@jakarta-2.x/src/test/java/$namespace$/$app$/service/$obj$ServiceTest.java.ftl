@@ -74,6 +74,8 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     <#if attr.name?starts_with("parent")><#continue></#if><#-- FIXME: 暂时规避Parent的全部属性 -->
     <#if attr.type.name == "number">
     Assert.assertEquals(0, toSaveQuery.${modelbase4java.name_getter(attr)}().compareTo(foundQuery.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.type.name == "datetime" || attr.type.name == "date">
+    Assert.assertTrue(isSameDate(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}()));
     <#else>
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}());
     </#if>
@@ -111,6 +113,8 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     <#if attr.name?starts_with("parent")><#continue></#if><#-- FIXME: 暂时规避Parent的全部属性 -->
     <#if attr.type.name == "number">
     Assert.assertEquals(0, toSaveQuery.${modelbase4java.name_getter(attr)}().compareTo(foundQuery.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.type.name == "datetime" || attr.type.name == "date">
+    Assert.assertTrue(isSameDate(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}()));
     <#else>
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}());
     </#if>

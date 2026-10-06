@@ -1,3 +1,4 @@
+<#setting number_format="computer">
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4c.ftl" as modelbase4c>
 <#if license??>
@@ -13,7 +14,7 @@ ${c.license(license)}
 
 ${namespace}_${obj.name}_p 
 ${namespace}_${obj.name}_decode(const unsigned char* bytes, 
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
 {
   ${namespace}_${obj.name}_p ret = ${namespace}_${obj.name}_init();
   size_t offset = 0;
@@ -29,6 +30,14 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
       </#if>
       <#if attrType.name == "char" && !attr.type.lengthVariable?? && !attrType.length??>
   ret->${attr.name} = bytes[offset];
+      <#elseif attrType.name == "short">
+  ${attrType.name} raw_${attr.name} = 0;
+  memcpy(&raw_${attr.name}, bytes + offset, ${lenExpr});
+  ret->${attr.name} = ntohs(raw_${attr.name});
+      <#elseif attrType.name == "int" || attrType.name == "long">
+  ${attrType.name} raw_${attr.name} = 0;
+  memcpy(&raw_${attr.name}, bytes + offset, ${lenExpr});
+  ret->${attr.name} = ntohl(raw_${attr.name});
       <#else>
   memcpy((void*)<#if !attr.type.collection && !attr.type.lengthVariable?? && !attrType.length??>&</#if>ret->${attr.name}, bytes + offset, ${lenExpr});
       </#if>
@@ -66,8 +75,8 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
 
 void
 ${namespace}_${obj.name}_encode(const ${namespace}_${obj.name}_p ${obj.name}, 
-${""?left_pad(namespace?length + obj.name?length + 7)}unsigned char** bytes,
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
+${""?left_pad(namespace?length + obj.name?length + 9)}unsigned char** bytes,
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
 {
   size_t offset = 0;
   size_t block_bytes = 0;
@@ -79,7 +88,15 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
     <#assign attrType = modelbase4c.type_attribute(attr)>
     <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, obj.name)?string>
   // ${attr.name}
-    <#if lenExpr != "0">
+    <#if attrType.name == "short">
+  ${attrType.name} net_${attr.name} = htons(${obj.name}->${attr.name});
+  memcpy((*bytes) + offset, &net_${attr.name}, ${lenExpr});
+  offset += ${lenExpr};
+    <#elseif attrType.name == "int" || attrType.name == "long">
+  ${attrType.name} net_${attr.name} = htonl(${obj.name}->${attr.name});
+  memcpy((*bytes) + offset, &net_${attr.name}, ${lenExpr});
+  offset += ${lenExpr};
+    <#elseif lenExpr != "0">
   memcpy((*bytes) + offset, <#if !attr.type.collection && !attrType.length?? && !attr.type.lengthVariable??>&</#if>${obj.name}->${attr.name}, ${lenExpr});
   offset += ${lenExpr};
     <#else>
@@ -101,7 +118,7 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
 
 void 
 ${namespace}_${obj.name}_bytes(const ${namespace}_${obj.name}_p obj, 
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size)
+${""?left_pad(namespace?length + obj.name?length + 8)}size_t* size)
 {
   size_t total_bytes = 0;
   size_t block_bytes = 0;

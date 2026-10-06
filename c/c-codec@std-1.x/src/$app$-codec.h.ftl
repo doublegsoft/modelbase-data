@@ -4,8 +4,8 @@
 ${c.license(license)}
 </#if>
 
-#ifndef __${namespace?upper_case}_PKT_CODEC_H__
-#define __${namespace?upper_case}_PKT_CODEC_H__
+#ifndef __${namespace?upper_case}_CODEC_H__
+#define __${namespace?upper_case}_CODEC_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -26,7 +26,7 @@ extern "C"
 */
 ${namespace}_${obj.name}_p 
 ${namespace}_${obj.name}_decode(const unsigned char* buf, 
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size);
 
 /*!
 ** Serializes (encodes) an object instance into a dynamically allocated byte buffer.
@@ -43,8 +43,8 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
 */
 void 
 ${namespace}_${obj.name}_encode(const ${namespace}_${obj.name}_p obj, 
-${""?left_pad(namespace?length + obj.name?length + 7)}unsigned char** bytes, 
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
+${""?left_pad(namespace?length + obj.name?length + 9)}unsigned char** bytes, 
+${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size);
 
 /*!
 ** Calculates the total byte size required to serialize (encode) a ${obj.name} instance.
@@ -59,7 +59,7 @@ ${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
 */
 void 
 ${namespace}_${obj.name}_bytes(const ${namespace}_${obj.name}_p obj, 
-${""?left_pad(namespace?length + obj.name?length + 7)}size_t* size);
+${""?left_pad(namespace?length + obj.name?length + 8)}size_t* size);
 </#list>
 
 #ifdef __cplusplus

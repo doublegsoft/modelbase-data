@@ -56,7 +56,7 @@ ${namespace}_${obj.name}_free(${namespace}_${obj.name}_p ${obj.name})
     <#assign refObj = model.findObjectByName(attr.type.name)>
   if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL)
     ${namespace}_${refObj.name}_free(${obj.name}->${modelbase4c.name_attribute(attr)});
-  <#elseif attrType.name == "char*">
+  <#elseif attrType.name == "char*" || attr.type.lengthVariable??>
   if (${obj.name}->${modelbase4c.name_attribute(attr)} != NULL) 
     free(${obj.name}->${modelbase4c.name_attribute(attr)});
   </#if>

@@ -16,8 +16,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.*;
 import javax.sql.DataSource;
+import java.text.SimpleDateFormat;
 
 /**
  * 服务测试基类。
@@ -61,4 +62,15 @@ public class ServiceTestBase {
     }
   }
 
+  public static boolean isSameDate(Date date1, Date date2) {
+    return isSameDate(date1, date2, "yyyy-MM-dd HH:mm:ss");
+  }
+
+  public static boolean isSameDate(Date date1, Date date2, String pattern) {
+    if (date1 == date2) return true;
+    if (date1 == null || date2 == null) return false;
+
+    SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+    return sdf.format(date1).equals(sdf.format(date2));
+  }
 }

@@ -245,7 +245,6 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
 <#-------------------------->
 <#list flow.types as typeObj>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
-  // ${typeObj.name} ${typeRefType}
   <#if typeRefType != "CREF"><#continue></#if>
   <#assign collObj = model.findObjectByName(typeObj.definition.name)>
   <#-- 如果这个集合对象的属性中，非集合对象的属性引用了在这个方法中存在的 -->
