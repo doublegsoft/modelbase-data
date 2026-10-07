@@ -119,6 +119,21 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}());
     </#if>
   </#list>
+<#elseif modelbase.is_aggregate_like(obj)>
+    <#assign idAttr = modelbase.get_aggregate_id(obj)?first>
+    // 验证
+    ${java.nameType(obj.name)}Query toFindQuery = new ${java.nameType(obj.name)}Query();
+    toFindQuery.set${java.nameType(obj.attributes?first.name)}(new ${java.nameType(obj.attributes?first.type.name)}Query());
+    toFindQuery.get${java.nameType(obj.attributes?first.name)}().${modelbase4java.name_setter(idAttr)}(savedQuery.get${java.nameType(obj.attributes?first.name)}().${modelbase4java.name_getter(idAttr)}());
+    ${java.nameType(obj.name)}Query foundQuery = service.read${java.nameType(obj.name)}(toFindQuery);
+    Assert.assertNotNull(foundQuery);
+    <#list obj.attributes as attr>
+      <#if attr.type.custom>
+    Assert.assertNotNull(foundQuery.get${java.nameType(attr.name)}());
+      <#elseif attr.type.collection>
+    // FIXME: Assert.assertTrue(foundQuery.get${java.nameType(attr.name)}().size() > 0);
+      </#if>
+    </#list>
 </#if>    
   }
 

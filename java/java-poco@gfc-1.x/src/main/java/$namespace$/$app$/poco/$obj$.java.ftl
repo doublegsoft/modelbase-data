@@ -18,7 +18,7 @@ import ${imp};
 public class ${java.nameType(obj.name)} implements Serializable {
 
   private static long serialVersionNumber = -1L;
-<#if idAttrs?size == 1>  
+<#if idAttrs?size == 1 && !modelbase.is_aggregate_like(obj)>  
   
   public static final ${java.nameType(obj.name)} NULL = new ${java.nameType(obj.name)}() {
 

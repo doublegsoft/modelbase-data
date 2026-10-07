@@ -42,7 +42,7 @@ import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
  */
 @Component 
 public class ${typename}Validation {
-<#if !obj.isLabelled("pivot")>
+<#if !obj.isLabelled("pivot") && !modelbase.is_aggregate_like(obj)>
   <#if !existingDaos[obj.name]??>
     <#assign existingDaos += {obj.name: obj}>
     

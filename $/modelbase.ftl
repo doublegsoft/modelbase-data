@@ -113,6 +113,29 @@
 </#function>
 
 <#--
+ ### 获取聚合对象的根实体主键标识属性（ID Attributes）。
+ ### <p>
+ ### 规则：将聚合对象的第一个属性视为聚合根属性（Root Attribute），
+ ### 依据该属性的类型名称从模型中查找根实体对象，并提取其主键属性。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 获取目标对象 attributes 列表中的第一个属性作为根属性（rootAttr）。
+ ### 2. 根据首个属性的类型名称（rootAttr.type.name），在 model 中查找对应的根实体对象（rootObj）。
+ ### 3. 调用 get_id_attributes 方法获取并返回该根实体的主键属性。
+ ###
+ ### @param obj
+ ###        待解析的聚合实体/模型对象（需包含 attributes 列表）
+ ###
+ ### @return
+ ###        list/attribute - 聚合根实体对应的主键属性集合或属性对象
+ -->
+<#function get_aggregate_id obj>
+  <#local rootAttr = obj.attributes?first>
+  <#local rootObj = model.findObjectByName(rootAttr.type.name)>
+  <#return get_id_attributes(rootObj)>
+</#function>
+
+<#--
  ### 在聚合对象中查找并匹配与给定数据属性所属父类型一致的聚合属性。
  ### <p>
  ### 遍历聚合对象的所有属性，过滤掉非自定义类型的属性；

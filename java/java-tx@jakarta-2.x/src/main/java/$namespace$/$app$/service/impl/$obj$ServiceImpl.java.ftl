@@ -344,7 +344,10 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     <#else>
+      <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    // FIXME: IMPROVEMENT
+    ${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_setter(idAttr)}(query.get${java.nameType(typeObj.variable)}Id());
     ${java.nameVariable(typeObj.variable)}Query = ${java.nameVariable(typeObj.variable)}Service.get${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     retVal.set${java.nameType(typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query);
     </#if>

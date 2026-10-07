@@ -98,7 +98,7 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
   }
 
   public void from${java.nameType(refObj.name)}Query(${java.nameType(refObj.name)}Query query) {
-    
+    set${java.nameType(attr.name)}(query);
   }
   </#list>
 <#else><#-- 没有任何标注的任意对象 -->  
