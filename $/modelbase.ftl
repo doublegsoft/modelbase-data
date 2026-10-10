@@ -136,6 +136,41 @@
 </#function>
 
 <#--
+ ### 根据属性名称或属性类型名称，从目标对象中检索匹配的属性。
+ ### <p>
+ ### 匹配规则（按优先级依次判定）：
+ ### 1. 属性名精确匹配：属性自身的名称（attr.name）与目标标识 attrProp 一致。
+ ### 2. 直接自定义类型匹配：属性为自定义类型且其类型名称与目标标识 attrProp 一致。
+ ### 3. 集合元素类型匹配：属性为集合类型，且其泛型元素类型为自定义类型并与目标标识 attrProp 一致。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 遍历目标对象的 attributes 列表中的每个属性（attr）。
+ ### 2. 优先比对属性名称（attr.name == attrProp），若匹配则直接返回。
+ ### 3. 其次判断是否为自定义类型（attr.type.custom）且类型名匹配 attrProp，若匹配则返回。
+ ### 4. 再次判断是否为集合类型（attr.type.collection）且泛型元素类型匹配 attrProp，若匹配则返回。
+ ### 5. 遍历结束若均未命中，则不返回任何属性（即返回 null）。
+ ###
+ ### @param obj
+ ###        待检索的聚合实体/模型对象（需包含 attributes 列表）
+ ### @param attrProp
+ ###        待匹配的属性名称或目标类型名称（String）
+ ###
+ ### @return
+ ###        attribute - 匹配到的属性对象；若未找到匹配项则无返回值
+ -->
+<#function get_aggregate_attribute obj attrProp>
+  <#list obj.attributes as attr>
+    <#if attr.name == attrProp>
+      <#return attr>
+    <#elseif attr.type.custom && attr.type.name == attrProp>
+      <#return attr>
+    <#elseif attr.type.collection && attr.type.componentType.custom && attr.type.componentType.name == attrProp>
+      <#return attr>
+    </#if>
+  </#list>
+</#function>
+
+<#--
  ### 在聚合对象中查找并匹配与给定数据属性所属父类型一致的聚合属性。
  ### <p>
  ### 遍历聚合对象的所有属性，过滤掉非自定义类型的属性；

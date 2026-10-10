@@ -7,6 +7,8 @@ ${c.license(license)}
 #ifndef __${app.name?upper_case}_POCO_H__
 #define __${app.name?upper_case}_POCO_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C"
 {

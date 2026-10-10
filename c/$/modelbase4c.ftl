@@ -44,25 +44,25 @@
     <#return {"name": "char", "length": 2}>
   <#elseif attr.type.name == "bit">
     <#if (attr.type.length <= 8)>
-      <#return {"name":"char"}>
+      <#return {"name":"uint8_t"}>
     <#elseif (attr.type.length <= 16)>
-      <#return {"name":"short"}>
+      <#return {"name":"uint16_t"}>
     <#elseif (attr.type.length <= 32)>
-      <#return {"name":"int"}>
+      <#return {"name":"uint32_t"}>
     <#elseif (attr.type.length <= 64)>
-      <#return {"name":"long"}>
+      <#return {"name":"uint64_t"}>
     <#else>
       <#return {"name":"char", "length": attr.type.length / 8}>
     </#if>
   <#elseif attr.type.name == "byte">
     <#if (attr.type.length <= 1)>
-      <#return {"name":"char"}>
+      <#return {"name":"uint8_t"}>
     <#elseif (attr.type.length <= 2)>
-      <#return {"name":"short"}>
+      <#return {"name":"uint16_t"}>
     <#elseif (attr.type.length <= 4)>
-      <#return {"name":"int"}>
+      <#return {"name":"uint32_t"}>
     <#elseif (attr.type.length <= 8)>
-      <#return {"name":"long"}>
+      <#return {"name":"uint64_t"}>
     <#else>
       <#return {"name":"char", "length": attr.type.length}>
     </#if>

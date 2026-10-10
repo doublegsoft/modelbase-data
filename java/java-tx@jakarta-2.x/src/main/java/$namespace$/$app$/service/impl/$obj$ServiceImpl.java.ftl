@@ -353,8 +353,27 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>
   <#elseif typeRefType == "CREF">
     <#if modelbase.is_attribute_conjunction(obj, typeObj.variable)>
-    <#-- TODO: 实现有conjunction标记的属性处理逻辑 -->
-    // TODO: 实现有conjunction标记的属性处理逻辑
+      <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
+      <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+      <#assign aggregateAttr = modelbase.get_aggregate_attribute(obj, leftAttr.parent.name)>
+    ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+      <#if aggregateAttr.type.collection>
+    // 获取【${modelbase.get_attribute_label(aggregateAttr)}】属性的集合数据
+    if (query.get${java.nameType(aggregateAttr.name)}() != null && !query.get${java.nameType(aggregateAttr.name)}().isEmpty()) {
+      for (${java.nameType(aggregateAttr.type.componentType.name)}Query row : query.get${java.nameType(aggregateAttr.name)}()) {
+        ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(row.${modelbase4java.name_getter(leftAttr)}());
+      }
+      ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+      retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
+    }
+      <#else>
+    // 获取【${modelbase.get_attribute_label(aggregateAttr)}】属性的数据
+    if (query.get${java.nameType(aggregateAttr.name)}() != null && query.get${java.nameType(aggregateAttr.name)}().${modelbase4java.name_getter(leftAttr)}() != null) {
+      ${java.nameVariable(typeObj.variable)}Query.set${java.nameType(modelbase.get_attribute_sql_name(rightAttr))}(query.get${java.nameType(aggregateAttr.name)}().${modelbase4java.name_getter(leftAttr)}());
+      ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(inflector.pluralize(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+      retVal.from${java.nameType(typeObj.name)}Queries(${java.nameVariable(typeObj.variable)}Queries);
+    }
+      </#if>
     <#else>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
