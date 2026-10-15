@@ -15,7 +15,6 @@ class Option {
     required this.value,
   });
 }
-
 <#assign existingOptions = {}>
 <#list model.objects as obj>
   <#list obj.attributes as attr>
@@ -28,13 +27,13 @@ class Option {
 ///        
 const List<Option> arrayOf${dart.nameType(obj.name)}${dart.nameType(attr.name)} = [
       <#list pairs as pair>
-  Option(text: '${pair.value}', value: '${pair.key}',),    
+  Option(text: '${pair.text}', value: '${pair.code}',),    
       </#list>
 ];
 
 const Map<String,Option> mapOf${dart.nameType(obj.name)}${dart.nameType(attr.name)} = {
       <#list pairs as pair>
-  '${pair.key}': Option(text: '${pair.value}', value: '${pair.key}',),    
+  '${pair.code}': Option(text: '${pair.text}', value: '${pair.code}',),    
       </#list>
 };   
 
