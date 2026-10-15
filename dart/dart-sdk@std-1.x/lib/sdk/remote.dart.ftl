@@ -3,157 +3,271 @@
 <#if license??>
 ${dart.license(license)}
 </#if>
-import '/common/xhr.dart' as xhr;
-import '/common/error.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 import '/model/dto.dart';
+import 'base.dart';
+
+///
+/// A client responsible for handling remote HTTP network requests,
+/// endpoint URI construction, and request execution.
+///
+class Remote {
+
+  /// The base URL prepended to all relative endpoint paths
+  /// (e.g., `'https://api.example.com'`).
+  final String baseUrl;
+
+  /// The underlying HTTP client used to dispatch network requests.
+  final http.Client _client;
+
+  /// Default HTTP headers included with every outgoing request
+  /// (defaults to `{'Content-Type': 'application/json'}`).
+  final Map<String, String> defaultHeaders;
+
+  /// Creates a new [Remote] instance.
+  ///
+  /// - [baseUrl]: The root URL for API calls. Defaults to an empty string.
+  /// - [client]: An optional custom [http.Client] (useful for testing or mocking).
+  /// - [headers]: Custom default headers to override or supplement [defaultHeaders].
+  Remote({
+    this.baseUrl = '',
+    http.Client? client,
+    Map<String, String>? headers,
+  })  : _client = client ?? http.Client(),
+        defaultHeaders = headers ?? {'Content-Type': 'application/json'};
+
+  /// Constructs a full [Uri] by joining [baseUrl] and the endpoint [path],
+  /// appending any provided [queryParameters].
+  ///
+  /// - Automatically handles leading and trailing slashes to avoid double slashes.
+  /// - Strips out any `null` values from [queryParameters].
+  /// - Returns the parsed and normalized [Uri].
+  Uri _buildUri(String path, [Map<String, dynamic>? queryParameters]) {
+    // Strip trailing slash from baseUrl if present
+    final cleanBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+
+    // Ensure leading slash on path
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    final baseUri = Uri.parse('$cleanBase$cleanPath');
+
+    if (queryParameters == null || queryParameters.isEmpty) {
+      return baseUri;
+    }
+
+    // Convert non-null values to strings for query parameters
+    final query = <String, String>{};
+    queryParameters.forEach((key, value) {
+      if (value != null) {
+        query[key] = value.toString();
+      }
+    });
+
+    return baseUri.replace(queryParameters: query);
+  }
+
+  /// Close the client connection
+  void close() {
+    _client.close();
+  }
 <#list model.objects as obj>
   <#if obj.isLabelled("generated")><#continue></#if>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
-  <#assign pluralTypeName = inflector.pluralize(dart.nameType(obj.name))>
-  <#assign singularTypeName = dart.nameType(obj.name)>
-  <#if pluralTypeName == singularTypeName>
-    <#assign pluralTypeName += "List">
-  </#if>
-  
-///
-/// 保存【${modelbase.get_object_label(obj)}】多个数据。
-///
-Future<void> save${pluralTypeName}({
-  required List<${dart.nameType(obj.name)}Query> queries,
-}) async {
-  List<Map<String,dynamic>> payload = [];
-  for (final query in queries) {
-    payload.add(query.to());
+
+  Future<void> save${dart.nameType(modelbase.get_object_plural(obj))}({
+    required List<${dart.nameType(obj.name)}Query> queries,
+  }) async {
+    List<Map<String,dynamic>> payload = [];
+    for (final query in queries) {
+      payload.add(query.to());
+    }
+    final uri = _buildUri('/api/${modelbase.get_object_module(obj)}/${modelbase.get_object_plural(obj)}/batch');
+    final response = await _client.post(
+      uri,
+      headers: defaultHeaders,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    } else {
+      throw SdkException(
+        'Failed to save ${modelbase.get_object_plural(obj)}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    }
   }
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${masterObj.name}/batch', payload);  
-  <#else>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${obj.name}/batch', payload);
-  </#if>
-}
-    
-///
-/// 保存【${modelbase.get_object_label(obj)}】数据。
-///
-Future<${dart.nameType(obj.name)}Query> save${dart.nameType(obj.name)}({
-  required ${dart.nameType(obj.name)}Query query,
-}) async {
-  Map<String,dynamic> payload = query.to();
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${masterObj.name}/save', payload);  
-  <#else>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${obj.name}/save', payload);
-  </#if>
-  <#list idAttrs as idAttr>
-  query.${modelbase.get_attribute_sql_name(idAttr)} = data['${modelbase.get_attribute_sql_name(idAttr)}'];
-  </#list>
-  return query;
-}
 
-///
-/// 部分保存【${modelbase.get_object_label(obj)}】数据。
-///
-Future<${dart.nameType(obj.name)}Query> modify${dart.nameType(obj.name)}({
-  required ${dart.nameType(obj.name)}Query query,
-}) async {
-  Map<String,dynamic> payload = query.to();
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  Map<String,dynamic> data = await xhr.patch('/${app.name}/${masterObj.name}/modify', payload);  
-  <#else>
-  Map<String,dynamic> data = await xhr.patch('/${app.name}/${obj.name}/modify', payload);
-  </#if>
-  <#list idAttrs as idAttr>
-  query.${modelbase.get_attribute_sql_name(idAttr)} = data['${modelbase.get_attribute_sql_name(idAttr)}'];
-  </#list>
-  return query;
-}
+  ///
+  /// 保存【${modelbase.get_object_label(obj)}】数据。
+  ///
+  Future<${dart.nameType(obj.name)}Query> save${dart.nameType(obj.name)}({
+    required ${dart.nameType(obj.name)}Query query,
+  }) async {
+    Map<String,dynamic> payload = query.to();
+    final uri = _buildUri('/api/${modelbase.get_object_module(obj)}/${modelbase.get_object_module(obj)}/${obj.name}/save');
+    final response = await _client.post(
+      uri,
+      headers: defaultHeaders,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final dynamic decoded = jsonDecode(response.body);
 
-///
-/// 读取【${modelbase.get_object_label(obj)}】数据。
-///
-Future<${dart.nameType(obj.name)}Query?> read${dart.nameType(obj.name)}({
-  <#list idAttrs as idAttr>
-    <#if idAttr.type.name == "datetime"><#continue></#if>
-  required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
-  </#list>
-}) async {
-  Map<String,dynamic> payload = {};
-  bool hasIdValue = false;
-  <#list idAttrs as idAttr>
-    <#if idAttr.type.name == "datetime"><#continue></#if>
-  if (${modelbase.get_attribute_sql_name(idAttr)} != '') {
-    hasIdValue = true;
-    payload['${modelbase.get_attribute_sql_name(idAttr)}'] = ${modelbase.get_attribute_sql_name(idAttr)};
+      // Handles both direct object response and envelope responses ({ "data": { ... } })
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] is Map<String, dynamic>
+            ? decoded['data'] as Map<String, dynamic>
+            : decoded;
+        return ${dart.nameType(obj.name)}Query.from(data);
+      }
+
+      throw SdkException(
+        'Unexpected response format when saving ${obj.name}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    } else {
+      throw SdkException(
+        'Failed to save ${obj.name}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    }
   }
-  </#list>
-  if (!hasIdValue) {
-    throw Exception('there is no given id value to read ${dart.nameType(obj.name)} object.');
+
+  ///
+  /// 读取【${modelbase.get_object_label(obj)}】数据。
+  ///
+  Future<${dart.nameType(obj.name)}Query?> read${dart.nameType(obj.name)}({
+    <#list idAttrs as idAttr>
+      <#if idAttr.type.name == "datetime"><#continue></#if>
+    required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
+    </#list>
+  }) async {
+    final Map<String, dynamic> payload = {};
+    bool hasIdValue = false;
+    <#list idAttrs as idAttr>
+      <#if idAttr.type.name == "datetime"><#continue></#if>
+    if (${modelbase.get_attribute_sql_name(idAttr)}.toString().isNotEmpty) {
+      hasIdValue = true;
+      payload['${modelbase.get_attribute_sql_name(idAttr)}'] = ${modelbase.get_attribute_sql_name(idAttr)};
+    }
+    </#list>
+
+    if (!hasIdValue) {
+      throw SdkException('There is no given id value to read ${dart.nameType(obj.name)} object.');
+    }
+
+    final uri = _buildUri('/v1/${modelbase.get_object_module(obj)}/${obj.name}/read', payload);
+    final response = await _client.get(uri, headers: defaultHeaders);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final dynamic decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] is Map<String, dynamic>
+            ? decoded['data'] as Map<String, dynamic>
+            : decoded;
+        return ${dart.nameType(obj.name)}Query.from(data);
+      }
+      return null;
+    } else {
+      throw SdkException(
+        'Failed to read ${dart.nameType(obj.name)}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    }
   }
-  Map<String,dynamic> data = await xhr.get('/${app.name}/${obj.name}/read', payload);
-  return ${dart.nameType(obj.name)}Query.from(data);
-}
 
-///
-/// 加载【${modelbase.get_object_label(obj)}】数据。
-///
-Future<Pagination<${dart.nameType(obj.name)}Query>> find${dart.nameType(inflector.pluralize(obj.name))}({
-  ${dart.nameType(obj.name)}Query? query,
-}) async {
-  List<${dart.nameType(obj.name)}Query> rows = [];
-  query = query ?? ${dart.nameType(obj.name)}Query();
-  Map<String,dynamic> payload = query.to();
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${masterObj.name}/find', payload);  
-  <#else>
-  Map<String,dynamic> data = await xhr.post('/${app.name}/${obj.name}/find', payload);
-  </#if>
-  data['data'].forEach((item) {
-    rows.add(${dart.nameType(obj.name)}Query.from(item));
-  });
-  return new Pagination(data['total'], rows);
-}
+  ///
+  /// 加载【${modelbase.get_object_label(obj)}】数据。
+  ///
+  Future<Pagination<${dart.nameType(obj.name)}Query>> find${dart.nameType(inflector.pluralize(obj.name))}({
+    ${dart.nameType(obj.name)}Query? query,
+  }) async {
+    final effectiveQuery = query ?? ${dart.nameType(obj.name)}Query();
+    final Map<String, dynamic> payload = effectiveQuery.to();
 
-///
-/// 删除【${modelbase.get_object_label(obj)}】数据。
-///
-Future<bool> remove${dart.nameType(obj.name)}({
-  <#list idAttrs as idAttr>
-    <#if idAttr.type.name == 'datetime'><#continue></#if>
-  required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
-  </#list>
-}) async {
-  Map<String,dynamic> payload = {
-  <#list idAttrs as idAttr>
-    <#if idAttr.type.name == 'datetime'><#continue></#if>
-    '${modelbase.get_attribute_sql_name(idAttr)}': ${modelbase.get_attribute_sql_name(idAttr)},
-  </#list>
-  };
-  <#if obj.isLabelled("pivot")>
-    <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
-  Map<String,dynamic> data = await xhr.delete('/${app.name}/${masterObj.name}/remove', payload);  
-  <#else>
-  Map<String,dynamic> data = await xhr.delete('/${app.name}/${obj.name}/remove', payload);
-  </#if>
-  return true;
-}
-
-  <#list obj.attributes as attr>
-    <#if attr.isLabelled("incrementable")>
-
-///
-/// 自增【${modelbase.get_object_label(obj)}】【${modelbase.get_object_label(attr)}】数据。
-///    
-Future<bool> increment${dart.nameType(attr.name)}({
-  required ${dart.nameType(obj.name)}Query query,
-}) async {
-  Map<String,dynamic> payload = query.to();
-  Map<String,dynamic> resp = await xhr.patch('/${app.name}/${obj.name}/${attr.name}/increment', payload);  
-  return true;
-}  
+    <#if obj.isLabelled("pivot")>
+      <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    final uri = _buildUri('/v1/${modelbase.get_object_module(obj)}/${masterObj.name}/find');
+    <#else>
+    final uri = _buildUri('/v1/${modelbase.get_object_module(obj)}/${obj.name}/find');
     </#if>
-  </#list>
+
+    final response = await _client.post(
+      uri,
+      headers: defaultHeaders,
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final dynamic decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        return Pagination.fromJson(
+          decoded,
+          (item) => ${dart.nameType(obj.name)}Query.from(item as Map<String, dynamic>),
+        );
+      }
+      return Pagination(total: 0, data: []);
+    } else {
+      throw SdkException(
+        'Failed to find ${dart.nameType(inflector.pluralize(obj.name))}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    }
+  }
+
+  ///
+  /// 删除【${modelbase.get_object_label(obj)}】数据。
+  ///
+  Future<bool> remove${dart.nameType(obj.name)}({
+    <#list idAttrs as idAttr>
+      <#if idAttr.type.name == 'datetime'><#continue></#if>
+    required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
+    </#list>
+  }) async {
+    final Map<String, dynamic> payload = {
+    <#list idAttrs as idAttr>
+      <#if idAttr.type.name == 'datetime'><#continue></#if>
+      '${modelbase.get_attribute_sql_name(idAttr)}': ${modelbase.get_attribute_sql_name(idAttr)},
+    </#list>
+    };
+
+    <#if obj.isLabelled("pivot")>
+      <#assign masterObj = model.findObjectByName(obj.getLabelledOptions("pivot")["master"])>
+    final uri = _buildUri('/${app.name}/${masterObj.name}/remove');  
+    <#else>
+    final uri = _buildUri('/${app.name}/${obj.name}/remove');
+    </#if>
+
+    final response = await _client.delete(
+      uri,
+      headers: defaultHeaders,
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return true;
+    } else {
+      throw SdkException(
+        'Failed to remove ${dart.nameType(obj.name)}',
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+    }
+  }
 </#list>
+
+}
+
+/// Global default instance
+final remote = Remote();

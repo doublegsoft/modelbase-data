@@ -3,18 +3,7 @@
 <#if license??>
 ${dart.license(license)}
 </#if>
-
-class Option {
-
-  final String text;
-  
-  final String value;
-  
-  const Option({
-    required this.text,
-    required this.value,
-  });
-}
+import 'base.dart';
 <#assign existingOptions = {}>
 <#list model.objects as obj>
   <#list obj.attributes as attr>
