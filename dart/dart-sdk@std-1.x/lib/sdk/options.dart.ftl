@@ -16,45 +16,6 @@ class Option {
   });
 }
 
-///
-/// 【语言】枚举值
-///
-const List<Option> arrayOfLanguage = [
-  Option(text: '中文', value: 'ZH',),
-  Option(text: '英文', value: 'EN',),
-  Option(text: '德文', value: 'DE',),
-  Option(text: '日文', value: 'JP',),
-];
-
-const Map<String,Option> mapOfLanguage = {
-  'ZH': Option(text: '中文', value: 'ZH',),
-  'EN': Option(text: '英文', value: 'EN',),
-  'DE': Option(text: '德文', value: 'DE',),
-  'JP': Option(text: '日文', value: 'JP',),
-};
-
-String getTextOfLanguage(String? value) {
-  if (value == null) {
-    return '';
-  }
-  Option? option = mapOfLanguage[value];
-  if (option == null) {
-    return '';
-  }
-  return option.text;
-}
-
-String getValueOfLanguage(String? text) {
-  if (text == null) {
-    return '';
-  }
-  for (Option opt in arrayOfLanguage) {
-    if (opt.text == text) {
-      return opt.value;
-    }
-  }
-  return '';
-}
 <#assign existingOptions = {}>
 <#list model.objects as obj>
   <#list obj.attributes as attr>
