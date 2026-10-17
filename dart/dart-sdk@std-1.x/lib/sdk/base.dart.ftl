@@ -3,6 +3,7 @@
 <#if license??>
 ${dart.license(license)}
 </#if>
+import '/model/dto.dart';
 
 ///
 /// Represents a selectable key-value option, commonly used in dropdowns,
@@ -48,3 +49,31 @@ class SdkException implements Exception {
   @override
   String toString() => 'SdkException: $message (status: $statusCode)';
 }
+<#list model.objects as obj>
+  <#if obj.isLabelled("generated")><#continue></#if>
+  <#assign idAttrs = modelbase.get_id_attributes(obj)>
+
+typedef Save${dart.nameType(modelbase.get_object_plural(obj))}Fn = Future<List<${dart.nameType(obj.name)}Query>> Function({
+  required List<${dart.nameType(obj.name)}Query> queries,
+});
+
+typedef Save${dart.nameType(obj.name)}Fn = Future<${dart.nameType(obj.name)}Query> Function({
+  required ${dart.nameType(obj.name)}Query query,
+});
+
+typedef Read${dart.nameType(obj.name)}Fn = Future<${dart.nameType(obj.name)}Query?> Function({
+  <#list idAttrs as idAttr>
+  required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
+  </#list>
+});
+
+typedef Find${dart.nameType(modelbase.get_object_plural(obj))}Fn = Future<Pagination<${dart.nameType(obj.name)}Query>> Function({
+  ${dart.nameType(obj.name)}Query? query,
+});
+
+typedef Delete${dart.nameType(obj.name)}Fn = Future<bool> Function({
+  <#list idAttrs as idAttr>
+  required ${modelbase4dart.type_attribute_primitive(idAttr)} ${modelbase.get_attribute_sql_name(idAttr)},
+  </#list>
+});
+</#list>

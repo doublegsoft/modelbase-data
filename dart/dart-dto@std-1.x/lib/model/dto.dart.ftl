@@ -13,7 +13,7 @@ class Pagination<T> {
     _data.addAll(data);
   }
   
-  List<T> _data = [];
+  final List<T> _data = [];
   
   int _total = 0;
   
@@ -21,6 +21,18 @@ class Pagination<T> {
   
   int get total => _total;
 
+  /// 实现 fromJson
+  /// [json] 后端返回的 Map 数据
+  /// [fromJsonT] 将单个 json 项转换为 T 类型的函数
+  factory Pagination.fromJson(
+    Map<String, dynamic> json,
+    T Function(dynamic item) fromJsonT,
+  ) {
+    final total = (json['total'] as num?)?.toInt() ?? 0;
+    final rawList = json['data'] as List<dynamic>? ?? [];
+    final data = rawList.map((item) => fromJsonT(item)).toList();
+    return Pagination<T>(total, data);
+  }
 }
 
 class QueryHandler {
@@ -52,7 +64,7 @@ class AbstractQuery {
   });
   
   Map<String,dynamic> to({List<String>? fields = const <String>[]}) {
-    Map<String,dynamic> retVal = new Map<String,dynamic>();
+    Map<String,dynamic> retVal = <String,dynamic>{};
     return retVal;
   }
 }
@@ -134,12 +146,12 @@ class ${java.nameType(obj.name)}Query extends AbstractQuery {
   
   @override
   Map<String,dynamic> to({List<String>? fields = const <String>[]}) {
-    Map<String,dynamic> retVal = new Map<String,dynamic>();
+    Map<String,dynamic> retVal = <String,dynamic>{};
 <#assign processedAttrs = {}>     
 <@modelbase4dart.print_object_query_to obj=obj processedAttrs=processedAttrs />         
-    if (!fields!.isEmpty) {
-      Map<String,dynamic> optionalRet = new Map<String,dynamic>();
-      for (String field in fields!) {
+    if (fields!.isNotEmpty) {
+      Map<String,dynamic> optionalRet = <String,dynamic>{};
+      for (String field in fields) {
         optionalRet[field] = retVal[field];
       }
       return optionalRet;
@@ -156,30 +168,21 @@ class ${java.nameType(obj.name)}Query extends AbstractQuery {
   }
   
   Map<String,dynamic> sql({List<String>? fields = const <String>[]}) {
-    Map<String,dynamic> retVal = new Map<String,dynamic>();
+    Map<String,dynamic> retVal = <String,dynamic>{};
 <#assign processedAttrs = {}>     
 <@modelbase4dart.print_object_query_sql obj=obj />         
-    if (!fields!.isEmpty) {
-      Map<String,dynamic> optionalRet = new Map<String,dynamic>();
-      for (String field in fields!) {
+    if (fields!.isNotEmpty) {
+      Map<String,dynamic> optionalRet = <String,dynamic>{};
+      for (String field in fields) {
         optionalRet[field] = retVal[field];
       }
       return optionalRet;
     }
     return retVal;
   }
-  
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! ${dart.nameType(obj.name)}Query) return false;
-<#assign processedAttrs = {}>     
-<@modelbase4dart.print_object_query_equal obj=obj processedAttrs=processedAttrs />        
-    return true;
-  }
 
   static ${dart.nameType(obj.name)}Query from(Map<String,dynamic> map) {
-    ${dart.nameType(obj.name)}Query retVal = new ${dart.nameType(obj.name)}Query();
+    ${dart.nameType(obj.name)}Query retVal = ${dart.nameType(obj.name)}Query();
 <#assign processedAttrs = {}>     
 <@modelbase4dart.print_object_query_from obj=obj processedAttrs=processedAttrs />     
     if (map['results'] != null) {

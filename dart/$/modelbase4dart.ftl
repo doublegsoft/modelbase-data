@@ -50,11 +50,14 @@ ${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '${tatabase.ran
   <#elseif attr.type.custom>
     <#local refObj = model.findObjectByName(attr.type.name)>
     <#local refObjIdAttr = modelbase.get_id_attributes(refObj)[0]>
-    <#return get_attribute_value_as_code(refObjIdAttr)>  
+    <#return test_unit_value(refObjIdAttr)>  
   <#elseif attr.constraint.identifiable && attr.type.name == "string">
     <#assign UUID = statics['java.util.UUID']>
     <#assign id = UUID.randomUUID()?string?upper_case>
-    <#return "'" + id + "'">    
+    <#return "'" + id + "'">
+  <#elseif attr.constraint.identifiable && attr.type.name == "long">
+    <#local val = tatabase.number(0,100,0)>
+    <#return val>
   <#elseif attr.type.name?starts_with('enum')>
     <#return "'" + tatabase.enumcode("enum" + widget.options["values"]) + "'">
   <#elseif attr.type.name == "string" && (attr.type.length > 100)>

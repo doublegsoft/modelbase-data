@@ -3,10 +3,10 @@
 <#if license??>
 ${dart.license(license)}
 </#if>
-import 'dart:convert';
+<#--  import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smbiz/model/dto.dart';
-import 'package:smbiz/sdk/remote.dart';
+import '/model/dto.dart';
+import '/sdk/remote.dart';
 
 void main() {
 <#list model.objects as obj>
@@ -32,4 +32,4 @@ void main() {
     });
   });
 </#list>  
-}
+}  -->
