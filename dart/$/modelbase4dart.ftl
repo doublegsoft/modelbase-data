@@ -11,18 +11,6 @@
     <#return id>  
   <#elseif attr.type?starts_with('enum')>
     <#return tatabase.enumcode("enum" + widget.options["values"])>
-  <#--  
-  <#elseif (widget.id!"unknown") == "id_card_number">
-${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '${tatabase.random("id_card_number", "")}',   
-  <#elseif (widget.id!"unknown") == "avatar">
-${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '',   
-  <#elseif (widget.type!"unknown") == "image">
-${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '',   
-  <#elseif (widget.type!"unknown") == "mobile">  
-${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '${tatabase.random("mobile", "")}',    
-  <#elseif (widget.type!"unknown") == "email">  
-${""?left_pad(indent)}'${js.nameVariable(widget.id!"unknown")}': '${tatabase.random("user", "")}@${tatabase.random("domain", "")}',     
-  -->
   <#elseif attr.type.name == "string" && (attr.type.length > 100)>
     <#return tatabase.value("note")> 
   <#elseif attr.type.name == "number">  
