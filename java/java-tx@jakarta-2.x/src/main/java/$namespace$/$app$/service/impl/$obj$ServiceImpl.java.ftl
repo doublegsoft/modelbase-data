@@ -6,7 +6,6 @@ ${java.license(license)}
 <#assign uniqueGroups = modelbase.group_unique_attributes(obj)>
 <#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
 <#assign rootObj = typeDef.definition>
-<#assign detailObjs = []>
 <#assign flow = typeDef.flow>
 <#assign idAttrs = typeDef.getIdentifiableAttributes()>
 <#assign existings = {}>
@@ -198,7 +197,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#elseif refTypeName == "AREF">
       <#assign refObj = model.findObjectByName(typeObj.name)>
       <#assign refObjIdAttr = refObj.getIdentifiableAttribute()>
+    <#if modelbase.is_aggregate_like(obj)>
+    if (query.get${java.nameType(typeObj.variable)}() != null) {
+      ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    }
+    <#else>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    </#if>
     if (${java.nameVariable(typeObj.variable)}Query != null) {
       ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
       query.${modelbase4java.name_setter(refObjIdAttr, typeObj.variable)}(${java.nameVariable(typeObj.variable)}Query.${modelbase4java.name_getter(refObjIdAttr)}());
@@ -215,7 +220,13 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#assign typeObj = flow.types[idx]>
     <#assign refTypeName = typeDef.getReferenceType(typeObj)>
     <#if refTypeName != "OREF"><#continue></#if>
+    <#if modelbase.is_aggregate_like(obj)>
+    if (query.get${java.nameType(typeObj.variable)}() != null) {
+      ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    }
+    <#else>
     ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
+    </#if>
     ${java.nameVariable(typeObj.variable)}Service.save${java.nameType(typeObj.name)}(${java.nameVariable(typeObj.variable)}Query);
     query.from${java.nameType(typeObj.name)}Query(${java.nameVariable(typeObj.variable)}Query);
   </#list>

@@ -1,5 +1,7 @@
 <#import "/$/modelbase.ftl" as modelbase>
 <#import "/$/modelbase4java.ftl" as modelbase4java>
+<#assign typeDef = objectConstructor("com.doublegsoft.jcommons.metacode.TypeDefinition", obj, model)>
+<#assign flow = typeDef.flow>
 <#-- 生成属性为自定义对象的对象数据 -->
 <#macro print_test_obj attr obj suffix="" is_aggregate_like=false>
   private ${java.nameType(obj.name)}Query test${java.nameType(attr.name)}${suffix}() {
@@ -170,6 +172,24 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = test${java.nameType(obj.name)}();
+<#--  <#list obj.attributes as attr>
+    <#if attr?index == 0><#continue></#if>
+    <#if attr.type.custom>
+    toSaveQuery.set${java.nameType(attr.name)}(null);
+    </#if>
+</#list>  -->
+<#if modelbase.is_aggregate_like(obj)>
+  <#assign null_set = false>
+  <#assign rootObj = model.findObjectByName(obj.attributes?first.name)>
+  <#list flow.sortTypes() as typeObj>
+    <#if null_set && !typeObj.collection>
+    toSaveQuery.set${java.nameType(typeObj.variable)}(null);
+    </#if>
+    <#if rootObj.name == typeObj.name>
+      <#assign null_set = true>
+    </#if>
+  </#list>
+</#if>
     ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
     Assert.assertNotNull(savedQuery);
 <#if obj.isLabelled("composite") || obj.isLabelled("persistence")>
@@ -199,6 +219,12 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(rootObj.name)}Query toSave${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
     ${java.nameType(rootObj.name)}Query found${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
 <@print_assert_obj obj=rootObj expected="toSave"+java.nameType(attrRoot.name) actual="found"+java.nameType(attrRoot.name) indent=4 />
+  <#list obj.attributes as attr>
+    <#if attr?index == 0><#continue></#if>
+    <#if attr.type.custom>
+    Assert.assertNull(foundQuery.get${java.nameType(attr.name)}());
+    </#if>
+  </#list>
 </#if>    
   }
 
