@@ -112,6 +112,15 @@
   <#return true>
 </#function>
 
+<#function is_plain_like obj>
+  <#list obj.attributes as attr>
+    <#if !attr.isLabelled("original") && !attr.isLabelled("persistence")>
+      <#return false>
+    </#if>
+  </#list>
+  <#return true>
+</#function>
+
 <#--
  ### 获取聚合对象的根实体主键标识属性（ID Attributes）。
  ### <p>

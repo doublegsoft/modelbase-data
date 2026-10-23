@@ -514,15 +514,49 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     retVal.setTotal(total);
   <#elseif typeRefType == "AREF">
-    <#--  ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();  -->
+    ${java.nameVariable(typeObj.variable)}Query = query.to${java.nameType(typeObj.name)}Query();
     <#if typeObj.reference??>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
     <#else>
       <#assign idAttr = modelbase.get_id_attributes(model.findObjectByName(typeObj.name))?first>
     </#if>
+    <#if typeObj?index != 0><#-- 非根对象 -->
+      <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
+        <#assign refObj = model.findObjectByName(childTypeObj.name)>
+        <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+    for (${java.nameType(childTypeObj.name)}Query q : ${java.nameVariable(childTypeObj.variable)}Queries) {
+      ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(refObjIdAttr))}(q.${modelbase4java.name_getter(refObjIdAttr)}());
+    }
+      </#list>
+    </#if>
     ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${java.nameType(typeObj.definition.plural)}(${java.nameVariable(typeObj.variable)}Query).getData();
-    <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
+    <#-- 聚合对象的处理方式 -->
+    <#if modelbase.is_aggregate_like(obj)>
+      <#if typeObj?index == 0><#-- 根对象才这样处理 -->
+    for (${java.nameType(typeObj.name)}Query q : ${java.nameVariable(typeObj.variable)}Queries) {
+      ${java.nameType(obj.name)}Query row = new ${java.nameType(obj.name)}Query();
+      row.set${java.nameType(typeObj.variable)}(q);
+      retVal.getData().add(row);
+    }
+      <#else>
+        <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
+          <#assign refObj = model.findObjectByName(childTypeObj.name)>
+          <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+          <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+    for (${java.nameType(obj.name)}Query row : retVal.getData()) {
+      ${java.nameType(childTypeObj.name)}Query base = row.get${java.nameType(childTypeObj.variable)}();
+      for (${java.nameType(typeObj.name)}Query child : ${java.nameVariable(typeObj.variable)}Queries) {
+        if (base.${modelbase4java.name_getter(refObjIdAttr)}().equals(child.${modelbase4java.name_getter(rightAttr)}())) {
+          row.set${java.nameType(typeObj.variable)}(child);
+          break;
+        }
+      }
+    }
+        </#list>
+      </#if>
+    </#if>
+    <#--  <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
     ${java.nameVariable(childTypeObj.variable)}Query = new ${java.nameType(childTypeObj.name)}Query();
     </#list>
     <#if flow.getParentsAndSiblings(typeObj)?size != 0>
@@ -532,7 +566,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       ${java.nameVariable(childTypeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(childTypeObjIdAttr))}(row.${modelbase4java.name_getter(childTypeObjIdAttr)}());
       </#list>
     }
-    </#if>
+    </#if>  -->
   <#elseif typeRefType == "PREF">
     <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>
     if (findingReference) {

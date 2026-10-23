@@ -317,11 +317,11 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       <#assign rightObj = predicate.rightObject>
       <#assign rightAttr = predicate.rightAttribute>
       <#assign attrName = modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)>
-      <#if obj.getAttribute(attrName)??>
+      <#--  <#if obj.getAttribute(attrName)??>  -->
     ${java.nameVariable(typeObj.variable)}.forEach(q -> {
       q.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
     });
-      </#if>
+      <#--  </#if>  -->
     </#if>
     return ${java.nameVariable(typeObj.variable)};
   </#if>
