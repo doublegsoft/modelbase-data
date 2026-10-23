@@ -525,8 +525,10 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
       <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
         <#assign refObj = model.findObjectByName(childTypeObj.name)>
         <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
-    for (${java.nameType(childTypeObj.name)}Query q : ${java.nameVariable(childTypeObj.variable)}Queries) {
-      ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(refObjIdAttr))}(q.${modelbase4java.name_getter(refObjIdAttr)}());
+    if (${java.nameVariable(childTypeObj.variable)}Queries != null) {
+      for (${java.nameType(childTypeObj.name)}Query q : ${java.nameVariable(childTypeObj.variable)}Queries) {
+        ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(refObjIdAttr))}(q.${modelbase4java.name_getter(refObjIdAttr)}());
+      }
     }
       </#list>
     </#if>
@@ -546,6 +548,9 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
           <#assign rightAttr = typeObj.getRightAttributeFromReference()>
     for (${java.nameType(obj.name)}Query row : retVal.getData()) {
       ${java.nameType(childTypeObj.name)}Query base = row.get${java.nameType(childTypeObj.variable)}();
+      if (base == null) {
+        continue;
+      }
       for (${java.nameType(typeObj.name)}Query child : ${java.nameVariable(typeObj.variable)}Queries) {
         if (base.${modelbase4java.name_getter(refObjIdAttr)}().equals(child.${modelbase4java.name_getter(rightAttr)}())) {
           row.set${java.nameType(typeObj.variable)}(child);
