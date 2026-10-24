@@ -10,7 +10,7 @@
   <#if obj.isLabelled("generated")><#continue></#if>
 
 TEST(${c.nameType(namespace)}_sqlite3_${c.nameType(obj.name)}, crud) {
-  sqlite3* conn;
+  sqlite3* conn = nullptr;
   sqlite3_open("./test.db", &conn);
   
   ASSERT_NE(conn, nullptr);
@@ -20,7 +20,7 @@ TEST(${c.nameType(namespace)}_sqlite3_${c.nameType(obj.name)}, crud) {
   char* errMsg = nullptr;
   sqlite3_exec(conn, sql.c_str(), nullptr, nullptr, &errMsg);
 
-  ${namespace}_table_result_p result;
+  ${namespace}_table_result_p result = nullptr;
   char errmsg[4096] = {'\0'};
   ${namespace}_${obj.name}_query_p query = ${namespace}_${obj.name}_query_init();
   <#list obj.attributes as attr>
@@ -44,6 +44,7 @@ TEST(${c.nameType(namespace)}_sqlite3_${c.nameType(obj.name)}, crud) {
   rc = ${namespace}_sqlite_${obj.name}_select(conn, query, errmsg, &result);
   ASSERT_EQ(rc, ${namespace?upper_case}_SQL_ERROR_SUCCESS) << "select error (" << rc << "): " << errmsg;
 
+  ASSERT_NE(result, nullptr);
   ASSERT_NE(result->rows, 0);
   ASSERT_NE(result->values, nullptr);
 

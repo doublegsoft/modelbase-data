@@ -23,10 +23,11 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
   <#list obj.attributes as attr>
     <#assign attrType = modelbase4c.type_attribute(attr)>
     <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, "ret")?string>
-    <#if lenExpr != "0">  
   // ${attr.name}
+    <#if lenExpr != "0">  
       <#if attr.type.lengthVariable??>
-  ret->${attr.name} = (${attrType.name}*)malloc(${lenExpr});  
+        <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
+  ret->${attr.name} = (${attrType.name}*)malloc(ret->${lengthVariable});  
       </#if>
       <#if attrType.name == "char" && !attr.type.lengthVariable?? && !attrType.length??>
   ret->${attr.name} = bytes[offset];
@@ -53,7 +54,7 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
     return NULL;
   }
       </#if>
-    <#else>
+    <#elseif attr.type.componentType??>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
   block_bytes = 0;
       <#if attr.type.componentType.custom>
@@ -88,18 +89,16 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
     <#assign attrType = modelbase4c.type_attribute(attr)>
     <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, obj.name)?string>
   // ${attr.name}
-    <#if attrType.name == "short">
-  ${attrType.name} net_${attr.name} = htons(${obj.name}->${attr.name});
-  memcpy((*bytes) + offset, &net_${attr.name}, ${lenExpr});
-  offset += ${lenExpr};
-    <#elseif attrType.name == "int" || attrType.name == "long">
-  ${attrType.name} net_${attr.name} = htonl(${obj.name}->${attr.name});
-  memcpy((*bytes) + offset, &net_${attr.name}, ${lenExpr});
-  offset += ${lenExpr};
-    <#elseif lenExpr != "0">
+    <#if lenExpr != "0">
+      <#if attr.type.lengthVariable??>
+        <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
+  memcpy((*bytes) + offset, <#if !attr.type.collection && !attrType.length?? && !attr.type.lengthVariable??>&</#if>${obj.name}->${attr.name}, ${obj.name}->${lengthVariable});
+  offset += ${obj.name}->${lengthVariable};
+      <#else>
   memcpy((*bytes) + offset, <#if !attr.type.collection && !attrType.length?? && !attr.type.lengthVariable??>&</#if>${obj.name}->${attr.name}, ${lenExpr});
   offset += ${lenExpr};
-    <#else>
+      </#if>
+    <#elseif attr.type.componentType??>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
   for (int i = 0; i < ${obj.name}->${lengthVariable}; i++) 
   {
@@ -127,7 +126,7 @@ ${""?left_pad(namespace?length + obj.name?length + 8)}size_t* size)
   // ${attr.name}    
     <#if lenExpr != "0">  
   total_bytes += ${lenExpr}; 
-    <#else>
+    <#elseif attr.type.componentType??>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
   for (int i = 0; i < obj->${lengthVariable}; i++) 
   {

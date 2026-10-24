@@ -534,8 +534,14 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     </#if>
     <#if typeObj?index != 0><#-- 非根对象 -->
       <#list flow.getParentsAndSiblings(typeObj) as childTypeObj>
-        <#assign refObj = model.findObjectByName(childTypeObj.name)>
-        <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+        <#assign refDirection = modelbase.check_reference_direction(typeObj.name, childTypeObj.name)>
+        <#if refDirection == "REFERENCING">
+          <#assign refObj = model.findObjectByName(childTypeObj.name)>
+          <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+        <#elseif refDirection == "REFERENCED">
+          <#assign refObj = model.findObjectByName(typeObj.name)>
+          <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+        </#if>
     if (${java.nameVariable(childTypeObj.variable)}Queries != null) {
       for (${java.nameType(childTypeObj.name)}Query q : ${java.nameVariable(childTypeObj.variable)}Queries) {
         ${java.nameVariable(typeObj.variable)}Query.add${java.nameType(modelbase.get_attribute_sql_name(refObjIdAttr))}(q.${modelbase4java.name_getter(refObjIdAttr)}());
@@ -557,6 +563,14 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
           <#assign refObj = model.findObjectByName(childTypeObj.name)>
           <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
           <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+          <#assign refDirection = modelbase.check_reference_direction(typeObj.name, childTypeObj.name)>
+          <#if refDirection == "REFERENCING">
+            <#assign refObj = model.findObjectByName(childTypeObj.name)>
+            <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+          <#elseif refDirection == "REFERENCED">
+            <#assign refObj = model.findObjectByName(typeObj.name)>
+            <#assign refObjIdAttr = modelbase.get_id_attributes(refObj)?first>
+          </#if>
     for (${java.nameType(obj.name)}Query row : retVal.getData()) {
       ${java.nameType(childTypeObj.name)}Query base = row.get${java.nameType(childTypeObj.variable)}();
       if (base == null) {

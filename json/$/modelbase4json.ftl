@@ -33,7 +33,7 @@
   <#elseif attr.constraint.domainType.name == 'id' || attr.name == 'id' || attr.type.custom || attr.identifiable>
     <#local val = tatabase.number(0,100)>
     <#local val = val?substring(0, val?index_of("."))>
-    <#return "\"" + val + "\"">
+    <#return "" + val + "">
   <#elseif attr.constraint.domainType.name == 'json'>
     <#return '{}'>
   <#elseif attr.constraint.domainType.name == 'state'>
@@ -45,9 +45,9 @@
   <#elseif attr.type.name == 'number'>
     <#return '"' + tatabase.number(0,100) + '"'>
   <#elseif attr.type.name == 'integer' || attr.type.name == 'int'>
-    <#return '"36"'>
+    <#return '36'>
   <#elseif attr.type.name == 'long'>
-    <#return '"63"'>
+    <#return '63'>
   <#elseif attr.type.name == 'date'>
     <#return '"' + tatabase.datetime() + '"'>
   <#elseif attr.type.name == 'datetime'>

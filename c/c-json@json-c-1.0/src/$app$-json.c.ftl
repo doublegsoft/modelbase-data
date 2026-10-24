@@ -35,17 +35,17 @@ ${namespace}_json_${obj.name}_query_assemble(struct json_object* jobj)
     <#if attr.constraint.domainType.name?starts_with("enum")>
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive(attr)});
     <#elseif attr.type.name == "string">
-      <#if attr.type.length != 0>
+      <#--  <#if attr.type.length != 0>
   rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}0", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
   rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}1", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}1);
   rc = ${namespace}_json_get_str(jobj, "${modelbase.get_attribute_sql_name(attr)}2", ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}2);
-      <#else>
+      <#else>  -->
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}0", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}1", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}1);
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}2", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}2);
-      </#if>
+      <#--  </#if>  -->
     <#elseif attr.type.name == "date" || attr.type.name == "datetime" || attr.type.name == "time">
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))});
   rc = ${namespace}_json_get_string(jobj, "${modelbase.get_attribute_sql_name(attr)}0", &ret->${c.nameVariable(modelbase.get_attribute_sql_name(attr))}0);
@@ -57,9 +57,9 @@ ${namespace}_json_${obj.name}_query_assemble(struct json_object* jobj)
     </#if>
     <#if attr.identifiable || attr.type.custom || attr.constraint.domainType.name?starts_with("enum")>
       <#if attrType.name == "char*" || attrType.name == "char">
-  rc = ${namespace}_json_get_strings(jobj, "${modelbase.get_attribute_sql_name(attr)}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});      
+  rc = ${namespace}_json_get_strings(jobj, "${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", &ret->${modelbase4c.name_attribute_primitive_plural(attr)});      
       <#elseif attrType.name == "int" || attrType.name == "long" || attrType.name == "short">
-  rc = ${namespace}_json_get_ints(jobj, "${modelbase.get_attribute_sql_name(attr)}", (int*)ret->${modelbase4c.name_attribute_primitive_plural(attr)});
+  rc = ${namespace}_json_get_ints(jobj, "${inflector.pluralize(modelbase.get_attribute_sql_name(attr))}", (int*)ret->${modelbase4c.name_attribute_primitive_plural(attr)});
       </#if>
     </#if>     
   </#list>  
@@ -146,7 +146,7 @@ ${namespace}_json_get_string(json_object* jobj, const char* name, char** holder)
       int len = strlen(strval);
       *holder = (char*)malloc(sizeof(char) * (len + 1));
       strcpy(*holder, strval);
-      *holder[len] = '\0';
+      (*holder)[len] = '\0';
     }
     else
       strcpy(*holder, strval);

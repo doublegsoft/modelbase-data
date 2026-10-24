@@ -1476,6 +1476,42 @@
 </#function>
 
 <#--
+ ### Checks the reference direction between two objects in the model.
+ ### <p>
+ ### Determines whether the source object directly references the target object,
+ ### or is referenced by the target object. for example:
+ ### <pre>
+ ###   check_reference_direction("bill", "account")  // returns "REFERENCING" (bill -> account)
+ ###   check_reference_direction("account", "bill")  // returns "REFERENCED"  (bill -> account)
+ ### </pre>
+ ###
+ ### @param {string} sourceObjName
+ ###      the name of the source object to check from
+ ### @param {string} targetObjName
+ ###      the name of the target object to check against
+ ###
+ ### @return the direction string:
+ ###      "REFERENCING" if source references target;
+ ###      "REFERENCED"  if target references source;
+ ###      "" (empty string) if no direct reference found
+ -->
+<#function check_reference_direction sourceObjName targetObjName>
+  <#local sourceObj = model.findObjectByName(sourceObjName)>
+  <#local targetObj = model.findObjectByName(targetObjName)>
+  <#list sourceObj.attributes as attr>
+    <#if attr.type.custom && attr.type.name == targetObjName>
+      <#return "REFERENCING">
+    </#if>
+  </#list>
+  <#list targetObj.attributes as attr>
+    <#if attr.type.custom && attr.type.name == sourceObjName>
+      <#return "REFERENCED">
+    </#if>
+  </#list>
+  <#return "">
+</#function>
+
+<#--
  ### Gets the arguments statement with the given attributes array.
  ### <p>
  ### And the arguments statement is applied in method invocation. like:
@@ -1487,7 +1523,7 @@
  ###      the attributes array
  ###
  ### @return the statement string
- #-->
+ -->
 <#function get_attributes_as_arguments attrs>
   <#assign ret = ''>
   <#list attrs as attr>

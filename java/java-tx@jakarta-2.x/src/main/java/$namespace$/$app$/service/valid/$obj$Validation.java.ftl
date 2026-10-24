@@ -39,7 +39,7 @@ public class ${typename}Validation {
 <#list flow.types as typeObj>
   <#if existings[typeObj.name]??><#continue></#if>
   <#assign typeRefType = typeDef.getReferenceType(typeObj)>
-  <#if typeRefType == "SREF">
+  <#if typeRefType == "SREF" && !modelbase.is_aggregate_like(obj)>
 
   @Inject
   private ${java.nameType(typeDef.name)}DataAccess ${java.nameVariable(typeDef.name)}DataAccess;

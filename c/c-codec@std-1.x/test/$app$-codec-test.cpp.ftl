@@ -17,10 +17,16 @@ TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, memory) {
   obj->${attr.name} = (${attrType.name}*) malloc(3 * sizeof(${attrType.name})); 
   snprintf(obj->${attr.name}, sizeof(obj->${attr.name}), "%s", "ABC");
     <#elseif attr.type.lengthVariable??>
-  obj->${attr.name} = (${attrType.name}*) malloc(3 * sizeof(${attrType.name}));  
-  obj->${attr.name}[0] = NULL;
-  obj->${attr.name}[1] = NULL;
-  obj->${attr.name}[2] = NULL;
+  obj->${attr.name} = (${attrType.name}*) malloc(3 * sizeof(${attrType.name}));
+      <#if attr.type.componentType??>
+  obj->${attr.name}[0] = ${namespace}_${attr.type.componentType.name}_init();
+  obj->${attr.name}[1] = ${namespace}_${attr.type.componentType.name}_init();
+  obj->${attr.name}[2] = ${namespace}_${attr.type.componentType.name}_init();
+      <#else>
+  obj->${attr.name}[0] = 1;
+  obj->${attr.name}[1] = 2;
+  obj->${attr.name}[2] = 3;
+      </#if>
     <#else>
   obj->${attr.name} = ${modelbase4c.test_unit_value(attr)};
     </#if>

@@ -172,15 +172,10 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     clearData();
     ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
     ${java.nameType(obj.name)}Query toSaveQuery = test${java.nameType(obj.name)}();
-<#--  <#list obj.attributes as attr>
-    <#if attr?index == 0><#continue></#if>
-    <#if attr.type.custom>
-    toSaveQuery.set${java.nameType(attr.name)}(null);
-    </#if>
-</#list>  -->
+<#-- 非关键依赖的设置为null -->
 <#if modelbase.is_aggregate_like(obj)>
   <#assign null_set = false>
-  <#assign rootObj = model.findObjectByName(obj.attributes?first.name)>
+  <#assign rootObj = model.findObjectByName(obj.attributes?first.type.name)>
   <#list flow.sortTypes() as typeObj>
     <#if null_set && !typeObj.collection>
     toSaveQuery.set${java.nameType(typeObj.variable)}(null);
@@ -219,10 +214,59 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     ${java.nameType(rootObj.name)}Query toSave${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
     ${java.nameType(rootObj.name)}Query found${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
 <@print_assert_obj obj=rootObj expected="toSave"+java.nameType(attrRoot.name) actual="found"+java.nameType(attrRoot.name) indent=4 />
+    // 检验应该为空的关联对象属性
+  <#assign null_set = false>
+  <#assign rootObj = model.findObjectByName(obj.attributes?first.type.name)>
+  <#list flow.sortTypes() as typeObj>
+    <#if null_set && !typeObj.collection>
+    Assert.assertNull(foundQuery.get${java.nameType(typeObj.variable)}());
+    </#if>
+    <#if rootObj.name == typeObj.name>
+      <#assign null_set = true>
+    </#if>
+  </#list>
+</#if>    
+  }
+
+  @Test
+  public void test_21_save_full_and_find() throws Exception {
+    clearData();
+    ${java.nameType(obj.name)}Service service = getContext().getBean(${java.nameType(obj.name)}Service.class);
+    ${java.nameType(obj.name)}Query toSaveQuery = test${java.nameType(obj.name)}();
+
+    ${java.nameType(obj.name)}Query savedQuery = service.save${java.nameType(obj.name)}(toSaveQuery);
+    Assert.assertNotNull(savedQuery);
+<#if obj.isLabelled("composite") || obj.isLabelled("persistence")>
+
+    // 验证全部可持久化属性的值
+    ${java.nameType(obj.name)}Query toFindQuery = new ${java.nameType(obj.name)}Query();
+  <#list idAttrs as idAttr>
+    <#if idAttr.type.name == "datetime"><#continue></#if>
+    toFindQuery.${modelbase4java.name_setter(idAttr)}(savedQuery.${modelbase4java.name_getter(idAttr)}());
+  </#list>
+    Pagination<${java.nameType(obj.name)}Query> page = service.find${java.nameType(inflector.pluralize(obj.name))}(toFindQuery);
+    ${java.nameType(obj.name)}Query foundQuery = page.getData().get(0);
+
+<@print_assert_obj obj=obj expected="toSaveQuery" actual="foundQuery" indent=4 />
+<#elseif modelbase.is_aggregate_like(obj)>
+  <#assign attrRoot = obj.attributes[0]>
+  <#assign rootObj = model.findObjectByName(attrRoot.type.name)>
+  <#assign rootObjIdAttr = modelbase.get_id_attributes(rootObj)?first>
+
+    ${java.nameType(obj.name)}Query toFindQuery = new ${java.nameType(obj.name)}Query();
+    ${java.nameType(rootObj.name)}Query toFind${java.nameType(attrRoot.name)} = new ${java.nameType(rootObj.name)}Query();
+    toFindQuery.set${java.nameType(attrRoot.name)}(toFind${java.nameType(attrRoot.name)});
+    toFind${java.nameType(attrRoot.name)}.${modelbase4java.name_setter(rootObjIdAttr)}(savedQuery.get${java.nameType(attrRoot.name)}Id());
+    Pagination<${java.nameType(obj.name)}Query> page = service.find${java.nameType(inflector.pluralize(obj.name))}(toFindQuery);
+    ${java.nameType(obj.name)}Query foundQuery = page.getData().get(0);
+
+    ${java.nameType(rootObj.name)}Query toSave${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
+    ${java.nameType(rootObj.name)}Query found${java.nameType(attrRoot.name)} = foundQuery.get${java.nameType(attrRoot.name)}();
+<@print_assert_obj obj=rootObj expected="toSave"+java.nameType(attrRoot.name) actual="found"+java.nameType(attrRoot.name) indent=4 />
   <#list obj.attributes as attr>
     <#if attr?index == 0><#continue></#if>
     <#if attr.type.custom>
-    Assert.assertNull(foundQuery.get${java.nameType(attr.name)}());
+    Assert.assertNotNull(foundQuery.get${java.nameType(attr.name)}());
     </#if>
   </#list>
 </#if>    
@@ -230,6 +274,10 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
 
   @Test(expected = ServiceException.class)
   public void test_99_save_and_throw() throws Exception {
+<#-- 利用【非空属性】置空来测试 -->
+<#if modelbase.is_aggregate_like(obj)>
+<#else>
+</#if>
     throw new ServiceException(500, "test_99_save_throw_error");
   }
 

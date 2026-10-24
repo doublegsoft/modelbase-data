@@ -226,6 +226,12 @@
     <#return 4>
   <#elseif typename == "long">
     <#return 8>
+  <#elseif typename == "uint8_t">
+    <#return 1>
+  <#elseif typename == "uint16_t">
+    <#return 2>
+  <#elseif typename == "uint32_t">
+    <#return 4>
   <#else>
     <#return 0>
   </#if>
@@ -285,7 +291,8 @@
   <#local attrType = type_attribute(attr)>
   <#if attrType.name == "int" || attrType.name == "integer" || 
        attrType.name == "long" || attrType.name == "short" || 
-       attrType.name == "double" || attrType.name == "float">
+       attrType.name == "double" || attrType.name == "float" ||
+       attrType.name == "uint8_t" || attrType.name == "uint16_t" || attrType.name == "uint32_t">
     <#if is_length_variable(attr)>
       <#return "3">
     <#else>    

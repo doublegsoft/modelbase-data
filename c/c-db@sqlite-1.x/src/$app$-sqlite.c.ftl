@@ -353,7 +353,7 @@ ${namespace}_sqlite_${obj.name}_select(sqlite3* conn, ${namespace}_${obj.name}_q
 
   rc = sqlite3_step(stmt);
 
-  if (rc == SQLITE_ROW) 
+  if (rc == SQLITE_ROW || rc == SQLITE_DONE) 
   {
     int column_count = sqlite3_column_count(stmt);
     int row_index = 0;
