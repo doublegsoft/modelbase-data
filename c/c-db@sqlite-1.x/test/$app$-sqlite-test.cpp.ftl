@@ -7,7 +7,7 @@
 #include "${app.name}-query.h"
 #include "${app.name}-sqlite.h"
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
 
 TEST(${c.nameType(namespace)}_sqlite3_${c.nameType(obj.name)}, crud) {
   sqlite3* conn = nullptr;

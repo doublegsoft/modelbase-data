@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include "${app.name}-sql.h"
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
 
 TEST(${namespace}_sql_${obj.name}, select) {
   ${namespace}_${obj.name}_query_p query = ${namespace}_${obj.name}_query_init();

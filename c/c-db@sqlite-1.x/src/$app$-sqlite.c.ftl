@@ -49,7 +49,7 @@ ${namespace}_sqlite_escape_string(const char* user_input, ${namespace}_sql_match
   return ret;
 }
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
   <#assign idAttrs = modelbase.get_id_attributes(obj)>
 
 int

@@ -144,7 +144,7 @@ ${namespace}_sql_str2like_g(const char* str)
   return ret;
 }
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
 
 /*!
 ** 获得【${modelbase.get_object_label(obj)}】的SELECT SQL语句。
@@ -231,7 +231,7 @@ ${namespace}_sql_persistence_name(const char* objname, const char* attrname, cha
     return ${namespace?upper_case}_SQL_ERROR_NO_OBJECT_SPECIFIED;
   if (1 == 0) {}
   <#list model.objects as obj>
-    <#if obj.isLabelled("generated")><#continue></#if>
+    <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
   else if (strcmp(objname, "${obj.name}") == 0)
   {
     if (attrname == NULL) 

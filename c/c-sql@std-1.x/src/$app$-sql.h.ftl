@@ -30,7 +30,7 @@ typedef enum ${namespace}_sql_match_e
 }
 ${namespace}_sql_match_e;
 <#list model.objects as obj>
-  <#if obj.isLabelled("generated")><#continue></#if>
+  <#if obj.isLabelled("generated") || !obj.isLabelled("persistence")><#continue></#if>
   
   <#assign persistAttrs = []>
   <#list obj.attributes as attr>

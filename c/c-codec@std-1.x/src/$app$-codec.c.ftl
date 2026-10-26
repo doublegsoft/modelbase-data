@@ -28,21 +28,25 @@ ${""?left_pad(namespace?length + obj.name?length + 9)}size_t* size)
       <#if attr.type.lengthVariable??>
         <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
   ret->${attr.name} = (${attrType.name}*)malloc(ret->${lengthVariable});  
-      </#if>
-      <#if attrType.name == "char" && !attr.type.lengthVariable?? && !attrType.length??>
+  memcpy((void*)<#if !attr.type.collection && !attr.type.lengthVariable?? && !attrType.length??>&</#if>ret->${attr.name}, bytes + offset, ret->${lengthVariable});
+  offset += ret->${lengthVariable};
+      <#elseif attrType.name == "char" && !attr.type.lengthVariable?? && !attrType.length??>
   ret->${attr.name} = bytes[offset];
+  offset += ${lenExpr};
       <#elseif attrType.name == "short">
   ${attrType.name} raw_${attr.name} = 0;
   memcpy(&raw_${attr.name}, bytes + offset, ${lenExpr});
   ret->${attr.name} = ntohs(raw_${attr.name});
+  offset += ${lenExpr};
       <#elseif attrType.name == "int" || attrType.name == "long">
   ${attrType.name} raw_${attr.name} = 0;
   memcpy(&raw_${attr.name}, bytes + offset, ${lenExpr});
-  ret->${attr.name} = ntohl(raw_${attr.name});
+  ret->${attr.name} = raw_${attr.name}; // ntohl(raw_${attr.name});
+  offset += ${lenExpr};
       <#else>
   memcpy((void*)<#if !attr.type.collection && !attr.type.lengthVariable?? && !attrType.length??>&</#if>ret->${attr.name}, bytes + offset, ${lenExpr});
-      </#if>
   offset += ${lenExpr};
+      </#if>
       <#if attr.type.constant>
         <#if attr.type.name == "int" || attr.type.name == "integer">
   if (ret->${attr.name} != ${attr.type.value?string("###")}) 
@@ -124,8 +128,13 @@ ${""?left_pad(namespace?length + obj.name?length + 8)}size_t* size)
   <#list obj.attributes as attr>
     <#assign lenExpr = modelbase4c.get_attribute_bytes(attr, "obj")?string>
   // ${attr.name}    
-    <#if lenExpr != "0">  
+    <#if lenExpr != "0">
+      <#if attr.type.lengthVariable??>
+        <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
+  total_bytes += obj->${lengthVariable};
+      <#else>
   total_bytes += ${lenExpr}; 
+      </#if>
     <#elseif attr.type.componentType??>
       <#assign lengthVariable = modelbase4c.get_attribute_length_variable(attr)>
   for (int i = 0; i < obj->${lengthVariable}; i++) 
