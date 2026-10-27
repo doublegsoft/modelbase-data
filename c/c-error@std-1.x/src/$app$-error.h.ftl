@@ -11,6 +11,15 @@ extern "C"
 {
 #endif
 
+<#list model.objects as obj>
+  <#list obj.attributes as attr>
+    <#if attr.name == "magic">
+#define ${namespace?upper_case}_MAGIC   ${attr.constraint.defaultValue}
+      <#break>
+    </#if>
+  </#list>
+</#list>
+
 /*!
 ** 【Together 统一错误码解码宏】
 ** 提取正整数错误码中的模块 (xx)、子对象 (yy) 以及具体错误序号 (zz)。

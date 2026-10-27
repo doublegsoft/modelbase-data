@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include "${app.name}-poco.h"
 #include "${app.name}-codec.h"
+#include "${app.name}-error.h"
 <#list model.objects as obj>
   <#if !obj.isLabelled("protocol")><#continue></#if>
 
@@ -11,11 +12,17 @@ TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, memory) {
   ${namespace}_${obj.name}_p obj = ${namespace}_${obj.name}_init();
   <#list obj.attributes as attr>
     <#assign attrType = modelbase4c.type_attribute(attr)>
-    <#if attrType.name == "char" && attrType.length??>
+    <#if attr.name == "magic">
+  obj->magic = ${namespace?upper_case}_MAGIC;
+    <#elseif attrType.name == "char" && attrType.length??>
   snprintf(obj->${attr.name}, sizeof(obj->${attr.name}), "%s", "DADA");
     <#elseif attrType.name == "char" && attr.type.lengthVariable??>
   obj->${attr.name} = (${attrType.name}*) malloc(3 * sizeof(${attrType.name})); 
   snprintf(obj->${attr.name}, sizeof(obj->${attr.name}), "%s", "ABC");
+    <#elseif attrType.name == "short">
+  obj->${attr.name} = htons(${modelbase4c.test_unit_value(attr)});
+    <#elseif attrType.name == "int" || attrType.name == "long">
+  obj->${attr.name} = htonl(${modelbase4c.test_unit_value(attr)});
     <#elseif attr.type.lengthVariable??>
   obj->${attr.name} = (${attrType.name}*) malloc(3 * sizeof(${attrType.name}));
       <#if attr.type.componentType??>
@@ -38,7 +45,9 @@ TEST(${c.nameType(namespace)}_codec_${c.nameType(obj.name)}, memory) {
   ASSERT_NE(obj, nullptr);
   <#list obj.attributes as attr>
     <#assign attrType = modelbase4c.type_attribute(attr)>
-    <#if attrType.name == "char" && attrType.length??>
+    <#if attr.name == "magic">
+  ASSERT_EQ(obj->${attr.name}, ${namespace?upper_case}_MAGIC);
+    <#elseif attrType.name == "char" && attrType.length??>
   ASSERT_STREQ(obj->${attr.name}, "DADA");
     <#elseif attrType.name == "char" && attr.type.lengthVariable??>  
   ASSERT_STREQ(obj->${attr.name}, "ABC");
