@@ -27,7 +27,7 @@
     retVal.${modelbase4java.name_getter(attr)}().add("标签2"); 
     retVal.${modelbase4java.name_getter(attr)}().add("标签3"); 
   <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
-    // TODO: JSON
+    retVal.${modelbase4java.name_setter(attr)}(new ${java.nameType(attr.type.objectName)}Query());
   <#else>
     retVal.${modelbase4java.name_setter(attr)}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(${modelbase4java.test_json_value(attr)}));
   </#if>
@@ -48,6 +48,7 @@ ${""?left_pad(indent)}Assert.assertEquals(0, ${expected}.${modelbase4java.name_g
 ${""?left_pad(indent)}Assert.assertTrue(isSameDate(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}()));
     <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
     // TODO: JSON
+    Assert.assertNotNull(foundQuery.${modelbase4java.name_getter(attr)}());
     <#else>
 ${""?left_pad(indent)}Assert.assertEquals(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}());
     </#if>
@@ -143,6 +144,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     Assert.assertTrue(isSameDate(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}()));
     <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
     // TODO: JSON
+    Assert.assertNotNull(foundQuery.${modelbase4java.name_getter(attr)}());
     <#else>
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}());
     </#if>
