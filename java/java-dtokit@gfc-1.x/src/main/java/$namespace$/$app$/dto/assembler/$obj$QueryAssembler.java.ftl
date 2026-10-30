@@ -67,8 +67,20 @@ ${java.license(license)}
         }
       }
     <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
-      Map<String,Object> ${java.nameVariable(attrname)} = (Map<String,Object>) params.get("${attrname}");
-      retVal.set${java.nameType(attrname)}(${java.nameType(attr.type.objectName)}QueryAssembler.assemble${java.nameType(attr.type.objectName)}Query(${java.nameVariable(attrname)}));
+      Object raw${java.nameType(attrname)} = params.get("${attrname}");
+      if (raw${java.nameType(attrname)} != null) {
+        Map<String,Object> raw = null;
+        if (raw${java.nameType(attrname)} instanceof String) {
+          raw = new Gson().fromJson((String) raw${java.nameType(attrname)}, new TypeToken<Map<String, Object>>() {}.getType());
+        } else if (raw${java.nameType(attrname)} instanceof Map) {
+          raw = (Map<String,Object>) params.get("${attrname}");
+        }
+        if (raw != null) {
+          retVal.set${java.nameType(attrname)}(${java.nameType(attr.type.objectName)}QueryAssembler.assemble${java.nameType(attr.type.objectName)}Query(raw));
+        }
+      }
+      
+      
     <#elseif attr.type.name == "string">
       retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), ${attrtype}.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), ${attrtype}.class));
@@ -117,6 +129,10 @@ import java.math.BigDecimal;
 import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
