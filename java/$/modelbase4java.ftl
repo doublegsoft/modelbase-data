@@ -437,6 +437,18 @@ ${""?left_pad(indent)}}
   protected final List<${java.nameType(attr.type.componentType.name)}Query> ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))} = new ArrayList<>();
   
   protected final Map<String,Object> in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))} = new HashMap<>();
+    <#elseif attr.constraint.domainType.name?starts_with("strings")>
+  
+  /*!
+  ** 【${modelbase.get_attribute_label(attr)}】
+  */
+  protected final List<String> ${modelbase.get_attribute_sql_name(attr, prefix)} = new ArrayList<>();
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+
+  /*!
+  ** 【${modelbase.get_attribute_label(attr)}】
+  */
+  protected ${java.nameType(attr.type.objectName)}Query ${modelbase.get_attribute_sql_name(attr, prefix)};
     <#else>
       <#local attrname = modelbase.get_attribute_sql_name(attr, prefix)>
       <#if attr.type.custom>
@@ -541,6 +553,20 @@ ${""?left_pad(indent)}}
   
   public Map<String,Object> getIn${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))}() {
     return in${java.nameType(inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix)))};
+  }
+    <#elseif attr.constraint.domainType.name?starts_with("strings")>
+
+  public List<String> get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)};
+  }
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+
+  public ${java.nameType(attr.type.objectName)}Query get${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}() {
+    return ${modelbase.get_attribute_sql_name(attr, prefix)};
+  }
+
+  public void set${java.nameType(modelbase.get_attribute_sql_name(attr, prefix))}(${java.nameType(attr.type.objectName)}Query obj) {
+    this.${modelbase.get_attribute_sql_name(attr, prefix)} = obj;
   }
     <#else>
     
@@ -741,6 +767,14 @@ ${""?left_pad(indent)}}
     <#if attr.type.collection>
     if (!${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}.isEmpty()) {
       retVal.put("${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))}", ${inflector.pluralize(modelbase.get_attribute_sql_name(attr, prefix))});
+    }
+    <#elseif attr.constraint.domainType.name?starts_with("strings")>
+    if (!${modelbase.get_attribute_sql_name(attr, prefix)}.isEmpty()) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}", ${modelbase.get_attribute_sql_name(attr, prefix)});
+    }
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    if (${modelbase.get_attribute_sql_name(attr, prefix)} != null) {
+      retVal.put("${modelbase.get_attribute_sql_name(attr, prefix)}", ${modelbase.get_attribute_sql_name(attr, prefix)});
     }
     <#else>
       <#local attrtype = modelbase4java.type_attribute_primitive(attr)>

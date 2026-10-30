@@ -3,7 +3,7 @@
 <#if license??>
 ${java.license(license)}
 </#if>
-<#assign obj = persistence>
+<#--  <#assign obj = persistence>  -->
 package <#if namespace??>${namespace}.</#if>${app.name}.orm.assembler;
 
 import java.util.List;
@@ -14,9 +14,11 @@ import java.math.BigDecimal;
 import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
+import com.google.gson.Gson;
 
 import <#if namespace??>${namespace}.</#if>${app.name}.poco.*;
 import <#if namespace??>${namespace}.</#if>${app.name}.dto.payload.*;
+import <#if namespace??>${namespace}.</#if>${app.name}.util.*;
 
 <#assign typename = java.nameType(obj.name)>
 /**
@@ -39,7 +41,7 @@ public final class ${typename}Assembler {
   public static ${typename} assemble${typename}FromMap(Map<String,Object> persisted) {
     ${typename} retVal = new ${typename}();
 <#list obj.attributes as attr>
-  <#if !attr.persistenceName??><#continue></#if>
+  <#--  <#if !attr.persistenceName??><#continue></#if>  -->
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
     <#assign idAttrsRefObj = modelbase.get_id_attributes(refObj)>
@@ -67,7 +69,7 @@ public final class ${typename}Assembler {
   public static ${typename} assemble${typename}FromQuery(${typename}Query query) {
     ${typename} retVal = new ${typename}();
 <#list obj.attributes as attr>
-  <#if !attr.persistenceName??><#continue></#if>
+  <#--  <#if !attr.persistenceName??><#continue></#if>  -->
   <#if attr.type.custom>
     <#assign refObj = model.findObjectByName(attr.type.name)>
     <#assign idAttrsRefObj = modelbase.get_id_attributes(refObj)>
@@ -79,6 +81,23 @@ public final class ${typename}Assembler {
     <#assign refObj = model.findObjectByName(attr.type.componentType.name)>
     for (${java.nameType(refObj.name)}Query item : query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}()) {
       retVal.get${java.nameType(attr.name)}().add(${java.nameType(refObj.name)}Assembler.assemble${java.nameType(refObj.name)}FromQuery(item));
+    }
+  <#elseif attr.constraint.domainType.name?starts_with("strings")>
+    StringBuilder ${java.nameVariable(attr.name)}AsString = new StringBuilder();
+    for (String row : query.get${java.nameType(attr.name)}()) {
+      if (!${java.nameVariable(attr.name)}AsString.isEmpty()) {
+        ${java.nameVariable(attr.name)}AsString.append("${attr.type.separator}");
+      }
+      if (!Strings.isBlank(row)) {
+        ${java.nameVariable(attr.name)}AsString.append(row);
+      }
+    }
+    retVal.set${java.nameType(attr.name)}(${java.nameVariable(attr.name)}AsString.toString());
+  <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    ${java.nameType(attr.type.objectName)}Query ${java.nameVariable(attr.name)} = query.get${java.nameType(attr.name)}();
+    if (${java.nameVariable(attr.name)} != null) {
+      ${java.nameType(attr.type.objectName)} data = ${java.nameType(attr.type.objectName)}Assembler.assemble${java.nameType(attr.type.objectName)}FromQuery(${java.nameVariable(attr.name)});
+      retVal.set${java.nameType(attr.name)}(new Gson().toJson(data));
     }
   <#else>
     retVal.set${java.nameType(attr.name)}(query.get${java.nameType(modelbase.get_attribute_sql_name(attr))}());

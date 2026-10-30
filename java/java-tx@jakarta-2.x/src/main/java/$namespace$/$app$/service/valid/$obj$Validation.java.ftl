@@ -66,8 +66,21 @@ public class ${typename}Validation {
 </#list>
 <#-- 长度 -->
 <#list obj.attributes as attr> 
-  <#if attr.type.primitive && modelbase4java.type_attribute_primitive(attr) == "String">  
-    <#if (attr.type.length > 0)>
+  <#if attr.type.primitive && modelbase4java.type_attribute_primitive(attr) == "String">
+    <#if attr.constraint.domainType.name?starts_with("strings")>
+    StringBuilder ${java.nameVariable(attr.name)}AsString = new StringBuilder();
+    for (String row : query.get${java.nameType(attr.name)}()) {
+      if (!${java.nameVariable(attr.name)}AsString.isEmpty()) {
+        ${java.nameVariable(attr.name)}AsString.append("${attr.type.separator}");
+      }
+      if (!Strings.isBlank(row)) {
+        ${java.nameVariable(attr.name)}AsString.append(row);
+      }
+    }
+    if (${java.nameVariable(attr.name)}AsString.length() > ${(attr.type.length!200)?string("#")}) {
+      return new ValidationResult(false, 413, "${modelbase.get_attribute_label(attr)}长度过长（>${(attr.type.length!200)?string("#")}）");
+    }
+    <#elseif (attr.type.length > 0)>
     if (query.${modelbase4java.name_getter(attr)}() != null && query.${modelbase4java.name_getter(attr)}()/*.getBytes()*/.length() > ${attr.type.length?string("#")}) {
       return new ValidationResult(false, 413, "${modelbase.get_attribute_label(attr)}长度过长（>${attr.type.length?string("#")}）");
     }

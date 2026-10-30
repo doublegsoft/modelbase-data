@@ -22,6 +22,12 @@
     </#if>
   <#elseif attr.type.collection>
     retVal.${modelbase4java.name_getter(attr)}().addAll(test${java.nameType(attr.name)}());  
+  <#elseif attr.constraint.domainType.name?starts_with("strings")>
+    retVal.${modelbase4java.name_getter(attr)}().add("标签1");  
+    retVal.${modelbase4java.name_getter(attr)}().add("标签2"); 
+    retVal.${modelbase4java.name_getter(attr)}().add("标签3"); 
+  <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    // TODO: JSON
   <#else>
     retVal.${modelbase4java.name_setter(attr)}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(${modelbase4java.test_json_value(attr)}));
   </#if>
@@ -40,6 +46,8 @@
 ${""?left_pad(indent)}Assert.assertEquals(0, ${expected}.${modelbase4java.name_getter(attr)}().compareTo(${actual}.${modelbase4java.name_getter(attr)}()));
     <#elseif attr.type.name == "datetime" || attr.type.name == "date">
 ${""?left_pad(indent)}Assert.assertTrue(isSameDate(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    // TODO: JSON
     <#else>
 ${""?left_pad(indent)}Assert.assertEquals(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}());
     </#if>
@@ -133,6 +141,8 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
     Assert.assertEquals(0, toSaveQuery.${modelbase4java.name_getter(attr)}().compareTo(foundQuery.${modelbase4java.name_getter(attr)}()));
     <#elseif attr.type.name == "datetime" || attr.type.name == "date">
     Assert.assertTrue(isSameDate(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    // TODO: JSON
     <#else>
     Assert.assertEquals(toSaveQuery.${modelbase4java.name_getter(attr)}(), foundQuery.${modelbase4java.name_getter(attr)}());
     </#if>

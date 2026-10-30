@@ -53,6 +53,22 @@ ${java.license(license)}
       retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), java.sql.Time.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), java.sql.Time.class));
       retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}1"), java.sql.Time.class));
+    <#elseif attr.constraint.domainType.name?starts_with("strings")>
+      Object raw${java.nameType(attrname)} = params.get("${attrname}");
+      if (raw${java.nameType(attrname)} != null) {
+        List<String> strs = null;
+        if (raw${java.nameType(attrname)} instanceof String) {
+          strs = Arrays.asList(((String)raw${java.nameType(attrname)}).split("${attr.type.separator}"));
+        } else if (raw${java.nameType(attrname)} instanceof List) {
+          strs = (List<String>) raw${java.nameType(attrname)};
+        }
+        if (strs != null) {
+          strs.forEach(row -> retVal.get${java.nameType(attrname)}().add(row));
+        }
+      }
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+      Map<String,Object> ${java.nameVariable(attrname)} = (Map<String,Object>) params.get("${attrname}");
+      retVal.set${java.nameType(attrname)}(${java.nameType(attr.type.objectName)}QueryAssembler.assemble${java.nameType(attr.type.objectName)}Query(${java.nameVariable(attrname)}));
     <#elseif attr.type.name == "string">
       retVal.set${java.nameType(attrname)}(Safe.safe(params.get("${attrname}"), ${attrtype}.class));
       retVal.set${java.nameType(attrname)}0(Safe.safe(params.get("${attrname}0"), ${attrtype}.class));
@@ -63,7 +79,7 @@ ${java.license(license)}
         retVal.get${java.nameType(inflector.pluralize(attrname))}().addAll(Safe.safeMore((List<Object>)params.get("${inflector.pluralize(java.nameVariable(attrname))}"), ${attrtype}.class));
       }
     <#elseif attr.type.name == "string" && !attr.type.custom && !attr.constraint.domainType.name?starts_with("enum")>
-      retVal.set${java.nameType(attrname)}1(Safe.safe(params.get("${attrname}2"), ${attrtype}.class));
+      retVal.set${java.nameType(attrname)}2(Safe.safe(params.get("${attrname}2"), ${attrtype}.class));
     </#if>   
     <#local processedAttrs += {attr.name:attr}> 
   </#list>
@@ -91,6 +107,7 @@ ${java.license(license)}
 <#assign typename = java.nameType(obj.name)>
 package <#if namespace??>${namespace}.</#if>${app.name}.dto.assembler;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;

@@ -210,6 +210,10 @@
     and "${modelbase.get_object_sql_alias(attr.parent)}".${attr.persistenceName} <= ${r"#{"}${modelbase.get_attribute_sql_name(attr)}1}
     ]]>
     </if>
+    <#elseif attr.constraint.domainType.name?starts_with("strings")>
+    <#-- nothing to do -->
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    <#-- nothing to do -->
     <#else>
     <!-- 【${modelbase.get_attribute_label(attr)}】 -->
     <if test = "${modelbase.get_attribute_sql_name(attr)} != null">

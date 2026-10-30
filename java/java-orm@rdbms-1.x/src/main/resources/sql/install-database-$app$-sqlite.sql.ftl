@@ -1,4 +1,13 @@
 <#import '/$/modelbase.ftl' as modelbase>
+<#if globalIdType??>
+  <#if globalIdType == "string">
+    <#assign sqlIdType = "varchar(32)">
+  <#else>
+    <#assign sqlIdType = "integer">
+  </#if>
+<#else>
+  <#assign sqlIdType = "integer">
+</#if>
 <#list model.objects as obj>
   <#if !obj.isLabelled('persistence') || obj.isLabelled('generated')><#continue></#if>
   <#if obj.persistenceName??>
