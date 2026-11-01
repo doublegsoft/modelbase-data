@@ -10,19 +10,19 @@ import 'base.dart';
     <#assign domainType = attr.constraint.domainType.toString()>
     <#if domainType?starts_with('enum') && !existingOptions[domainType]??>
       <#assign pairs = typebase.enumtype(domainType)>
-      
+
 ///
 /// 【${modelbase.get_object_label(obj)} ${modelbase.get_attribute_label(attr)}】枚举值
 ///        
 const List<Option> arrayOf${dart.nameType(obj.name)}${dart.nameType(attr.name)} = [
       <#list pairs as pair>
-  Option(text: '${pair.text}', value: '${pair.code}',),    
+  Option(label: '${pair.text}', value: '${pair.code}',),    
       </#list>
 ];
 
 const Map<String,Option> mapOf${dart.nameType(obj.name)}${dart.nameType(attr.name)} = {
       <#list pairs as pair>
-  '${pair.code}': Option(text: '${pair.text}', value: '${pair.code}',),    
+  '${pair.code}': Option(label: '${pair.text}', value: '${pair.code}',),    
       </#list>
 };   
 
@@ -34,7 +34,7 @@ String getTextOf${dart.nameType(obj.name)}${dart.nameType(attr.name)}(String? va
   if (option == null) {
     return '';
   }
-  return option.text;
+  return option.label;
 }
 
 String getValueOf${dart.nameType(obj.name)}${dart.nameType(attr.name)}(String? text) {
@@ -42,7 +42,7 @@ String getValueOf${dart.nameType(obj.name)}${dart.nameType(attr.name)}(String? t
     return '';
   }
   for (Option opt in arrayOf${dart.nameType(obj.name)}${dart.nameType(attr.name)}) {
-    if (opt.text == text) {
+    if (opt.label == text) {
       return opt.value;
     }
   }
