@@ -1805,3 +1805,91 @@ ${""?left_pad(indent)}}
 ${""?left_pad(indent)}${java.nameVariable(obj.name)}DataAccess.updatePartial${java.nameType(obj.name)}(${java.nameVariable(obj.name)});
   </#if>  
 </#macro>
+
+<#--
+ ### 生成构造模拟测试对象数据的辅助方法。
+ ### <p>
+ ### 生成一个私有方法（例如：testUser()），自动遍历对象的各属性并根据属性元数据
+ ### （如基础类型、枚举状态、日期时间、自定义嵌套对象、集合类型等）为其填充
+ ### 对应的测试假数据。
+ ###
+ ### @param attr
+ ###        当前关联的属性定义，用于提取生成的方法名
+ ### @param obj
+ ###        目标模型对象元数据，用于遍历属性列表并赋值
+ ### @param suffix
+ ###        生成的方法名称后缀，默认为空字符串
+ ### @param is_aggregate_like
+ ###        是否按聚合根模式处理，为 true 时自定义类型会递归生成构建方法，否则进行安全类型转换
+ -->
+<#macro print_test_obj attr obj suffix="" is_aggregate_like=false>
+  private ${java.nameType(obj.name)}Query test${java.nameType(attr.name)}${suffix}() {
+    ${java.nameType(obj.name)}Query retVal = new ${java.nameType(obj.name)}Query();
+<#list obj.attributes as attr>
+  <#if modelbase.is_attribute_system(attr)><#continue></#if>
+  <#if !modelbase.is_aggregate_like(obj) && attr.type.collection><#continue></#if>
+  <#if attr.constraint.defaultValue??><#continue></#if>
+  <#if attr.name == "state">
+    retVal.setState("E");
+  <#elseif attr.type.name == "datetime">
+    retVal.${modelbase4java.name_setter(attr)}(Safe.safeTimestamp(${modelbase4java.test_json_value(attr)}));
+  <#elseif attr.type.custom>
+    <#if is_aggregate_like>
+    retVal.set${java.nameType(attr.name)}(test${java.nameType(attr.name)}());
+    <#else>
+    retVal.${modelbase4java.name_setter(attr)}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(${modelbase4java.test_json_value(attr)}));
+    </#if>
+  <#elseif attr.type.collection>
+    retVal.${modelbase4java.name_getter(attr)}().addAll(test${java.nameType(attr.name)}());  
+  <#elseif attr.constraint.domainType.name?starts_with("strings")>
+    retVal.${modelbase4java.name_getter(attr)}().add("标签1");  
+    retVal.${modelbase4java.name_getter(attr)}().add("标签2"); 
+    retVal.${modelbase4java.name_getter(attr)}().add("标签3"); 
+  <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    retVal.${modelbase4java.name_setter(attr)}(new ${java.nameType(attr.type.objectName)}Query());
+  <#else>
+    retVal.${modelbase4java.name_setter(attr)}(Safe.safe${modelbase4java.type_attribute_primitive(attr)}(${modelbase4java.test_json_value(attr)}));
+  </#if>
+</#list>    
+    return retVal;
+  }
+</#macro>
+
+<#--
+ ### 生成用于对比两个对象属性值的单元测试断言语句代码。
+ ### <p>
+ ### 遍历对象的非系统属性，并根据具体类型生成对应的断言逻辑：
+ ### <ul>
+ ###   <li>数值类型（number）：生成基于 compareTo 的大小比对断言</li>
+ ###   <li>日期类型（date/datetime）：生成基于 isSameDate 的日期比对断言</li>
+ ###   <li>普通类型：生成通用的 assertEquals 断言</li>
+ ### </ul>
+ ### 会自动忽略集合类型、系统字段、默认值字段以及父级关联字段。
+ ###
+ ### @param obj
+ ###        目标模型对象元数据，提供要比对的属性列表
+ ### @param expected
+ ###        预期结果对象的变量名称（例如："expected"、"item1"）
+ ### @param actual
+ ###        实际结果对象的变量名称（例如："actual"、"found"）
+ ### @param indent
+ ###        生成 Java 代码时的行首缩进空格数
+ -->
+<#macro print_assert_obj obj expected actual indent>
+  <#list obj.attributes as attr>
+    <#if modelbase.is_attribute_system(attr)><#continue></#if>
+    <#if attr.type.collection><#continue></#if>
+    <#if attr.constraint.defaultValue??><#continue></#if>
+    <#if attr.name?starts_with("parent")><#continue></#if><#-- FIXME: 暂时规避Parent的全部属性 -->
+    <#if attr.type.name == "number">
+${""?left_pad(indent)}Assert.assertEquals(0, ${expected}.${modelbase4java.name_getter(attr)}().compareTo(${actual}.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.type.name == "datetime" || attr.type.name == "date">
+${""?left_pad(indent)}Assert.assertTrue(isSameDate(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}()));
+    <#elseif attr.constraint.domainType.name?starts_with("{") && attr.constraint.domainType.name?ends_with("}")>
+    // TODO: JSON
+    Assert.assertNotNull(foundQuery.${modelbase4java.name_getter(attr)}());
+    <#else>
+${""?left_pad(indent)}Assert.assertEquals(${expected}.${modelbase4java.name_getter(attr)}(), ${actual}.${modelbase4java.name_getter(attr)}());
+    </#if>
+  </#list>
+</#macro>

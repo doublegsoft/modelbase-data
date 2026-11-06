@@ -181,8 +181,14 @@ public class Safe {
     } else if (clazz == java.util.Date.class) {
       return (T) safeTimestamp(str);
     } else if (clazz == Integer.class) {
+      if (val instanceof Number) {
+        return (T) ((Integer)((Number)val).intValue());
+      }
       return (T) safeInteger(str);
     } else if (clazz == Long.class) {
+      if (val instanceof Number) {
+        return (T) ((Long)((Number)val).longValue());
+      }
       return (T) safeLong(str);
     } 
     return (T) val;

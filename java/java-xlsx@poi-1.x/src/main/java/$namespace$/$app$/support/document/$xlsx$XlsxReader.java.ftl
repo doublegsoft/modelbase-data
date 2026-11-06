@@ -4,7 +4,7 @@
 ${java.license(license)}
 </#if>
 <#assign obj = xlsx>
-package ${namespace}.${java.nameNamespace(app.name)}.office;
+package ${namespace}.${java.nameNamespace(app.name)}.support.document;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -37,12 +37,14 @@ public class ${java.nameType(obj.name)}XlsxReader {
       Object value;
       if (r > 0) {
         ${java.nameType(obj.name)}Query ${java.nameVariable(obj.name)} = new ${java.nameType(obj.name)}Query();
-        <#list obj.attributes as attr>
-          <#assign attrTypeName = modelbase4java.type_attribute_primitive(attr)>  
-        cell = row.getCell(cellIndex);
+<#list obj.attributes as attr>
+  <#if attr.type.collection || attr.type.custom><#continue></#if>
+  <#if attr.constraint.domainType.name?starts_with("strings") || attr.constraint.domainType.name?starts_with("{")><#continue></#if>
+  <#assign attrTypeName = modelbase4java.type_attribute_primitive(attr)>  
+        cell = row.getCell(cellIndex++);
         value = getCellValue(cell);
         ${java.nameVariable(obj.name)}.${modelbase4java.name_setter(attr)}(Safe.safe(value, ${attrTypeName}.class));
-        </#list>
+</#list>
       
         retVal.add(${java.nameVariable(obj.name)});
       }
