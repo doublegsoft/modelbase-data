@@ -118,7 +118,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
 <@modelbase4java.print_assert_obj obj=rootObj expected="toSave"+java.nameType(attr.name) actual="found"+java.nameType(attr.name) indent=4 />    
     <#elseif attr.type.collection>
       <#assign collObj = model.findObjectByName(attr.type.componentType.name)>
-      <#if !modelbase.is_aggregate_like(collObj)>
+      <#if !modelbase.is_aggregate_like(collObj) && modelbase.is_attribute_direct(attr)>
     // 【${modelbase.get_attribute_label(attr)}】对象数据验证
     Assert.assertTrue(foundQuery.get${java.nameType(attr.name)}().size() > 0);
       </#if>
@@ -137,7 +137,7 @@ public class ${java.nameType(obj.name)}ServiceTest extends ServiceTestBase {
   <#assign null_set = false>
   <#assign rootObj = model.findObjectByName(obj.attributes?first.type.name)>
   <#list flow.sortTypes() as typeObj>
-    <#if null_set && !typeObj.collection>
+    <#if null_set && !typeObj.collection && !modelbase.is_object_conjunction(obj)>
     toSaveQuery.set${java.nameType(typeObj.variable)}(null);
     </#if>
     <#if rootObj.name == typeObj.name>

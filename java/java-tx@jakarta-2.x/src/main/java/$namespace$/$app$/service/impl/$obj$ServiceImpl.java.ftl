@@ -264,6 +264,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#if !collAttr.type.custom><#continue></#if>
     <#list flow.types as innerTypeObj>
       <#if !innerTypeObj.collection || innerTypeObj.name != collAttr.type.name><#continue></#if>
+    ${java.nameVariable(innerTypeObj.variable)}Queries = query.to${java.nameType(innerTypeObj.name)}Queries();
     for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
       for (${java.nameType(innerTypeObj.name)}Query item : ${java.nameVariable(innerTypeObj.variable)}Queries) {
         if (item.equalsWithoutId(row.get${java.nameType(collAttr.name)}())) {
@@ -366,6 +367,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     <#if modelbase.is_attribute_conjunction(obj, typeObj.variable)>
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
       <#assign rightAttr = typeObj.getRightAttributeFromReference()>
+      <#if !modelbase.get_aggregate_attribute(obj, leftAttr.parent.name)??><#continue></#if>
       <#assign aggregateAttr = modelbase.get_aggregate_attribute(obj, leftAttr.parent.name)>
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
       <#if aggregateAttr.type.collection>
@@ -598,7 +600,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
     }
     </#if>  -->
   <#elseif typeRefType == "PREF">
-    <#if !typeObj.getLeftAttributeFromReference()??><#continue></#if>
+    <#if typeObj.getLeftAttributeFromReference()??>
     if (findingReference) {
       ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
       for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
@@ -618,7 +620,21 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
         }
       }
     }
-  <#elseif typeRefType == "CREF" && typeDef.definition.isLabelled("meta")>
+    <#else><#-- FIXME: 聚合对象引用了可持久化的聚合根对象会走到此处 -->
+    ${java.nameVariable(typeObj.variable)}Query = query.get${java.nameType(typeObj.variable)}();
+    if (${java.nameVariable(typeObj.variable)}Query == null) {
+      ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
+    } 
+    ${java.nameVariable(typeObj.variable)}Queries = ${java.nameVariable(typeObj.variable)}Service.find${inflector.pluralize(java.nameType(typeObj.name))}(${java.nameVariable(typeObj.variable)}Query).getData();
+    for (${java.nameType(typeObj.name)}Query row : ${java.nameVariable(typeObj.variable)}Queries) {
+      ${java.nameType(obj.name)}Query q = new ${java.nameType(obj.name)}Query();
+      q.set${java.nameType(typeObj.variable)}(row);
+      retVal.getData().add(q);
+    }
+    </#if>
+  <#elseif typeRefType == "CREF">
+    <#if typeDef.definition.isLabelled("meta")>
+    <#-- 聚合对象不允许对集合属性进行查询 -->
     ${java.nameVariable(typeObj.variable)}Query = new ${java.nameType(typeObj.name)}Query();
     for (${java.nameType(typeDef.name)}Query retRow : retVal.getData()) {
       <#assign leftAttr = typeObj.getLeftAttributeFromReference()>
@@ -636,6 +652,7 @@ public class ${java.nameType(typeDef.name)}ServiceImpl extends QueryHandlerServi
         }
       }
     }
+    </#if> <#-- meta -->
   </#if>  
 </#list>
     return retVal;

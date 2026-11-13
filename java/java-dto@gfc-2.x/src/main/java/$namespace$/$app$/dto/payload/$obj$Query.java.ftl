@@ -317,11 +317,12 @@ public class ${java.nameType(obj.name)}Query extends AbstractQuery implements Se
       <#assign rightObj = predicate.rightObject>
       <#assign rightAttr = predicate.rightAttribute>
       <#assign attrName = modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)>
-      <#--  <#if obj.getAttribute(attrName)??>  -->
+      <#-- 检查可能的属性是否存在聚合对象中 -->
+      <#if modelbase.should_attribute_exist(obj, leftAttr)>
     ${java.nameVariable(typeObj.variable)}.forEach(q -> {
       q.${modelbase4java.name_setter(rightAttr)}(${modelbase4java.name_getter(leftAttr, predicate.leftObjectAlias)}());
     });
-      <#--  </#if>  -->
+      </#if>
     </#if>
     return ${java.nameVariable(typeObj.variable)};
   </#if>

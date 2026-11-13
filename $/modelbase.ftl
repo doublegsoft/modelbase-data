@@ -60,6 +60,42 @@
   <#return false>
 </#function>
 
+<#--
+ ### 判断指定属性是否属于“直接关联”（direct）。
+ ### <p>
+ ### 判定规则如下：
+ ### 1. 若该属性不是集合类型（!attr.type.collection）：
+ ###    - 直接判定为直接关联，返回 true。
+ ### 2. 若该属性为集合类型：
+ ###    - 解析该属性集合组件类型对应的集合对象（collObj）及其所属的父对象（obj）；
+ ###    - 遍历集合对象的属性（collAttr），若发现其直接反向引用了父对象，则判定为直接关联，返回 true；
+ ###    - 或者父对象中存在自定义类型属性（objAttr.type.custom），且集合对象的属性类型与该自定义属性类型一致，也判定为直接关联，返回 true；
+ ###    - 若遍历后均未命中上述关联条件，则返回 false。
+ ###
+ ### @param attr
+ ###        待检查的属性元数据或模型对象
+ ###
+ ### @return 如果属性为非集合类型，或集合元素对象与父对象存在直接或共享自定义类型的关联关系则返回 true；否则返回 false
+ -->
+<#function is_attribute_direct attr>
+  <#if !attr.type.collection>
+    <#return true>
+  </#if>
+  <#local collObj = model.findObjectByName(attr.type.componentType.name)>
+  <#local obj = attr.parent>
+  <#list collObj.attributes as collAttr>
+    <#if collAttr.type.name == obj.name>
+      <#return true>
+    </#if>
+    <#list obj.attributes as objAttr>
+      <#if objAttr.type.custom && collAttr.type.name == objAttr.type.name>
+        <#return true>
+      </#if>
+    </#list>
+  </#list>
+  <#return false>
+</#function>
+
 <#--  <#function match_conjunction_for_attribute obj attrname>
   <#if is_aggregate_like(obj) && obj.getAttribute(attrname)??>
     <#local attr = obj.getAttribute(attrname)>
@@ -85,6 +121,51 @@
   </#if>
 </#function>  -->
 
+<#--
+ ### 判断指定属性名（attrname）在目标对象（obj）中是否存在。
+ ### <p>
+ ### 规则：根据对象是否具备“聚合特征”采用不同查找策略。对于聚合类对象，取其首个属性的类型作为根对象，
+ ### 并在根对象的属性列表中匹配；对于普通对象，先直接按属性名查找，若未找到则尝试去掉“<对象名>_”前缀后再次查找。
+ ###
+ ### 逻辑流程 (Logic Flow):
+ ### 1. 若 is_aggregate_like(obj) 为 true：
+ ###    - 根据 obj 首个属性的类型名，通过 model.findObjectByName 获取根对象（rootObj）。
+ ###    - 遍历 rootObj.attributes，若存在名称等于 attrname 的属性，立即返回 true。
+ ### 2. 若 is_aggregate_like(obj) 为 false：
+ ###    - 检查 obj.getAttribute(attrname) 是否存在，存在则返回 true。
+ ###    - 否则去除 attrname 中的“<obj.name>_”前缀，再次检查并返回是否存在。
+ ###
+ ### @param obj
+ ###        目标实体/模型对象
+ ### @param predAttr
+ ###        待校验的属性（支持普通属性名或带 "<对象名>_" 前缀的属性名）
+ ###
+ ### @return
+ ###        boolean - 属性存在返回 true；普通对象未找到时返回 false（聚合对象未命中时当前无显式返回值）
+ -->
+<#function should_attribute_exist obj predAttr>
+  <#local attrname = predAttr.name>
+  <#if attrname == "id" || attrname == "code" || attrname == "name" || attrname == "type" || attrname == "text" || attrname == "group">
+    <#local attrname = predAttr.parent.name + "_" + attrname>
+  </#if>
+  <#local ret = false>
+  <#if is_aggregate_like(obj)>
+    <#local rootObj = model.findObjectByName(obj.attributes?first.type.name)>
+    <#list modelbase.get_id_attributes(rootObj) as idAttr>
+      <#if idAttr.name == attrname || (rootObj.name + "_" + idAttr.name) == attrname>
+        <#return true>
+      </#if>
+    </#list>
+  <#else>
+    <#local ret = obj.getAttribute(attrname)??>
+    <#if ret>
+      <#return true>
+    </#if>
+    <#local ret = obj.getAttribute(attrname?replace(obj.name + "_", ""))??>
+    <#return ret>
+  </#if>
+  <#return false>
+</#function>
 
 <#--
  ### 判断对象是否具备“聚合特征”（仅由复杂类型或集合组成）。
